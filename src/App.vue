@@ -161,8 +161,9 @@ const copyToClipboard = async () => {
 <template>
   <!-- Main Header Stepper -->
   <header class="app-header">
-    <div class="brand-logo-container">
-      <img src="/splat_logo.jpg" alt="SPLAT Logo" class="brand-logo" />
+    <div class="brand">
+      <i class="pi pi-percentage text-2xl"></i>
+      <span>Splat</span>
     </div>
     
     <!-- Step indicator visualization -->
