@@ -470,6 +470,14 @@ input[type="text"]:focus, input[type="password"]:focus {
   transform: translate(-1px, -1px);
 }
 
+/* Small Inputs Padding Fix */
+.p-inputtext-sm,
+.p-inputtext-sm .p-inputnumber-input,
+.p-inputtext-sm.p-inputnumber .p-inputnumber-input {
+  padding: 6px 10px !important;
+  font-size: 13px !important;
+}
+
 .p-button {
   background-color: var(--primary-color) !important; /* Default buttons neon pink! */
   color: #ffffff !important;

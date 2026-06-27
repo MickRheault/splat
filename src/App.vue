@@ -156,6 +156,14 @@ const copyToClipboard = async () => {
     console.error('Failed to copy', e)
   }
 }
+
+// Select all text in an input on focus
+const selectAllText = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  if (target) {
+    target.select()
+  }
+}
 </script>
 
 <template>
@@ -294,6 +302,7 @@ const copyToClipboard = async () => {
               v-model="item.name" 
               placeholder="Item name" 
               class="flex-1 p-inputtext-sm" 
+              @focus="selectAllText"
             />
             <InputNumber 
               v-model="item.price" 
@@ -301,8 +310,9 @@ const copyToClipboard = async () => {
               :minFractionDigits="2" 
               :maxFractionDigits="2" 
               placeholder="0.00" 
-              class="w-24 p-inputtext-sm" 
+              class="w-28 p-inputtext-sm" 
               :inputStyle="{ width: '100%' }"
+              @focus="selectAllText"
             />
             <Button 
               icon="pi pi-trash" 
@@ -329,6 +339,7 @@ const copyToClipboard = async () => {
               class="p-inputtext-sm" 
               :style="{ width: '100%' }"
               :inputStyle="{ width: '100%' }"
+              @focus="selectAllText"
             />
           </div>
           <div class="flex-1 flex flex-col gap-1">
@@ -351,6 +362,7 @@ const copyToClipboard = async () => {
               class="p-inputtext-sm" 
               :style="{ width: '100%' }"
               :inputStyle="{ width: '100%' }"
+              @focus="selectAllText"
             />
           </div>
         </div>
@@ -430,6 +442,7 @@ const copyToClipboard = async () => {
                 type="text" 
                 class="participant-name-input"
                 @change="store.saveToLocalStorage()"
+                @focus="selectAllText"
               />
             </div>
             <Button 
