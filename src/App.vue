@@ -161,12 +161,12 @@ const copyToClipboard = async () => {
 <template>
   <!-- Main Header Stepper -->
   <header class="app-header">
-    <div class="brand-logo-container">
+    <div class="brand-logo-container" v-if="store.step === 'capture'">
       <img src="/splat_logo.png?v=2" alt="SPLAT Logo" class="brand-logo" />
     </div>
     
     <!-- Step indicator visualization -->
-    <div class="stepper" v-if="store.step !== 'capture' && !store.isParsing">
+    <div class="stepper" v-else-if="!store.isParsing">
       <div 
         class="step-node" 
         :class="{ 
