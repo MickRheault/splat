@@ -107,7 +107,7 @@ export const store = reactive({
         ? imageSrc.split(';base64,')[1] 
         : imageSrc
 
-      const prompt = 'Analyze this receipt image. Extract all line items, their prices, the tax amount, and the tip amount (if tip is explicitly written, otherwise set tip to 0). Also detect the currency symbol or currency code used on the receipt (e.g. $, €, £, ¥, SGD, etc.). Provide the output in a strict JSON format matching this schema: {"items": [{"name": "item name", "price": 12.34}], "tax": 1.23, "tip": 0.0, "currency": "$"}. If the currency is not specified or cannot be identified, default the "currency" field to "$". Do not wrap the JSON in markdown code blocks, just return raw JSON.'
+      const prompt = 'Analyze this receipt image. Extract all line items and their prices. For the "tax" field, calculate the sum of all tax lines, VAT, service charges, credit card fees, and rounding adjustments (sum them up if there are multiple, so that all additional subtotal fees are captured). Extract the tip amount (if explicitly written, otherwise set tip to 0). Also detect the currency symbol or currency code used on the receipt (e.g. $, €, £, ¥, SGD, etc.). Provide the output in a strict JSON format matching this schema: {"items": [{"name": "item name", "price": 12.34}], "tax": 1.23, "tip": 0.0, "currency": "$"}. If the currency is not specified or cannot be identified, default the "currency" field to "$". Do not wrap the JSON in markdown code blocks, just return raw JSON.'
 
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`, {
         method: 'POST',
