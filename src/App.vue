@@ -479,7 +479,7 @@ const selectAllText = (event: Event) => {
             />
             <Button 
               icon="pi pi-trash" 
-              class="p-button-danger p-button-text p-button-sm shrink-0" 
+              class="item-delete-btn" 
               @click="store.removeItem(item.id)" 
             />
           </div>

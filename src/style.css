@@ -533,6 +533,29 @@ input[type="text"]:focus, input[type="password"]:focus {
   text-align: right !important;
 }
 
+/* Compact delete button to fit narrow screens */
+.item-delete-btn {
+  background-color: transparent !important;
+  color: #f43f5e !important; /* Rose-500 red */
+  border: none !important;
+  box-shadow: none !important;
+  width: 32px !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  padding: 0 !important;
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  transition: transform 0.15s ease !important;
+  cursor: pointer;
+}
+
+.item-delete-btn:hover {
+  background-color: rgba(244, 63, 94, 0.08) !important;
+  transform: scale(1.1) !important;
+}
+
 .p-button {
   background-color: var(--primary-color) !important; /* Default buttons neon pink! */
   color: #ffffff !important;
