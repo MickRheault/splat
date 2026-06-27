@@ -474,7 +474,7 @@ const selectAllText = (event: Event) => {
               :minFractionDigits="2" 
               :maxFractionDigits="2" 
               placeholder="0.00" 
-              class="w-28 shrink-0 p-inputtext-sm" 
+              class="w-32 shrink-0 p-inputtext-sm" 
               :inputStyle="{ width: '100%' }"
               @focus="selectAllText"
             />
