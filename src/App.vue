@@ -247,9 +247,9 @@ const selectAllText = (event: Event) => {
         </div>
       </div>
 
-      <div class="flex flex-col gap-3">
+      <div class="flex flex-col gap-4">
         <!-- Option 1: Live Camera Snap -->
-        <div class="capture-container flex items-center gap-3 py-3" @click="triggerCamera">
+        <div class="capture-option-card" @click="triggerCamera">
           <i class="pi pi-camera capture-icon-sm"></i>
           <div class="text-left flex-1">
             <h4 class="font-bold text-md">Take Live Photo</h4>
@@ -266,7 +266,7 @@ const selectAllText = (event: Event) => {
         </div>
 
         <!-- Option 2: Gallery Upload -->
-        <div class="capture-container flex items-center gap-3 py-3" @click="triggerGallery">
+        <div class="capture-option-card" @click="triggerGallery">
           <i class="pi pi-images capture-icon-sm"></i>
           <div class="text-left flex-1">
             <h4 class="font-bold text-md">Choose from Gallery</h4>
@@ -337,13 +337,13 @@ const selectAllText = (event: Event) => {
               :minFractionDigits="2" 
               :maxFractionDigits="2" 
               placeholder="0.00" 
-              class="w-28 p-inputtext-sm" 
+              class="w-28 shrink-0 p-inputtext-sm" 
               :inputStyle="{ width: '100%' }"
               @focus="selectAllText"
             />
             <Button 
               icon="pi pi-trash" 
-              class="p-button-danger p-button-text p-button-sm" 
+              class="p-button-danger p-button-text p-button-sm shrink-0" 
               @click="store.removeItem(item.id)" 
             />
           </div>
