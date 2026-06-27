@@ -279,6 +279,30 @@ describe('Splat Core Store & Math Logic', () => {
       
       vi.useRealTimers()
     })
+
+    test('should throw error if Gemini returns receipt validation error', async () => {
+      store.apiKey = 'fake_key'
+      const mockResponse = {
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({ error: 'This image does not appear to be a valid receipt.' })
+            }]
+          }
+        }]
+      }
+      
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() => 
+        Promise.resolve(new Response(JSON.stringify(mockResponse), { status: 200 }))
+      )
+      
+      await store.parseWithGemini('fake_image')
+      
+      expect(store.ocrError).toBe('This image does not appear to be a valid receipt.')
+      expect(store.step).toBe('capture')
+      
+      fetchSpy.mockRestore()
+    })
   })
 
   describe('Sharing Plain-Text Summary Formatter', () => {

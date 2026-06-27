@@ -147,7 +147,7 @@ export const store = reactive({
         ? imageSrc.split(';base64,')[1] 
         : imageSrc
 
-      const prompt = 'Analyze this receipt image. Extract all line items and their prices. Also extract any subtotal adjustments or fee lines (such as Tax, VAT, Service Charge, Card Surcharge, Rounding, or Discounts) into the "adjustments" array with their exact names and values (use negative values for discounts). Extract the tip amount (if explicitly written, otherwise set tip to 0). Detect the currency symbol or code. Detect the restaurant or merchant name and the date of the receipt (formatted as YYYY-MM-DD). Provide strict JSON matching this schema: {"items": [{"name": "item name", "price": 12.34}], "adjustments": [{"name": "VAT 7%", "value": 1.23}], "tip": 0.0, "currency": "$", "restaurant": "Restaurant Name", "date": "YYYY-MM-DD"}. If no adjustments are found, return an empty array for "adjustments". If restaurant or date is not found, leave them as empty strings. Do not wrap the JSON in markdown code blocks, just return raw JSON.'
+      const prompt = 'First, verify if the image is indeed a receipt, bill, or invoice. If the image does not look like a receipt, bill, or invoice, return JSON with only an "error" key explaining why (e.g., {"error": "This image does not appear to be a valid receipt. Please upload a clear photo of a receipt."}) and do not populate other fields. If it is a valid receipt, analyze the image and extract all line items and their prices. Also extract any subtotal adjustments or fee lines (such as Tax, VAT, Service Charge, Card Surcharge, Rounding, or Discounts) into the "adjustments" array with their exact names and values (use negative values for discounts). Extract the tip amount (if explicitly written, otherwise set tip to 0). Detect the currency symbol or code. Detect the restaurant or merchant name and the date of the receipt (formatted as YYYY-MM-DD). Provide strict JSON matching this schema: {"items": [{"name": "item name", "price": 12.34}], "adjustments": [{"name": "VAT 7%", "value": 1.23}], "tip": 0.0, "currency": "$", "restaurant": "Restaurant Name", "date": "YYYY-MM-DD"}. If no adjustments are found, return an empty array for "adjustments". If restaurant or date is not found, leave them as empty strings. Do not wrap the JSON in markdown code blocks, just return raw JSON.'
 
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`, {
         method: 'POST',
@@ -176,6 +176,10 @@ export const store = reactive({
       }
 
       const result = JSON.parse(text)
+      
+      if (result.error) {
+        throw new Error(result.error)
+      }
       
       this.items = (result.items || []).map((item: any, idx: number) => ({
         id: `item_${Date.now()}_${idx}`,
