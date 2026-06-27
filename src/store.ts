@@ -56,6 +56,7 @@ const getTodayFormatted = () => {
 export const store = reactive({
   step: 'capture' as 'capture' | 'edit' | 'participants' | 'allocate' | 'share',
   receiptImage: null as string | null,
+  splitId: `split_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
   billName: 'New Split',
   items: [] as Item[],
   participants: [] as Participant[],
@@ -70,6 +71,7 @@ export const store = reactive({
   reset() {
     this.step = 'capture'
     this.receiptImage = null
+    this.splitId = `split_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     this.billName = 'New Split'
     this.items = []
     this.participants = []
@@ -304,6 +306,7 @@ export const store = reactive({
       const data = {
         step: this.step,
         receiptImage: this.receiptImage,
+        splitId: this.splitId,
         billName: this.billName,
         items: this.items,
         participants: this.participants,
@@ -325,6 +328,7 @@ export const store = reactive({
       const data = JSON.parse(dataStr)
       if (data.step) this.step = data.step
       if (data.receiptImage !== undefined) this.receiptImage = data.receiptImage
+      if (data.splitId) this.splitId = data.splitId
       if (data.billName) this.billName = data.billName
       if (data.items) this.items = data.items
       if (data.participants) this.participants = data.participants
@@ -335,6 +339,51 @@ export const store = reactive({
     } catch (e) {
       console.error('Failed to load from localStorage', e)
     }
+  },
+
+  saveToHistory() {
+    try {
+      const historyStr = localStorage.getItem('splat_history') || '[]'
+      const history = JSON.parse(historyStr) as any[]
+      
+      const entry = {
+        splitId: this.splitId,
+        billName: this.billName,
+        timestamp: Date.now(),
+        participantsCount: this.participants.length,
+        totalBill: totalBill.value,
+        currencySymbol: this.currencySymbol,
+        items: JSON.parse(JSON.stringify(this.items)),
+        participants: JSON.parse(JSON.stringify(this.participants)),
+        adjustments: JSON.parse(JSON.stringify(this.adjustments)),
+        tipInput: this.tipInput,
+        tipType: this.tipType
+      }
+      
+      const existingIdx = history.findIndex((h: any) => h.splitId === this.splitId)
+      if (existingIdx !== -1) {
+        history[existingIdx] = entry
+      } else {
+        history.unshift(entry)
+      }
+      
+      localStorage.setItem('splat_history', JSON.stringify(history))
+    } catch (e) {
+      console.error('Failed to save split history', e)
+    }
+  },
+
+  loadSplit(split: any) {
+    this.splitId = split.splitId
+    this.billName = split.billName
+    this.items = split.items
+    this.participants = split.participants
+    this.adjustments = split.adjustments
+    this.tipInput = split.tipInput
+    this.tipType = split.tipType
+    this.currencySymbol = split.currencySymbol || '$'
+    this.step = 'share'
+    this.saveToLocalStorage()
   }
 })
 
