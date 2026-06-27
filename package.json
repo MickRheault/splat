@@ -1,0 +1,31 @@
+{
+  "name": "splat",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "screenshot": "node screenshot_test.js"
+  },
+  "dependencies": {
+    "primevue": "^4.0.5",
+    "@primevue/themes": "^4.0.5",
+    "primeicons": "^7.0.0",
+    "vue": "^3.5.38"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.2",
+    "@vitejs/plugin-vue": "^6.0.7",
+    "@vue/test-utils": "^2.4.6",
+    "@vue/tsconfig": "^0.9.1",
+    "jsdom": "^26.0.0",
+    "playwright": "^1.59.1",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.0",
+    "vitest": "^3.0.5",
+    "vue-tsc": "^3.3.5"
+  }
+}
