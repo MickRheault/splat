@@ -474,8 +474,7 @@ const selectAllText = (event: Event) => {
               :minFractionDigits="2" 
               :maxFractionDigits="2" 
               placeholder="0.00" 
-              class="w-32 shrink-0 p-inputtext-sm" 
-              :inputStyle="{ width: '100%' }"
+              class="item-price-input" 
               @focus="selectAllText"
             />
             <Button 

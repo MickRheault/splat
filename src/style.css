@@ -521,6 +521,18 @@ input[type="text"]:focus, input[type="password"]:focus {
   text-align: right !important;
 }
 
+/* Bulletproof 100% reliable 6-digit price input constraints */
+.item-price-input,
+.item-price-input .p-inputnumber-input {
+  width: 96px !important;
+  min-width: 96px !important;
+  max-width: 96px !important;
+  flex-shrink: 0 !important;
+  padding: 6px 4px !important;
+  font-size: 13px !important;
+  text-align: right !important;
+}
+
 .p-button {
   background-color: var(--primary-color) !important; /* Default buttons neon pink! */
   color: #ffffff !important;
