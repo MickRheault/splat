@@ -300,7 +300,7 @@ describe('Splat Core Store & Math Logic', () => {
 
       const summary = shareTextSummary.value
 
-      expect(summary).toContain('Splat Bill Split Summary')
+      expect(summary).toContain('Splat split:')
       expect(summary).toContain('Alice')
       expect(summary).toContain('Bob')
       expect(summary).toContain('Subtotal:')

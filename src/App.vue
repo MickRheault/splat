@@ -451,9 +451,22 @@ const selectAllText = (event: Event) => {
 
     <!-- Step 2: Edit Items -->
     <div v-else-if="store.step === 'edit'" class="step-view">
+      <!-- Bill Title Editor -->
+      <div class="flex flex-col gap-1.5 px-1 mb-1">
+        <label class="text-xs font-semibold text-secondary uppercase tracking-wider">Bill / Event Title</label>
+        <input 
+          v-model="store.billName" 
+          type="text"
+          placeholder="e.g. 2026-06-27 - Pizza Express" 
+          class="p-2 border-3 border-black rounded-lg font-bold bg-white text-black shadow-[3px_3px_0px_rgba(0,0,0,1)] text-sm focus:outline-none focus:border-primary" 
+          @change="store.saveToLocalStorage()"
+          @focus="selectAllText"
+        />
+      </div>
+
       <div class="bill-card">
         <div class="flex justify-between items-center mb-2">
-          <h3 class="font-bold">Review Receipt Items</h3>
+          <h3 class="font-bold">Review Items</h3>
           <Button 
             icon="pi pi-plus" 
             label="Add Row" 

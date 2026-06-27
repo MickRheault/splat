@@ -45,9 +45,18 @@ const MOCK_RECEIPT_TEMPLATES = [
   }
 ]
 
+const getTodayFormatted = () => {
+  const today = new Date()
+  const yyyy = today.getFullYear()
+  const mm = String(today.getMonth() + 1).padStart(2, '0')
+  const dd = String(today.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
 export const store = reactive({
   step: 'capture' as 'capture' | 'edit' | 'participants' | 'allocate' | 'share',
   receiptImage: null as string | null,
+  billName: 'New Split',
   items: [] as Item[],
   participants: [] as Participant[],
   adjustments: [] as Adjustment[],
@@ -61,6 +70,7 @@ export const store = reactive({
   reset() {
     this.step = 'capture'
     this.receiptImage = null
+    this.billName = 'New Split'
     this.items = []
     this.participants = []
     this.adjustments = []
@@ -81,14 +91,20 @@ export const store = reactive({
     } else {
       setTimeout(() => {
         let template = MOCK_RECEIPT_TEMPLATES[0]
+        let restName = 'Truffle Garden'
         if (imageSrc === 'demo_image_uri_1') {
           template = MOCK_RECEIPT_TEMPLATES[1]
+          restName = 'Avocado Bistro'
         } else if (imageSrc === 'demo_image_uri_0') {
           template = MOCK_RECEIPT_TEMPLATES[0]
+          restName = 'Truffle Garden'
         } else {
           template = MOCK_RECEIPT_TEMPLATES[Math.floor(Math.random() * MOCK_RECEIPT_TEMPLATES.length)]
+          restName = Math.random() > 0.5 ? 'Gourmet Grill' : 'Street Food Stall'
         }
         
+        this.billName = `${getTodayFormatted()} - ${restName}`
+
         this.items = template.items.map((item, idx) => ({
           id: `item_${Date.now()}_${idx}`,
           name: item.name,
@@ -129,7 +145,7 @@ export const store = reactive({
         ? imageSrc.split(';base64,')[1] 
         : imageSrc
 
-      const prompt = 'Analyze this receipt image. Extract all line items and their prices. Also extract any subtotal adjustments or fee lines (such as Tax, VAT, Service Charge, Card Surcharge, Rounding, or Discounts) into the "adjustments" array with their exact names and values (use negative values for discounts). Extract the tip amount (if explicitly written, otherwise set tip to 0). Detect the currency symbol or code. Provide strict JSON matching this schema: {"items": [{"name": "item name", "price": 12.34}], "adjustments": [{"name": "VAT 7%", "value": 1.23}], "tip": 0.0, "currency": "$"}. If no adjustments are found, return an empty array for "adjustments". Do not wrap the JSON in markdown code blocks, just return raw JSON.'
+      const prompt = 'Analyze this receipt image. Extract all line items and their prices. Also extract any subtotal adjustments or fee lines (such as Tax, VAT, Service Charge, Card Surcharge, Rounding, or Discounts) into the "adjustments" array with their exact names and values (use negative values for discounts). Extract the tip amount (if explicitly written, otherwise set tip to 0). Detect the currency symbol or code. Detect the restaurant or merchant name and the date of the receipt (formatted as YYYY-MM-DD). Provide strict JSON matching this schema: {"items": [{"name": "item name", "price": 12.34}], "adjustments": [{"name": "VAT 7%", "value": 1.23}], "tip": 0.0, "currency": "$", "restaurant": "Restaurant Name", "date": "YYYY-MM-DD"}. If no adjustments are found, return an empty array for "adjustments". If restaurant or date is not found, leave them as empty strings. Do not wrap the JSON in markdown code blocks, just return raw JSON.'
 
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`, {
         method: 'POST',
@@ -172,6 +188,12 @@ export const store = reactive({
       }))
       this.tipInput = Number(result.tip) || 0
       this.tipType = 'flat'
+      
+      // Auto-generate Bill Name
+      const parsedDate = result.date ? result.date.trim() : getTodayFormatted()
+      const parsedRestaurant = result.restaurant ? result.restaurant.trim() : 'Restaurant Split'
+      this.billName = `${parsedDate} - ${parsedRestaurant}`
+
       this.currencySymbol = result.currency || '$'
       this.step = 'edit'
     } catch (e: any) {
@@ -282,6 +304,7 @@ export const store = reactive({
       const data = {
         step: this.step,
         receiptImage: this.receiptImage,
+        billName: this.billName,
         items: this.items,
         participants: this.participants,
         adjustments: this.adjustments,
@@ -302,6 +325,7 @@ export const store = reactive({
       const data = JSON.parse(dataStr)
       if (data.step) this.step = data.step
       if (data.receiptImage !== undefined) this.receiptImage = data.receiptImage
+      if (data.billName) this.billName = data.billName
       if (data.items) this.items = data.items
       if (data.participants) this.participants = data.participants
       if (data.adjustments) this.adjustments = data.adjustments
@@ -405,7 +429,7 @@ export const shareTextSummary = computed(() => {
   const breakdown = billBreakdown.value
   const currency = store.currencySymbol
   
-  let text = `💸 *Splat Bill Split Summary* 💸\n\n`
+  let text = `💸 *Splat split: ${store.billName}* 💸\n\n`
   
   breakdown.forEach(p => {
     text += `👤 *${p.name}* owes *${currency}${p.total.toFixed(2)}*\n`
