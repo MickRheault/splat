@@ -144,6 +144,13 @@ const goBack = () => {
   }
 }
 
+// Reset app back to landing page
+const handleReset = () => {
+  if (window.confirm("Are you sure you want to reset? This will clear all data and return to the home page.")) {
+    store.reset()
+  }
+}
+
 // Open allocation dialog for an item
 const openAllocation = (itemId: string) => {
   selectedItemId.value = itemId
@@ -829,24 +836,37 @@ const selectAllText = (event: Event) => {
 
     <!-- Stepper Navigation bar -->
     <nav class="app-nav" v-if="!store.isParsing">
+      <!-- Left: Back Button -->
       <Button 
         v-if="store.step !== 'capture'" 
         label="Back" 
         icon="pi pi-chevron-left" 
-        class="p-button-text p-button-sm text-secondary" 
+        class="p-button-text p-button-sm text-secondary min-w-[70px]" 
         @click="goBack" 
+      />
+      <div v-else class="min-w-[70px]"></div> <!-- spacer -->
+
+      <!-- Center: Reset Button -->
+      <Button 
+        v-if="store.step !== 'capture'" 
+        label="Reset" 
+        icon="pi pi-refresh" 
+        class="p-button-text p-button-sm text-rose-500/80 hover:text-rose-500" 
+        @click="handleReset" 
       />
       <div v-else></div> <!-- spacer -->
 
+      <!-- Right: Next Button -->
       <Button 
         v-if="store.step !== 'share'" 
         label="Next" 
         icon="pi pi-chevron-right" 
         iconPos="right" 
-        class="p-button-sm" 
+        class="p-button-sm min-w-[70px]" 
         :disabled="!canGoNext" 
         @click="goNext" 
       />
+      <div v-else class="min-w-[70px]"></div> <!-- spacer -->
     </nav>
 
     <!-- Modal dialogue for assignment selection -->
