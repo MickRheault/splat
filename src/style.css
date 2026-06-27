@@ -5,14 +5,14 @@
   --font-marker: 'Permanent Marker', cursive, sans-serif;
   --font-bubble: 'Lilita One', cursive, sans-serif;
   
-  --bg-color: #f5f5f4; /* Concrete light plaster */
-  --surface-color: #ffffff;
-  --text-color: #000000;
-  --text-secondary: #44403c;
+  --bg-color: #0c0a09; /* Dark grunge concrete */
+  --surface-color: #1c1917;
+  --text-color: #ffffff;
+  --text-secondary: #d6d3d1;
   
-  --primary-color: #d946ef;  /* Vibrant Neon Pink/Magenta */
+  --primary-color: #ec4899;  /* Vivid Neon Pink */
   --primary-hover: #f472b6;  /* Punchy pink hover */
-  --accent-color: #10b981;   /* Vibrant Green */
+  --accent-color: #4ade80;   /* Vibrant Green */
   
   --neon-yellow: #facc15;
   --neon-cyan: #06b6d4;
@@ -23,28 +23,12 @@
   --border-color: #000000;
   --border-width: 3px;
   
-  --shadow-block: 6px 6px 0px var(--primary-color); /* Vibrant Pink Shadow for maximum contrast! */
+  --shadow-block: 6px 6px 0px var(--primary-color);
   --shadow-block-sm: 4px 4px 0px var(--primary-color);
   
   --radius-lg: 24px;
   --radius-md: 16px;
   --radius-sm: 10px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-color: #0c0a09; /* Dark grunge concrete */
-    --surface-color: #1c1917;
-    --text-color: #ffffff;
-    --text-secondary: #d6d3d1;
-    
-    --primary-color: #ec4899; /* Even brighter hot pink for dark mode contrast */
-    --primary-hover: #f472b6;
-    --accent-color: #4ade80;  /* Bright neon green */
-    
-    --stroke-color: #000000;
-    --border-color: #000000;
-  }
 }
 
 * {
@@ -56,10 +40,10 @@
 body {
   font-family: var(--font-sans);
   background-color: var(--bg-color);
-  /* Concrete texture grid using pink dots! */
+  /* Concrete texture grid using hot pink dots! */
   background-image: 
-    radial-gradient(rgba(217, 70, 239, 0.15) 2px, transparent 0),
-    radial-gradient(rgba(217, 70, 239, 0.15) 2px, transparent 0);
+    radial-gradient(rgba(236, 72, 153, 0.1) 2px, transparent 0),
+    radial-gradient(rgba(236, 72, 153, 0.1) 2px, transparent 0);
   background-size: 24px 24px;
   background-position: 0 0, 12px 12px;
   color: var(--text-color);
@@ -69,14 +53,6 @@ body {
   align-items: flex-start;
   min-height: 100vh;
   padding: 20px 0;
-}
-
-@media (prefers-color-scheme: dark) {
-  body {
-    background-image: 
-      radial-gradient(rgba(236, 72, 153, 0.1) 2px, transparent 0),
-      radial-gradient(rgba(236, 72, 153, 0.1) 2px, transparent 0);
-  }
 }
 
 #app {
@@ -118,14 +94,7 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: 0.03em;
   line-height: 1.1;
   color: var(--text-color);
-  text-shadow: 2px 2px 0px var(--primary-color); /* Pink text shadow for high contrast tags */
-}
-
-/* Adjust heading shadow for readability when on dark backgrounds */
-@media (prefers-color-scheme: dark) {
-  h1, h2, h3, h4, h5, h6 {
-    text-shadow: 2px 2px 0px rgba(236, 72, 153, 0.7);
-  }
+  text-shadow: 2px 2px 0px rgba(236, 72, 153, 0.7);
 }
 
 /* Header & Navigation Stepper */
@@ -348,13 +317,7 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   gap: 12px;
   padding: 10px 0;
-  border-bottom: 2px dashed rgba(217, 70, 239, 0.2); /* Pink dashed separator */
-}
-
-@media (prefers-color-scheme: dark) {
-  .item-row {
-    border-bottom: 2px dashed rgba(236, 72, 153, 0.2);
-  }
+  border-bottom: 2px dashed rgba(236, 72, 153, 0.2); /* Pink dashed separator */
 }
 
 .item-row:last-child {
@@ -704,13 +667,6 @@ input[type="text"]:focus, input[type="password"]:focus {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-@media (prefers-color-scheme: dark) {
-  .receipt-totals-sticker {
-    background-color: #fdfcee; /* Keep it light and paper-like even in dark mode for massive popup sticker contrast! */
-    color: #000000 !important;
-  }
-}
-
 .receipt-totals-sticker:hover {
   transform: rotate(0deg) scale(1.02);
   box-shadow: 7px 7px 0px var(--primary-color);
@@ -726,14 +682,9 @@ input[type="text"]:focus, input[type="password"]:focus {
 }
 
 .text-primary-pink {
-  color: #d946ef !important; /* Vivid pink */
+  color: #ec4899 !important; /* Hot pink */
   font-weight: 900;
   font-size: 16px;
-}
-@media (prefers-color-scheme: dark) {
-  .text-primary-pink {
-    color: #ec4899 !important; /* Hot pink in dark mode */
-  }
 }
 
 /* Neobrutalist Participant Badges/Rows */
@@ -830,15 +781,9 @@ input[type="text"]:focus, input[type="password"]:focus {
 }
 
 .selection-row.selected {
-  background-color: rgba(217, 70, 239, 0.08) !important;
+  background-color: rgba(236, 72, 153, 0.15) !important;
   border-color: var(--primary-color) !important;
   box-shadow: 4px 4px 0px var(--primary-color) !important;
-}
-
-@media (prefers-color-scheme: dark) {
-  .selection-row.selected {
-    background-color: rgba(236, 72, 153, 0.15) !important;
-  }
 }
 
 .custom-checkbox {
@@ -901,15 +846,9 @@ input[type="text"]:focus, input[type="password"]:focus {
   font-size: 11px;
   font-weight: 700;
   color: var(--text-secondary);
-  border-top: 2px dashed rgba(0,0,0,0.1);
+  border-top: 2px dashed rgba(255,255,255,0.15);
   padding-top: 8px;
   margin-top: 4px;
-}
-
-@media (prefers-color-scheme: dark) {
-  .split-details-row {
-    border-top: 2px dashed rgba(255,255,255,0.15);
-  }
 }
 
 .tip-tag-btn {
