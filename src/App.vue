@@ -34,9 +34,53 @@ const loadHistoryFromStorage = () => {
   }
 }
 
+// Custom Name Picker State
+const isQuickPickerOpen = ref(false)
+const activePickerParticipantId = ref<string | null>(null)
+const savedCustomNames = ref<string[]>([])
+
+const loadSavedNames = () => {
+  try {
+    const savedStr = localStorage.getItem('splat_saved_names') || '[]'
+    savedCustomNames.value = JSON.parse(savedStr)
+  } catch (e) {
+    console.error('Failed to load saved names', e)
+  }
+}
+
 onMounted(() => {
   loadHistoryFromStorage()
+  loadSavedNames()
 })
+
+const onParticipantNameChanged = (name: string) => {
+  store.saveToLocalStorage()
+  
+  const trimmed = name.trim()
+  if (!trimmed) return
+  if (/^Person\s*\d+$/i.test(trimmed)) return // Ignore default Person 1, etc.
+  
+  if (!savedCustomNames.value.includes(trimmed)) {
+    savedCustomNames.value.push(trimmed)
+    localStorage.setItem('splat_saved_names', JSON.stringify(savedCustomNames.value))
+  }
+}
+
+const openQuickPicker = (participantId: string) => {
+  activePickerParticipantId.value = participantId
+  isQuickPickerOpen.value = true
+}
+
+const applyQuickName = (name: string) => {
+  if (activePickerParticipantId.value) {
+    const p = store.participants.find(part => part.id === activePickerParticipantId.value)
+    if (p) {
+      p.name = name
+      store.saveToLocalStorage()
+    }
+  }
+  isQuickPickerOpen.value = false
+}
 
 // Auto-save history when share step is reached
 watch(() => store.step, (newStep) => {
@@ -714,12 +758,18 @@ const selectAllText = (event: Event) => {
             class="participant-badge-row"
           >
             <div class="flex items-center gap-3 flex-1 mr-2">
-              <div class="avatar-badge">{{ getInitials(p.name) }}</div>
+              <div 
+                class="avatar-badge cursor-pointer hover:scale-105 transition-transform" 
+                title="Quick Pick Name"
+                @click="openQuickPicker(p.id)"
+              >
+                {{ getInitials(p.name) }}
+              </div>
               <input 
                 v-model="p.name" 
                 type="text" 
                 class="participant-name-input"
-                @change="store.saveToLocalStorage()"
+                @change="onParticipantNameChanged(p.name)"
                 @focus="selectAllText"
               />
             </div>
@@ -1075,6 +1125,34 @@ const selectAllText = (event: Event) => {
             :disabled="bulkSelectedParticipants.length === 0"
             @click="applyBulkAssignment" 
           />
+        </div>
+      </div>
+    </Dialog>
+
+    <!-- Quick Select Participant Name Picker Dialogue -->
+    <Dialog 
+      v-model:visible="isQuickPickerOpen" 
+      modal 
+      header="Quick Select Name" 
+      :style="{ width: '90%', maxWidth: '340px' }"
+      :draggable="false"
+      class="dark:bg-slate-900"
+    >
+      <div class="flex flex-col gap-3">
+        <p class="text-xs text-secondary mb-1">Select from your saved custom names:</p>
+        <div class="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
+          <div 
+            v-for="name in savedCustomNames" 
+            :key="name"
+            class="quick-name-row"
+            @click="applyQuickName(name)"
+          >
+            <span class="font-bold text-sm text-slate-800 dark:text-slate-100">{{ name }}</span>
+            <i class="pi pi-plus text-xs text-primary"></i>
+          </div>
+          <div v-if="savedCustomNames.length === 0" class="text-center py-6 text-xs text-secondary italic border-2 border-dashed border-slate-700 rounded-lg">
+            No saved names yet. Type a name to save it automatically!
+          </div>
         </div>
       </div>
     </Dialog>
