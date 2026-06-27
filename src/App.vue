@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, computed } from 'vue'
+import { ref, computed } from 'vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
@@ -18,8 +18,7 @@ import {
 // Local UI states
 const cameraInput = ref<HTMLInputElement | null>(null)
 const galleryInput = ref<HTMLInputElement | null>(null)
-const newParticipantName = ref('')
-const participantInputRef = ref<HTMLInputElement | null>(null)
+
 const copySuccess = ref(false)
 const showFullNames = ref(false)
 
@@ -75,20 +74,6 @@ const startManualEntry = () => {
   store.addItem('New Item', 0)
 }
 
-// Add participant
-const addParticipant = () => {
-  const name = newParticipantName.value.trim()
-  if (name) {
-    store.addParticipant(name)
-    newParticipantName.value = ''
-    // Keep focus on input for rapid typing
-    nextTick(() => {
-      if (participantInputRef.value) {
-        participantInputRef.value.focus()
-      }
-    })
-  }
-}
 
 // Handle navigation validation
 const canGoNext = computed(() => {
@@ -112,12 +97,6 @@ const goNext = () => {
     store.step = 'edit'
   } else if (store.step === 'edit') {
     store.step = 'participants'
-    // Auto-focus participant input on step enter
-    nextTick(() => {
-      if (participantInputRef.value) {
-        participantInputRef.value.focus()
-      }
-    })
   } else if (store.step === 'participants') {
     store.step = 'allocate'
     // Automatically assign everyone to all items if they haven't been customized yet
@@ -636,7 +615,7 @@ const selectAllText = (event: Event) => {
         <div class="mb-2 py-2">
           <div class="flex gap-1 flex-wrap">
             <Button 
-              v-for="n in [2, 3, 4, 5, 6, 7, 8, 9, 10]" 
+              v-for="n in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]" 
               :key="n"
               :label="String(n)" 
               class="quick-add-btn"
@@ -677,23 +656,7 @@ const selectAllText = (event: Event) => {
           </p>
         </div>
 
-        <!-- Add Participant input (at the very bottom) -->
-        <div class="flex gap-2 py-2 mt-2">
-          <input 
-            ref="participantInputRef"
-            v-model="newParticipantName" 
-            type="text" 
-            placeholder="Add custom name..." 
-            class="flex-1 p-2 border border-slate-300 dark:border-slate-700 rounded-md bg-transparent text-sm focus:outline-none focus:border-indigo-500" 
-            @keyup.enter="addParticipant" 
-          />
-          <Button 
-            label="Add" 
-            icon="pi pi-user-plus" 
-            class="p-button-sm" 
-            @click="addParticipant" 
-          />
-        </div>
+
       </div>
     </div>
 
