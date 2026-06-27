@@ -836,12 +836,6 @@ const selectAllText = (event: Event) => {
           :class="copySuccess ? 'p-button-success' : 'p-button-primary'"
           @click="copyToClipboard" 
         />
-        <Button 
-          label="Start New Split" 
-          icon="pi pi-refresh" 
-          class="w-full p-button-text" 
-          @click="store.reset()" 
-        />
       </div>
     </div>
 
@@ -859,7 +853,7 @@ const selectAllText = (event: Event) => {
 
       <!-- Center: Reset Button -->
       <Button 
-        v-if="store.step !== 'capture'" 
+        v-if="store.step !== 'capture' && store.step !== 'share'" 
         label="Reset" 
         icon="pi pi-refresh" 
         class="p-button-text p-button-sm text-rose-500/80 hover:text-rose-500" 
@@ -869,6 +863,7 @@ const selectAllText = (event: Event) => {
 
       <!-- Right: Next Button -->
       <Button 
+        v-slot:default
         v-if="store.step !== 'share'" 
         label="Next" 
         icon="pi pi-chevron-right" 
@@ -877,7 +872,14 @@ const selectAllText = (event: Event) => {
         :disabled="!canGoNext" 
         @click="goNext" 
       />
-      <div v-else class="min-w-[70px]"></div> <!-- spacer -->
+      <Button 
+        v-slot:default
+        v-else
+        label="Start New Split" 
+        icon="pi pi-refresh" 
+        class="p-button-sm p-button-primary min-w-[140px]" 
+        @click="store.reset()" 
+      />
     </nav>
 
     <!-- Modal dialogue for assignment selection -->
