@@ -111,21 +111,24 @@ h1, h2, h3, h4, h5, h6 {
   z-index: 10;
 }
 
-.brand {
-  font-family: var(--font-marker);
-  font-size: 38px;
-  letter-spacing: 0.05em;
-  color: var(--primary-color);
+.brand-logo-container {
   display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 8px;
-  transform: rotate(-3deg);
-  text-shadow: 3px 3px 0px var(--stroke-color);
-  user-select: none;
+  margin-top: 4px;
 }
 
-.brand span {
-  color: var(--text-color);
+.brand-logo {
+  height: 64px;
+  border-radius: var(--radius-sm);
+  border: 3px solid var(--stroke-color);
+  box-shadow: 4px 4px 0px var(--primary-color);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.brand-logo:hover {
+  transform: scale(1.05) rotate(-1.5deg);
+  box-shadow: 5px 5px 0px var(--primary-color);
 }
 
 .stepper {
