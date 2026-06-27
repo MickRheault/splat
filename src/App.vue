@@ -161,9 +161,8 @@ const copyToClipboard = async () => {
 <template>
   <!-- Main Header Stepper -->
   <header class="app-header">
-    <div class="brand">
-      <i class="pi pi-percentage text-2xl"></i>
-      <span>Splat</span>
+    <div class="brand-logo-container">
+      <img src="/splat_logo.png?v=2" alt="SPLAT Logo" class="brand-logo" />
     </div>
     
     <!-- Step indicator visualization -->
@@ -212,7 +211,6 @@ const copyToClipboard = async () => {
     <div v-else-if="store.step === 'capture'" class="step-view">
       <div class="text-center py-4">
         <h2 class="text-2xl font-extrabold mb-1">Split Bills Instantly</h2>
-        <p class="text-secondary">Proportional math, rounding errors corrected, completely stateless.</p>
       </div>
 
       <!-- OCR Error Notice -->
