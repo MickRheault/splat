@@ -249,7 +249,6 @@ const selectAllText = (event: Event) => {
           type="file" 
           ref="fileInput" 
           accept="image/*" 
-          capture="environment" 
           class="hidden" 
           @change="onFileCaptured" 
         />
