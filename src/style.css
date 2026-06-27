@@ -720,6 +720,14 @@ input[type="text"]:focus, input[type="password"]:focus {
   transform: rotate(-1deg);
 }
 
+.error-banner h5 {
+  color: #9f1239 !important; /* High contrast dark red for light mode */
+}
+
+.dark .error-banner h5 {
+  color: #fda4af !important; /* High contrast light pink/red for dark mode */
+}
+
 .settings-panel {
   background-color: var(--surface-color);
   border: 3px solid var(--stroke-color);
