@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI
 
 on:
   push:
@@ -6,11 +6,8 @@ on:
   pull_request:
     branches: [ main ]
 
-permissions:
-  contents: write
-
 jobs:
-  build-test-deploy:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -31,10 +28,3 @@ jobs:
 
     - name: Build project
       run: npm run build
-
-    - name: Deploy to GitHub Pages
-      if: github.ref == 'refs/heads/main'
-      uses: JamesIves/github-pages-deploy-action@v4
-      with:
-        folder: dist
-        branch: gh-pages
