@@ -125,9 +125,7 @@ const goBack = () => {
 
 // Reset app back to landing page
 const handleReset = () => {
-  if (window.confirm("Are you sure you want to reset? This will clear all data and return to the home page.")) {
-    store.reset()
-  }
+  store.reset()
 }
 
 // Open allocation dialog for an item
