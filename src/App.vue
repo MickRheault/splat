@@ -465,7 +465,7 @@ const selectAllText = (event: Event) => {
             <InputText 
               v-model="item.name" 
               placeholder="Item name" 
-              class="flex-1 p-inputtext-sm" 
+              class="flex-1 min-w-0 p-inputtext-sm" 
               @focus="selectAllText"
             />
             <InputNumber 
