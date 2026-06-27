@@ -92,6 +92,9 @@ const addParticipant = () => {
 
 // Handle navigation validation
 const canGoNext = computed(() => {
+  if (store.step === 'capture') {
+    return false
+  }
   if (store.step === 'edit') {
     return store.items.length > 0 && itemsSubtotal.value > 0
   }
@@ -145,6 +148,140 @@ const goBack = () => {
 const openAllocation = (itemId: string) => {
   selectedItemId.value = itemId
   isAllocationOpen.value = true
+}
+
+// Bulk Allocation State & Handlers
+const isBulkMode = ref(false)
+const bulkSelectedItems = ref<string[]>([])
+const isBulkAssignOpen = ref(false)
+const bulkSelectedParticipants = ref<string[]>([])
+
+let longPressTimer: ReturnType<typeof setTimeout> | null = null
+let longPressTriggered = false
+let startX = 0
+let startY = 0
+
+const onItemPointerDown = (event: PointerEvent, itemId: string) => {
+  startX = event.clientX
+  startY = event.clientY
+  longPressTriggered = false
+  
+  longPressTimer = setTimeout(() => {
+    longPressTriggered = true
+    enterBulkMode(itemId)
+  }, 600) // 600ms hold triggers bulk selection mode
+}
+
+const onItemPointerUp = (event: PointerEvent, itemId: string) => {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer)
+    longPressTimer = null
+  }
+  
+  if (longPressTriggered) {
+    event.preventDefault()
+    event.stopPropagation()
+    return
+  }
+  
+  if (isBulkMode.value) {
+    toggleBulkItem(itemId)
+  } else {
+    openAllocation(itemId)
+  }
+}
+
+const onItemPointerMove = (event: PointerEvent) => {
+  if (longPressTimer) {
+    const dx = Math.abs(event.clientX - startX)
+    const dy = Math.abs(event.clientY - startY)
+    if (dx > 8 || dy > 8) {
+      clearTimeout(longPressTimer)
+      longPressTimer = null
+    }
+  }
+}
+
+const onItemPointerLeave = () => {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer)
+    longPressTimer = null
+  }
+}
+
+const enterBulkMode = (itemId: string) => {
+  isBulkMode.value = true
+  bulkSelectedItems.value = [itemId]
+  if (navigator.vibrate) {
+    navigator.vibrate(50)
+  }
+}
+
+const toggleBulkItem = (itemId: string) => {
+  const idx = bulkSelectedItems.value.indexOf(itemId)
+  if (idx > -1) {
+    bulkSelectedItems.value.splice(idx, 1)
+  } else {
+    bulkSelectedItems.value.push(itemId)
+  }
+  
+  if (bulkSelectedItems.value.length === 0) {
+    exitBulkMode()
+  }
+}
+
+const exitBulkMode = () => {
+  isBulkMode.value = false
+  bulkSelectedItems.value = []
+}
+
+const selectAllItems = () => {
+  bulkSelectedItems.value = store.items.map(item => item.id)
+}
+
+const toggleBulkParticipant = (pId: string) => {
+  const idx = bulkSelectedParticipants.value.indexOf(pId)
+  if (idx > -1) {
+    bulkSelectedParticipants.value.splice(idx, 1)
+  } else {
+    bulkSelectedParticipants.value.push(pId)
+  }
+}
+
+const bulkSelectEveryone = () => {
+  bulkSelectedParticipants.value = store.participants.map(p => p.id)
+}
+
+const bulkClearEveryone = () => {
+  bulkSelectedParticipants.value = []
+}
+
+const openBulkAssignDialog = () => {
+  bulkSelectedParticipants.value = []
+  isBulkAssignOpen.value = true
+}
+
+const applyBulkAssignment = () => {
+  bulkSelectedItems.value.forEach(itemId => {
+    const item = store.items.find(i => i.id === itemId)
+    if (item) {
+      item.assignedTo = [...bulkSelectedParticipants.value]
+    }
+  })
+  store.saveToLocalStorage()
+  isBulkAssignOpen.value = false
+  exitBulkMode()
+}
+
+const clearBulkAssignments = () => {
+  bulkSelectedItems.value.forEach(itemId => {
+    const item = store.items.find(i => i.id === itemId)
+    if (item) {
+      item.assignedTo = []
+    }
+  })
+  store.saveToLocalStorage()
+  exitBulkMode()
 }
 
 // Format participant initials for circular badges
@@ -250,10 +387,10 @@ const selectAllText = (event: Event) => {
       <div class="flex flex-col gap-4">
         <!-- Option 1: Live Camera Snap -->
         <div class="capture-option-card" @click="triggerCamera">
-          <i class="pi pi-camera capture-icon-sm"></i>
-          <div class="text-left flex-1">
-            <h4 class="font-bold text-md">Take Live Photo</h4>
-            <p class="text-secondary text-xs">Snap a photo of your receipt</p>
+          <i class="pi pi-camera capture-icon-sm" style="font-size: 48px !important;"></i>
+          <div>
+            <h4 class="font-bold text-lg">Take Live Photo</h4>
+            <p class="text-secondary text-sm">Snap a photo of your receipt</p>
           </div>
           <input 
             type="file" 
@@ -267,10 +404,10 @@ const selectAllText = (event: Event) => {
 
         <!-- Option 2: Gallery Upload -->
         <div class="capture-option-card" @click="triggerGallery">
-          <i class="pi pi-images capture-icon-sm"></i>
-          <div class="text-left flex-1">
-            <h4 class="font-bold text-md">Choose from Gallery</h4>
-            <p class="text-secondary text-xs">Upload an existing photo or screenshot</p>
+          <i class="pi pi-images capture-icon-sm" style="font-size: 48px !important;"></i>
+          <div>
+            <h4 class="font-bold text-lg">Choose from Gallery</h4>
+            <p class="text-secondary text-sm">Upload an existing photo or screenshot</p>
           </div>
           <input 
             type="file" 
@@ -525,55 +662,68 @@ const selectAllText = (event: Event) => {
           v-for="item in store.items" 
           :key="item.id" 
           class="alloc-item-card" 
-          @click="openAllocation(item.id)"
+          :class="{ 'bulk-selected': bulkSelectedItems.includes(item.id), 'bulk-mode-item': isBulkMode }"
+          @pointerdown="onItemPointerDown($event, item.id)"
+          @pointerup="onItemPointerUp($event, item.id)"
+          @pointermove="onItemPointerMove($event)"
+          @pointerleave="onItemPointerLeave"
         >
-          <div class="alloc-item-header">
-            <span>{{ item.name }}</span>
-            <span class="text-primary">{{ store.currencySymbol }}{{ item.price.toFixed(2) }}</span>
-          </div>
-          
-          <div class="alloc-badges mt-1">
-            <!-- Case 1: Everyone or empty (which defaults to everyone) -->
-            <span 
-              v-if="item.assignedTo.length === store.participants.length || item.assignedTo.length === 0" 
-              class="avatar-badge everyone"
-            >
-              Everyone
-            </span>
-            
-            <!-- Case 2: 50% or greater assigned (Everyone minus the excluded) -->
-            <template v-else-if="item.assignedTo.length >= store.participants.length / 2">
-              <span class="avatar-badge everyone">Everyone</span>
-              <span 
-                v-for="p in store.participants.filter(p => !item.assignedTo.includes(p.id))" 
-                :key="p.id" 
-                class="avatar-badge excluded"
-                :class="{ 'full-name': showFullNames }"
-                :title="`Excluded: ${p.name}`"
-              >
-                -{{ showFullNames ? p.name : getInitials(p.name) }}
-              </span>
-            </template>
-            
-            <!-- Case 3: Minority assigned (<50%) (List assigned participants in cyan) -->
-            <template v-else>
-              <!-- Included (Assigned) Participants -->
-              <span 
-                v-for="pId in item.assignedTo" 
-                :key="pId" 
-                class="avatar-badge"
-                :class="{ 'full-name': showFullNames }"
-                :title="store.participants.find(p => p.id === pId)?.name"
-              >
-                {{ showFullNames ? (store.participants.find(p => p.id === pId)?.name || '??') : getInitials(store.participants.find(p => p.id === pId)?.name || '??') }}
-              </span>
-            </template>
+          <div class="flex items-center gap-3 w-full">
+            <i 
+              v-if="isBulkMode" 
+              class="pi shrink-0 text-xl" 
+              :class="bulkSelectedItems.includes(item.id) ? 'pi-check-circle text-primary' : 'pi-circle text-secondary'"
+            ></i>
+            <div class="flex-1 min-w-0">
+              <div class="alloc-item-header">
+                <span>{{ item.name }}</span>
+                <span class="text-primary">{{ store.currencySymbol }}{{ item.price.toFixed(2) }}</span>
+              </div>
+              
+              <div class="alloc-badges mt-1">
+                <!-- Case 1: Everyone or empty (which defaults to everyone) -->
+                <span 
+                  v-if="item.assignedTo.length === store.participants.length || item.assignedTo.length === 0" 
+                  class="avatar-badge everyone"
+                >
+                  Everyone
+                </span>
+                
+                <!-- Case 2: 50% or greater assigned (Everyone minus the excluded) -->
+                <template v-else-if="item.assignedTo.length >= store.participants.length / 2">
+                  <span class="avatar-badge everyone">Everyone</span>
+                  <span 
+                    v-for="p in store.participants.filter(p => !item.assignedTo.includes(p.id))" 
+                    :key="p.id" 
+                    class="avatar-badge excluded"
+                    :class="{ 'full-name': showFullNames }"
+                    :title="`Excluded: ${p.name}`"
+                  >
+                    -{{ showFullNames ? p.name : getInitials(p.name) }}
+                  </span>
+                </template>
+                
+                <!-- Case 3: Minority assigned (<50%) (List assigned participants in cyan) -->
+                <template v-else>
+                  <!-- Included (Assigned) Participants -->
+                  <span 
+                    v-for="pId in item.assignedTo" 
+                    :key="pId" 
+                    class="avatar-badge"
+                    :class="{ 'full-name': showFullNames }"
+                    :title="store.participants.find(p => p.id === pId)?.name"
+                  >
+                    {{ showFullNames ? (store.participants.find(p => p.id === pId)?.name || '??') : getInitials(store.participants.find(p => p.id === pId)?.name || '??') }}
+                  </span>
+                </template>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Quick totals visual reference at bottom of allocation -->
-      <div class="bill-card bg-slate-50 dark:bg-slate-800/40 mt-2">
+      <div v-if="!isBulkMode" class="bill-card bg-slate-50 dark:bg-slate-800/40 mt-2">
         <h4 class="font-bold text-xs uppercase tracking-wider text-secondary">Split Preview</h4>
         <div class="flex flex-col gap-1 text-sm mt-1">
           <div 
@@ -584,6 +734,42 @@ const selectAllText = (event: Event) => {
             <span class="font-medium">{{ p.name }}</span>
             <span class="font-bold text-indigo-500">{{ store.currencySymbol }}{{ p.total.toFixed(2) }}</span>
           </div>
+        </div>
+      </div>
+
+      <!-- Bulk Action Bar -->
+      <div v-else class="bill-card border-2 border-primary mt-2 p-3 bg-pink-500/10">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-xs font-black uppercase text-pink-500">
+            ⚡ {{ bulkSelectedItems.length }} selected
+          </span>
+          <div class="flex gap-2">
+            <Button 
+              label="Select All" 
+              class="p-button-text p-button-sm text-[10px]" 
+              @click="selectAllItems" 
+            />
+            <Button 
+              label="Cancel" 
+              class="p-button-text p-button-danger p-button-sm text-[10px]" 
+              @click="exitBulkMode" 
+            />
+          </div>
+        </div>
+        
+        <div class="flex gap-2">
+          <Button 
+            label="Assign Selected" 
+            icon="pi pi-user-edit" 
+            class="flex-1 p-button-sm" 
+            @click="openBulkAssignDialog" 
+          />
+          <Button 
+            label="Clear" 
+            icon="pi pi-trash" 
+            class="p-button-outlined p-button-danger p-button-sm" 
+            @click="clearBulkAssignments" 
+          />
         </div>
       </div>
     </div>
@@ -721,6 +907,64 @@ const selectAllText = (event: Event) => {
           class="p-button-primary w-full mt-1" 
           @click="isAllocationOpen = false" 
         />
+      </div>
+    </Dialog>
+
+    <!-- Bulk Assignment Modal Dialog -->
+    <Dialog 
+      v-model:visible="isBulkAssignOpen" 
+      modal 
+      header="Bulk Assign Items" 
+      :style="{ width: '90%', maxWidth: '400px' }"
+      :draggable="false"
+      class="dark:bg-slate-900"
+    >
+      <div class="flex flex-col gap-4">
+        <p class="text-xs text-secondary">
+          Select participants to assign to the {{ bulkSelectedItems.length }} selected items:
+        </p>
+
+        <!-- Toggle List of Participants -->
+        <div class="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
+          <div 
+            v-for="p in store.participants" 
+            :key="p.id" 
+            class="selection-row"
+            :class="{ 'selected': bulkSelectedParticipants.includes(p.id) }"
+            @click="toggleBulkParticipant(p.id)"
+          >
+            <div class="flex items-center gap-3">
+              <div class="avatar-badge">{{ getInitials(p.name) }}</div>
+              <span class="text-sm font-bold">{{ p.name }}</span>
+            </div>
+            <div class="custom-checkbox" :class="{ 'checked': bulkSelectedParticipants.includes(p.id) }">
+              <i class="pi pi-check" v-if="bulkSelectedParticipants.includes(p.id)"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-2 mt-2">
+          <Button 
+            label="Select Everyone" 
+            class="p-button-outlined p-button-sm flex-1" 
+            @click="bulkSelectEveryone" 
+          />
+          <Button 
+            label="Clear All" 
+            class="p-button-outlined p-button-danger p-button-sm flex-1" 
+            @click="bulkClearEveryone" 
+          />
+        </div>
+
+        <!-- Bulk Action Buttons -->
+        <div class="flex flex-col gap-2 mt-1">
+          <Button 
+            label="Set Assignees" 
+            class="p-button-primary w-full" 
+            :disabled="bulkSelectedParticipants.length === 0"
+            @click="applyBulkAssignment" 
+          />
+        </div>
       </div>
     </Dialog>
 
