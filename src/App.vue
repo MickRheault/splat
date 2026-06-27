@@ -16,7 +16,8 @@ import {
 } from './store'
 
 // Local UI states
-const fileInput = ref<HTMLInputElement | null>(null)
+const cameraInput = ref<HTMLInputElement | null>(null)
+const galleryInput = ref<HTMLInputElement | null>(null)
 const newParticipantName = ref('')
 const participantInputRef = ref<HTMLInputElement | null>(null)
 const copySuccess = ref(false)
@@ -36,8 +37,15 @@ store.loadFromLocalStorage()
 
 // Trigger native device camera
 const triggerCamera = () => {
-  if (fileInput.value) {
-    fileInput.value.click()
+  if (cameraInput.value) {
+    cameraInput.value.click()
+  }
+}
+
+// Trigger gallery file picker
+const triggerGallery = () => {
+  if (galleryInput.value) {
+    galleryInput.value.click()
   }
 }
 
@@ -239,19 +247,39 @@ const selectAllText = (event: Event) => {
         </div>
       </div>
 
-      <div class="capture-container" @click="triggerCamera">
-        <i class="pi pi-camera capture-icon"></i>
-        <div>
-          <h4 class="font-bold text-lg">Snap Receipt Photo</h4>
-          <p class="text-secondary text-sm">Upload from camera roll or take live photo</p>
+      <div class="flex flex-col gap-3">
+        <!-- Option 1: Live Camera Snap -->
+        <div class="capture-container flex items-center gap-3 py-3" @click="triggerCamera">
+          <i class="pi pi-camera capture-icon-sm"></i>
+          <div class="text-left flex-1">
+            <h4 class="font-bold text-md">Take Live Photo</h4>
+            <p class="text-secondary text-xs">Snap a photo of your receipt</p>
+          </div>
+          <input 
+            type="file" 
+            ref="cameraInput" 
+            accept="image/*" 
+            capture="environment" 
+            class="hidden" 
+            @change="onFileCaptured" 
+          />
         </div>
-        <input 
-          type="file" 
-          ref="fileInput" 
-          accept="image/*" 
-          class="hidden" 
-          @change="onFileCaptured" 
-        />
+
+        <!-- Option 2: Gallery Upload -->
+        <div class="capture-container flex items-center gap-3 py-3" @click="triggerGallery">
+          <i class="pi pi-images capture-icon-sm"></i>
+          <div class="text-left flex-1">
+            <h4 class="font-bold text-md">Choose from Gallery</h4>
+            <p class="text-secondary text-xs">Upload an existing photo or screenshot</p>
+          </div>
+          <input 
+            type="file" 
+            ref="galleryInput" 
+            accept="image/*" 
+            class="hidden" 
+            @change="onFileCaptured" 
+          />
+        </div>
       </div>
 
       <div class="text-center mt-4">

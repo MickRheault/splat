@@ -234,6 +234,13 @@ h1, h2, h3, h4, h5, h6 {
   animation: bouncePulse 2s infinite ease-in-out;
 }
 
+.capture-icon-sm {
+  font-size: 36px;
+  color: var(--primary-color);
+  filter: drop-shadow(2px 2px 0px var(--stroke-color));
+  animation: bouncePulse 2s infinite ease-in-out;
+}
+
 @keyframes bouncePulse {
   0%, 100% { transform: scale(1) translateY(0); }
   50% { transform: scale(1.1) translateY(-6px); }
