@@ -494,47 +494,28 @@ const selectAllText = (event: Event) => {
 
         <hr class="border-t border-slate-200 dark:border-slate-700 my-2" />
 
-        <!-- Tax & Tip Input panel -->
-        <div class="flex gap-3">
-          <div class="flex-1 flex flex-col gap-1">
-            <div class="flex justify-between items-center">
-              <label class="text-xs font-semibold text-secondary">Tax Amount</label>
-              <span class="text-[10px] invisible font-bold">&nbsp;</span>
-            </div>
-            <InputNumber 
-              v-model="store.taxInput" 
-              mode="decimal" 
-              :minFractionDigits="2" 
-              :maxFractionDigits="2" 
-              class="p-inputtext-sm" 
-              :style="{ width: '100%' }"
-              :inputStyle="{ width: '100%' }"
-              @focus="selectAllText"
-            />
+        <!-- Tip Input panel (Full Width) -->
+        <div class="flex flex-col gap-1 mt-1">
+          <div class="flex justify-between items-center">
+            <label class="text-xs font-semibold text-secondary">Add Tip?</label>
+            <!-- Switch flat vs percentage -->
+            <span 
+              class="text-[10px] cursor-pointer font-bold" 
+              :class="store.tipType === 'percentage' ? 'text-primary' : 'text-secondary'"
+              @click="store.tipType = store.tipType === 'percentage' ? 'flat' : 'percentage'"
+            >
+              {{ store.tipType === 'percentage' ? '%' : 'Cash' }}
+            </span>
           </div>
-          <div class="flex-1 flex flex-col gap-1">
-            <div class="flex justify-between items-center">
-              <label class="text-xs font-semibold text-secondary">Add Tip?</label>
-              <!-- Switch flat vs percentage -->
-              <span 
-                class="text-[10px] cursor-pointer font-bold" 
-                :class="store.tipType === 'percentage' ? 'text-primary' : 'text-secondary'"
-                @click="store.tipType = store.tipType === 'percentage' ? 'flat' : 'percentage'"
-              >
-                {{ store.tipType === 'percentage' ? '%' : 'Cash' }}
-              </span>
-            </div>
-            <InputNumber 
-              v-model="store.tipInput" 
-              mode="decimal" 
-              :minFractionDigits="store.tipType === 'flat' ? 2 : 0" 
-              :maxFractionDigits="store.tipType === 'flat' ? 2 : 0" 
-              class="p-inputtext-sm" 
-              :style="{ width: '100%' }"
-              :inputStyle="{ width: '100%' }"
-              @focus="selectAllText"
-            />
-          </div>
+          <InputNumber 
+            v-model="store.tipInput" 
+            mode="decimal" 
+            :minFractionDigits="store.tipType === 'flat' ? 2 : 0" 
+            :maxFractionDigits="store.tipType === 'flat' ? 2 : 0" 
+            class="p-inputtext-sm w-full" 
+            :inputStyle="{ width: '100%' }"
+            @focus="selectAllText"
+          />
         </div>
 
         <!-- Quick Tip Suggester -->
@@ -556,16 +537,70 @@ const selectAllText = (event: Event) => {
           />
         </div>
 
+        <!-- Fees & Taxes Subtotal Adjustments List -->
+        <div class="flex flex-col gap-1.5 mt-3">
+          <div class="flex justify-between items-center px-1">
+            <label class="text-xs font-semibold text-secondary uppercase tracking-wider">Fees & Taxes</label>
+            <Button 
+              icon="pi pi-plus" 
+              label="Add Line" 
+              class="p-button-text p-button-sm text-[10px]" 
+              @click="store.addAdjustment('Service Charge', 0)"
+            />
+          </div>
+          
+          <div class="flex flex-col gap-2 max-h-[160px] overflow-y-auto pr-1">
+            <div 
+              v-for="adj in store.adjustments" 
+              :key="adj.id" 
+              class="item-row"
+            >
+               <InputText 
+                 v-model="adj.name" 
+                 placeholder="Fee / Tax / Rounding" 
+                 class="item-name-input p-inputtext-sm" 
+                 @focus="selectAllText"
+               />
+               <InputNumber 
+                 v-model="adj.value" 
+                 mode="decimal" 
+                 :minFractionDigits="2" 
+                 :maxFractionDigits="2" 
+                 placeholder="0.00" 
+                 class="item-price-input" 
+                 @focus="selectAllText"
+               />
+               <Button 
+                 icon="pi pi-trash" 
+                 class="item-delete-btn" 
+                 @click="store.removeAdjustment(adj.id)" 
+               />
+            </div>
+            
+            <!-- Empty state if no adjustments are configured -->
+            <div v-if="store.adjustments.length === 0" class="text-center py-2 border-2 border-dashed border-slate-700 rounded-lg">
+              <span class="text-xs text-secondary italic">No fees or taxes. Click Add Line to add any.</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Totals Preview card (Receipt Sticker style) -->
         <div class="receipt-totals-sticker">
           <div class="flex justify-between">
             <span>SUBTOTAL:</span>
             <span class="font-bold">{{ store.currencySymbol }}{{ itemsSubtotal.toFixed(2) }}</span>
           </div>
-          <div class="flex justify-between">
-            <span>TAX:</span>
-            <span class="font-bold">{{ store.currencySymbol }}{{ store.taxInput.toFixed(2) }}</span>
+          
+          <!-- Dynamic Adjustments display list -->
+          <div 
+            v-for="adj in store.adjustments" 
+            :key="adj.id" 
+            class="flex justify-between text-xs text-secondary/90"
+          >
+            <span>{{ adj.name.toUpperCase() }}:</span>
+            <span>{{ store.currencySymbol }}{{ adj.value.toFixed(2) }}</span>
           </div>
+          
           <div class="flex justify-between">
             <span>TIP:</span>
             <span class="font-bold">{{ store.currencySymbol }}{{ tipAmount.toFixed(2) }}</span>

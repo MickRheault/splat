@@ -1,5 +1,5 @@
 import { describe, expect, test, beforeEach, vi } from 'vitest'
-import { store, itemsSubtotal, tipAmount, totalBill, billBreakdown, shareTextSummary } from './store'
+import { store, itemsSubtotal, tipAmount, totalAdjustments, totalBill, billBreakdown, shareTextSummary } from './store'
 
 describe('Splat Core Store & Math Logic', () => {
   beforeEach(() => {
@@ -122,7 +122,7 @@ describe('Splat Core Store & Math Logic', () => {
       store.addItem('Steak', 40)
       store.addItem('Salad', 10) // Total subtotal = 50
 
-      store.taxInput = 5  // 10% tax
+      store.addAdjustment('Tax', 5)  // 10% tax
       store.tipInput = 10 // 20% tip ($10)
       store.tipType = 'flat'
 
@@ -168,7 +168,7 @@ describe('Splat Core Store & Math Logic', () => {
       // Bob = 5 (Salad) + 5 (half Fries) = 10
       // Total subtotal = 30
       
-      store.taxInput = 3  // 10% tax
+      store.addAdjustment('Tax', 3)  // 10% tax
       store.tipInput = 6  // 20% tip
       store.tipType = 'flat'
       // Total bill = 30 + 3 + 6 = 39
@@ -240,7 +240,7 @@ describe('Splat Core Store & Math Logic', () => {
         step: 'edit',
         items: [{ id: '1', name: 'Water', price: 2.50, assignedTo: [] }],
         participants: [{ id: 'p1', name: 'Bob' }],
-        taxInput: 0.50,
+        adjustments: [{ id: 'a1', name: 'Tax', value: 0.50 }],
         tipInput: 10,
         tipType: 'percentage'
       }
@@ -253,7 +253,7 @@ describe('Splat Core Store & Math Logic', () => {
       expect(store.participants[0].name).toBe('Bob')
       expect(store.items).toHaveLength(1)
       expect(store.items[0].name).toBe('Water')
-      expect(store.taxInput).toBe(0.50)
+      expect(totalAdjustments.value).toBe(0.50)
       
       getItemSpy.mockRestore()
     })
@@ -274,7 +274,7 @@ describe('Splat Core Store & Math Logic', () => {
       expect(store.isParsing).toBe(false)
       expect(store.step).toBe('edit')
       expect(store.items.length).toBeGreaterThan(0)
-      expect(store.taxInput).toBeGreaterThan(0)
+      expect(totalAdjustments.value).toBeGreaterThan(0)
       expect(store.tipInput).toBe(0)
       
       vi.useRealTimers()
@@ -294,7 +294,7 @@ describe('Splat Core Store & Math Logic', () => {
       store.addItem('Salad', 6)
       store.items[1].assignedTo = [bobId]
 
-      store.taxInput = 1.60
+      store.addAdjustment('Tax', 1.60)
       store.tipInput = 3.20
       store.tipType = 'flat'
 

@@ -12,6 +12,12 @@ export interface Participant {
   name: string
 }
 
+export interface Adjustment {
+  id: string
+  name: string
+  value: number
+}
+
 // Mock receipt templates for testing
 const MOCK_RECEIPT_TEMPLATES = [
   {
@@ -44,7 +50,7 @@ export const store = reactive({
   receiptImage: null as string | null,
   items: [] as Item[],
   participants: [] as Participant[],
-  taxInput: 0,
+  adjustments: [] as Adjustment[],
   tipInput: 0,
   tipType: 'percentage' as 'percentage' | 'flat',
   currencySymbol: '$',
@@ -57,7 +63,7 @@ export const store = reactive({
     this.receiptImage = null
     this.items = []
     this.participants = []
-    this.taxInput = 0
+    this.adjustments = []
     this.tipInput = 0
     this.tipType = 'percentage'
     this.ocrError = null
@@ -90,7 +96,9 @@ export const store = reactive({
           assignedTo: []
         }))
         
-        this.taxInput = template.tax
+        this.adjustments = [
+          { id: `adj_${Date.now()}_0`, name: 'Tax / VAT', value: template.tax }
+        ]
         this.tipInput = 0
         this.tipType = 'percentage'
         
@@ -101,13 +109,27 @@ export const store = reactive({
     }
   },
 
+  addAdjustment(name = 'New Charge', value = 0) {
+    this.adjustments.push({
+      id: `adj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name,
+      value
+    })
+    this.saveToLocalStorage()
+  },
+
+  removeAdjustment(id: string) {
+    this.adjustments = this.adjustments.filter(a => a.id !== id)
+    this.saveToLocalStorage()
+  },
+
   async parseWithGemini(imageSrc: string) {
     try {
       const base64Data = imageSrc.includes(';base64,') 
         ? imageSrc.split(';base64,')[1] 
         : imageSrc
 
-      const prompt = 'Analyze this receipt image. Extract all line items and their prices. For the "tax" field, calculate the sum of all tax lines, VAT, service charges, credit card fees, and rounding adjustments (sum them up if there are multiple, so that all additional subtotal fees are captured). Extract the tip amount (if explicitly written, otherwise set tip to 0). Also detect the currency symbol or currency code used on the receipt (e.g. $, €, £, ¥, SGD, etc.). Provide the output in a strict JSON format matching this schema: {"items": [{"name": "item name", "price": 12.34}], "tax": 1.23, "tip": 0.0, "currency": "$"}. If the currency is not specified or cannot be identified, default the "currency" field to "$". Do not wrap the JSON in markdown code blocks, just return raw JSON.'
+      const prompt = 'Analyze this receipt image. Extract all line items and their prices. Also extract any subtotal adjustments or fee lines (such as Tax, VAT, Service Charge, Card Surcharge, Rounding, or Discounts) into the "adjustments" array with their exact names and values (use negative values for discounts). Extract the tip amount (if explicitly written, otherwise set tip to 0). Detect the currency symbol or code. Provide strict JSON matching this schema: {"items": [{"name": "item name", "price": 12.34}], "adjustments": [{"name": "VAT 7%", "value": 1.23}], "tip": 0.0, "currency": "$"}. If no adjustments are found, return an empty array for "adjustments". Do not wrap the JSON in markdown code blocks, just return raw JSON.'
 
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`, {
         method: 'POST',
@@ -143,7 +165,11 @@ export const store = reactive({
         price: Number(item.price) || 0,
         assignedTo: []
       }))
-      this.taxInput = Number(result.tax) || 0
+      this.adjustments = (result.adjustments || []).map((adj: any, idx: number) => ({
+        id: `adj_${Date.now()}_${idx}`,
+        name: adj.name || 'Tax',
+        value: Number(adj.value) || 0
+      }))
       this.tipInput = Number(result.tip) || 0
       this.tipType = 'flat'
       this.currencySymbol = result.currency || '$'
@@ -258,7 +284,7 @@ export const store = reactive({
         receiptImage: this.receiptImage,
         items: this.items,
         participants: this.participants,
-        taxInput: this.taxInput,
+        adjustments: this.adjustments,
         tipInput: this.tipInput,
         tipType: this.tipType,
         currencySymbol: this.currencySymbol
@@ -278,7 +304,7 @@ export const store = reactive({
       if (data.receiptImage !== undefined) this.receiptImage = data.receiptImage
       if (data.items) this.items = data.items
       if (data.participants) this.participants = data.participants
-      if (data.taxInput !== undefined) this.taxInput = Number(data.taxInput) || 0
+      if (data.adjustments) this.adjustments = data.adjustments
       if (data.tipInput !== undefined) this.tipInput = Number(data.tipInput) || 0
       if (data.tipType) this.tipType = data.tipType
       if (data.currencySymbol) this.currencySymbol = data.currencySymbol
@@ -301,15 +327,19 @@ export const tipAmount = computed(() => {
   return Number(store.tipInput) || 0
 })
 
+export const totalAdjustments = computed(() => {
+  return store.adjustments.reduce((sum, adj) => sum + (Number(adj.value) || 0), 0)
+})
+
 export const totalBill = computed(() => {
-  return itemsSubtotal.value + (Number(store.taxInput) || 0) + tipAmount.value
+  return itemsSubtotal.value + totalAdjustments.value + tipAmount.value
 })
 
 export const billBreakdown = computed(() => {
   const activeParticipants = store.participants
   const activeItems = store.items
   const subtotalVal = itemsSubtotal.value
-  const taxVal = Number(store.taxInput) || 0
+  const taxVal = totalAdjustments.value
   const tipVal = tipAmount.value
   const totalVal = totalBill.value
 
@@ -380,14 +410,20 @@ export const shareTextSummary = computed(() => {
   breakdown.forEach(p => {
     text += `👤 *${p.name}* owes *${currency}${p.total.toFixed(2)}*\n`
     text += `   ↳ Subtotal: ${currency}${p.subtotal.toFixed(2)}\n`
-    if (p.tax > 0) text += `   ↳ Tax: ${currency}${p.tax.toFixed(2)}\n`
+    if (p.tax !== 0) text += `   ↳ Adjustments/Fees: ${currency}${p.tax.toFixed(2)}\n`
     if (p.tip > 0) text += `   ↳ Tip: ${currency}${p.tip.toFixed(2)}\n`
     text += `\n`
   })
   
   text += `---------------------------\n`
   text += `🧾 *Subtotal:* ${currency}${itemsSubtotal.value.toFixed(2)}\n`
-  if (store.taxInput > 0) text += `🏛️ *Tax:* ${currency}${store.taxInput.toFixed(2)}\n`
+  
+  store.adjustments.forEach(adj => {
+    if (adj.value !== 0) {
+      text += `🏛️ *${adj.name}:* ${currency}${adj.value.toFixed(2)}\n`
+    }
+  })
+  
   if (tipAmount.value > 0) text += `💡 *Tip:* ${currency}${tipAmount.value.toFixed(2)}\n`
   text += `💰 *Total Bill:* ${currency}${totalBill.value.toFixed(2)}\n\n`
   text += `Split proportionally using Splat!`
