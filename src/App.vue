@@ -397,18 +397,19 @@ const selectAllText = (event: Event) => {
       </div>
 
       <!-- OCR Error Notice -->
-      <div v-if="store.ocrError" class="error-banner mb-2">
+      <div v-if="store.ocrError" class="error-banner mb-3">
         <div class="flex justify-between items-start">
           <div class="flex gap-2 items-start text-left">
-            <i class="pi pi-exclamation-triangle text-rose-500 mt-1"></i>
+            <i class="pi pi-exclamation-triangle text-rose-500 mt-0.5" style="font-size: 1.1rem;"></i>
             <div>
-              <h5 class="font-bold text-sm text-rose-500">OCR Parsing Failed</h5>
-              <p class="text-xs text-secondary">{{ store.ocrError }}</p>
+              <h5 class="font-extrabold text-sm text-slate-900 dark:text-slate-100">OCR Parsing Failed</h5>
+              <p class="text-xs text-secondary mt-0.5">{{ store.ocrError }}</p>
             </div>
           </div>
           <Button 
             icon="pi pi-times" 
             class="p-button-text p-button-danger p-button-sm" 
+            :style="{ height: 'auto', minWidth: 'auto', padding: '0 !important' }"
             @click="store.ocrError = null" 
           />
         </div>

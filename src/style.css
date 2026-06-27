@@ -711,21 +711,18 @@ input[type="text"]:focus, input[type="password"]:focus {
 .text-green-500 { color: #10b981; }
 .text-amber-500 { color: #eab308; }
 
+/* White/surface background card with neon pink shadow backing */
 .error-banner {
-  background-color: rgba(239, 68, 68, 0.08);
+  background-color: var(--surface-color);
   border: 3px solid var(--stroke-color);
   border-radius: var(--radius-md);
   padding: 12px;
-  box-shadow: var(--shadow-block-sm);
+  box-shadow: 4px 4px 0px var(--primary-color); /* Neon pink shadow backing */
   transform: rotate(-1deg);
 }
 
 .error-banner h5 {
-  color: #9f1239 !important; /* High contrast dark red for light mode */
-}
-
-.dark .error-banner h5 {
-  color: #fda4af !important; /* High contrast light pink/red for dark mode */
+  color: var(--text-color) !important; /* Matches main theme contrast text color */
 }
 
 .settings-panel {
