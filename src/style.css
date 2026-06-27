@@ -522,6 +522,12 @@ input[type="text"]:focus, input[type="password"]:focus {
 }
 
 /* Bulletproof 100% reliable 6-digit price input constraints */
+.item-name-input {
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+  max-width: calc(100% - 96px - 32px - 16px) !important; /* Locks width to remaining space */
+}
+
 .item-price-input,
 .item-price-input .p-inputnumber-input {
   width: 96px !important;
