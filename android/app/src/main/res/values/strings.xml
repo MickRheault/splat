@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Splat</string>
+    <string name="title_activity_main">Splat</string>
+    <string name="package_name">com.mickrheault.splat</string>
+    <string name="custom_url_scheme">com.mickrheault.splat</string>
+</resources>

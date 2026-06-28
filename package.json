@@ -14,7 +14,8 @@
     "primevue": "^4.0.5",
     "@primevue/themes": "^4.0.5",
     "primeicons": "^7.0.0",
-    "vue": "^3.5.38"
+    "vue": "^3.5.38",
+    "@capacitor/core": "^6.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.13.2",
@@ -26,6 +27,9 @@
     "typescript": "~6.0.2",
     "vite": "^8.1.0",
     "vitest": "^3.0.5",
-    "vue-tsc": "^3.3.5"
+    "vue-tsc": "^3.3.5",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
+    "@capacitor/android": "^6.0.0"
   }
 }
