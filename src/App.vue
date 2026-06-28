@@ -5,6 +5,12 @@ import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Dialog from 'primevue/dialog'
 
+// Import Capacitor Core & Plugins
+import { Capacitor } from '@capacitor/core'
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
+import { Share } from '@capacitor/share'
+import { Clipboard } from '@capacitor/clipboard'
+
 // Import reactive store and computed properties
 import { 
   store, 
@@ -12,7 +18,9 @@ import {
   tipAmount, 
   totalBill, 
   billBreakdown, 
-  shareTextSummary 
+  shareTextSummary,
+  getStorageItem,
+  setStorageItem
 } from './store'
 
 // Local UI states
@@ -25,9 +33,9 @@ const showFullNames = ref(false)
 // History List State
 const savedSplits = ref<any[]>([])
 
-const loadHistoryFromStorage = () => {
+const loadHistoryFromStorage = async () => {
   try {
-    const historyStr = localStorage.getItem('splat_history') || '[]'
+    const historyStr = await getStorageItem('splat_history') || '[]'
     savedSplits.value = JSON.parse(historyStr)
   } catch (e) {
     console.error('Failed to load history list', e)
@@ -39,22 +47,23 @@ const isQuickPickerOpen = ref(false)
 const activePickerParticipantId = ref<string | null>(null)
 const savedCustomNames = ref<string[]>([])
 
-const loadSavedNames = () => {
+const loadSavedNames = async () => {
   try {
-    const savedStr = localStorage.getItem('splat_saved_names') || '[]'
+    const savedStr = await getStorageItem('splat_saved_names') || '[]'
     savedCustomNames.value = JSON.parse(savedStr)
   } catch (e) {
     console.error('Failed to load saved names', e)
   }
 }
 
-onMounted(() => {
-  loadHistoryFromStorage()
-  loadSavedNames()
+onMounted(async () => {
+  await store.loadFromLocalStorage()
+  await loadHistoryFromStorage()
+  await loadSavedNames()
 })
 
-const onParticipantNameChanged = (name: string) => {
-  store.saveToLocalStorage()
+const onParticipantNameChanged = async (name: string) => {
+  await store.saveToLocalStorage()
   
   const trimmed = name.trim()
   if (!trimmed) return
@@ -62,7 +71,7 @@ const onParticipantNameChanged = (name: string) => {
   
   if (!savedCustomNames.value.includes(trimmed)) {
     savedCustomNames.value.push(trimmed)
-    localStorage.setItem('splat_saved_names', JSON.stringify(savedCustomNames.value))
+    await setStorageItem('splat_saved_names', JSON.stringify(savedCustomNames.value))
   }
 }
 
@@ -71,22 +80,22 @@ const openQuickPicker = (participantId: string) => {
   isQuickPickerOpen.value = true
 }
 
-const applyQuickName = (name: string) => {
+const applyQuickName = async (name: string) => {
   if (activePickerParticipantId.value) {
     const p = store.participants.find(part => part.id === activePickerParticipantId.value)
     if (p) {
       p.name = name
-      store.saveToLocalStorage()
+      await store.saveToLocalStorage()
     }
   }
   isQuickPickerOpen.value = false
 }
 
 // Auto-save history when share step is reached
-watch(() => store.step, (newStep) => {
+watch(() => store.step, async (newStep) => {
   if (newStep === 'share') {
-    store.saveToHistory()
-    loadHistoryFromStorage()
+    await store.saveToHistory()
+    await loadHistoryFromStorage()
   }
 })
 
@@ -121,19 +130,38 @@ const selectedItem = computed(() => {
   return store.items.find(item => item.id === selectedItemId.value) || null
 })
 
-// Lifecycle hook to restore session from localStorage on load
-store.loadFromLocalStorage()
+const captureNativeImage = async (source: CameraSource) => {
+  try {
+    const image = await Camera.getPhoto({
+      quality: 90,
+      allowEditing: false,
+      resultType: CameraResultType.Base64,
+      source: source
+    })
+    if (image.base64String) {
+      const mimeType = `image/${image.format}`
+      const dataUrl = `data:${mimeType};base64,${image.base64String}`
+      store.simulateOCR(dataUrl)
+    }
+  } catch (e) {
+    console.warn('Native camera capture cancelled or failed', e)
+  }
+}
 
 // Trigger native device camera
 const triggerCamera = () => {
-  if (cameraInput.value) {
+  if (Capacitor.isNativePlatform()) {
+    captureNativeImage(CameraSource.Camera)
+  } else if (cameraInput.value) {
     cameraInput.value.click()
   }
 }
 
 // Trigger gallery file picker
 const triggerGallery = () => {
-  if (galleryInput.value) {
+  if (Capacitor.isNativePlatform()) {
+    captureNativeImage(CameraSource.Photos)
+  } else if (galleryInput.value) {
     galleryInput.value.click()
   }
 }
@@ -365,14 +393,28 @@ const getInitials = (name: string) => {
 
 // Copy sharing plain text summary to clipboard
 const copyToClipboard = async () => {
+  const text = shareTextSummary.value
   try {
-    await navigator.clipboard.writeText(shareTextSummary.value)
+    if (Capacitor.isNativePlatform()) {
+      const canShare = await Share.canShare()
+      if (canShare.value) {
+        await Share.share({
+          title: store.billName,
+          text: text,
+          dialogTitle: 'Share Split Summary'
+        })
+        return
+      }
+      await Clipboard.write({ string: text })
+    } else {
+      await navigator.clipboard.writeText(text)
+    }
     copySuccess.value = true
     setTimeout(() => {
       copySuccess.value = false
     }, 2000)
   } catch (e) {
-    console.error('Failed to copy', e)
+    console.error('Failed to copy or share', e)
   }
 }
 

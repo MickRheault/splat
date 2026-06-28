@@ -235,7 +235,7 @@ describe('Splat Core Store & Math Logic', () => {
       setItemSpy.mockRestore()
     })
 
-    test('should load state from localStorage', () => {
+    test('should load state from localStorage', async () => {
       const mockState = {
         step: 'edit',
         items: [{ id: '1', name: 'Water', price: 2.50, assignedTo: [] }],
@@ -246,7 +246,7 @@ describe('Splat Core Store & Math Logic', () => {
       }
       const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(JSON.stringify(mockState))
       
-      store.loadFromLocalStorage()
+      await store.loadFromLocalStorage()
       
       expect(store.step).toBe('edit')
       expect(store.participants).toHaveLength(1)

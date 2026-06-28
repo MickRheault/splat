@@ -1,4 +1,22 @@
 import { reactive, computed } from 'vue'
+import { Capacitor } from '@capacitor/core'
+import { Preferences } from '@capacitor/preferences'
+
+export const getStorageItem = async (key: string): Promise<string | null> => {
+  if (Capacitor.isNativePlatform()) {
+    const { value } = await Preferences.get({ key })
+    return value
+  }
+  return localStorage.getItem(key)
+}
+
+export const setStorageItem = async (key: string, value: string): Promise<void> => {
+  if (Capacitor.isNativePlatform()) {
+    await Preferences.set({ key, value })
+  } else {
+    localStorage.setItem(key, value)
+  }
+}
 
 export interface Item {
   id: string
@@ -305,7 +323,7 @@ export const store = reactive({
     this.saveToLocalStorage()
   },
 
-  saveToLocalStorage() {
+  async saveToLocalStorage() {
     try {
       const data = {
         step: this.step,
@@ -319,15 +337,15 @@ export const store = reactive({
         tipType: this.tipType,
         currencySymbol: this.currencySymbol
       }
-      localStorage.setItem('splat_store', JSON.stringify(data))
+      await setStorageItem('splat_store', JSON.stringify(data))
     } catch (e) {
       console.error('Failed to save to localStorage', e)
     }
   },
 
-  loadFromLocalStorage() {
+  async loadFromLocalStorage() {
     try {
-      const dataStr = localStorage.getItem('splat_store')
+      const dataStr = await getStorageItem('splat_store')
       if (!dataStr) return
       const data = JSON.parse(dataStr)
       if (data.step) this.step = data.step
@@ -345,9 +363,9 @@ export const store = reactive({
     }
   },
 
-  saveToHistory() {
+  async saveToHistory() {
     try {
-      const historyStr = localStorage.getItem('splat_history') || '[]'
+      const historyStr = await getStorageItem('splat_history') || '[]'
       const history = JSON.parse(historyStr) as any[]
       
       const entry = {
@@ -371,13 +389,13 @@ export const store = reactive({
         history.unshift(entry)
       }
       
-      localStorage.setItem('splat_history', JSON.stringify(history))
+      await setStorageItem('splat_history', JSON.stringify(history))
     } catch (e) {
       console.error('Failed to save split history', e)
     }
   },
 
-  loadSplit(split: any) {
+  async loadSplit(split: any) {
     this.splitId = split.splitId
     this.billName = split.billName
     this.items = split.items
@@ -387,7 +405,7 @@ export const store = reactive({
     this.tipType = split.tipType
     this.currencySymbol = split.currencySymbol || '$'
     this.step = 'share'
-    this.saveToLocalStorage()
+    await this.saveToLocalStorage()
   }
 })
 
