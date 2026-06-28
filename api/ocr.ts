@@ -38,7 +38,7 @@ export default async function handler(req: Request) {
       });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
     if (!apiKey) {
       return new Response(JSON.stringify({ error: 'Gemini API key is not configured on Vercel backend' }), {
         status: 500,
