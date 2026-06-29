@@ -1,65 +1,43 @@
 export const config = {
-  maxDuration: 60,
+  maxDuration: 30,
 };
 
-export default async function handler(req: Request) {
+export default async function handler(req: any, res: any) {
   // Handle CORS preflight options
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      }
-    });
+    res.status(204).end();
+    return;
   }
 
   // Only allow POST
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
-      status: 405,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
-    });
+    res.status(405).json({ error: 'Method Not Allowed' });
+    return;
   }
 
   try {
-    const { image } = await req.json();
+    const { image } = req.body;
     if (!image) {
-      return new Response(JSON.stringify({ error: 'Missing image data' }), {
-        status: 400,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        }
-      });
+      res.status(400).json({ error: 'Missing image data' });
+      return;
     }
 
     const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'Gemini API key is not configured on Vercel backend' }), {
-        status: 500,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        }
-      });
+      res.status(500).json({ error: 'Gemini API key is not configured on Vercel backend' });
+      return;
     }
 
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
     
     const match = image.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
     if (!match) {
-      return new Response(JSON.stringify({ error: 'Invalid image format. Expected base64 data URL.' }), {
-        status: 400,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        }
-      });
+      res.status(400).json({ error: 'Invalid image format. Expected base64 data URL.' });
+      return;
     }
     
     const mimeType = match[1];
@@ -117,31 +95,13 @@ Return format must be EXACTLY this JSON structure:
 
     if (!response.ok) {
       const errorText = await response.text();
-      return new Response(JSON.stringify({ error: `Gemini API returned status ${response.status}: ${errorText}` }), {
-        status: response.status,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        }
-      });
+      res.status(response.status).json({ error: `Gemini API returned status ${response.status}: ${errorText}` });
+      return;
     }
 
     const result = await response.json();
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
-    });
-
+    res.status(200).json(result);
   } catch (e: any) {
-    return new Response(JSON.stringify({ error: e.message || 'Internal Server Error' }), {
-      status: 500,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
-    });
+    res.status(500).json({ error: e.message || 'Internal Server Error' });
   }
 }

@@ -160,23 +160,99 @@ export const store = reactive({
   },
 
   async parseWithGemini(imageSrc: string) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000)
+
     try {
-      const apiBase = Capacitor.isNativePlatform() 
-        ? 'https://splat-chi.vercel.app' 
-        : ''
-      
-      const response = await fetch(`${apiBase}/api/ocr`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: imageSrc })
-      })
+      const isNative = Capacitor.isNativePlatform()
+      let resJson: any
 
-      if (!response.ok) {
-        const errJson = await response.json().catch(() => ({}))
-        throw new Error(errJson.error || `Serverless Error: Status ${response.status}`)
+      // If we are in local development (Vite) and have an API key, we can make the Gemini API call directly from the browser.
+      // In production/native platforms, we call the backend Vercel serverless function.
+      if (!isNative && import.meta.env.DEV && import.meta.env.MODE !== 'test') {
+        if (!this.apiKey) {
+          throw new Error('Gemini API key is not configured in .env')
+        }
+
+        const match = imageSrc.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/)
+        if (!match) {
+          throw new Error('Invalid image format. Expected base64 data URL.')
+        }
+        const mimeType = match[1]
+        const base64Data = match[2]
+
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`
+        const geminiPayload = {
+          contents: [
+            {
+              parts: [
+                {
+                  text: `You are an expert receipt parser. Analyze this receipt and return a clean JSON object.
+Follow these rules strictly:
+1. Extract the merchant/restaurant name and target date if present.
+2. Extract all individual line items (name, price).
+3. Do NOT include tax, service charges, VAT, or card fees in the items list.
+4. Extract tax, service charge, card fee, or roundings as individual entries in an adjustments array:
+   Example: [{"name": "Tax", "value": 3.50}, {"name": "Service Charge", "value": 5.00}]
+5. Extract the tip value (if specified on the receipt).
+6. Validate if the image is a valid receipt. If it's a photo of something else (like a dog, a car, landscape, blank screen, or arbitrary text), return a JSON with error: "This image does not appear to be a valid receipt."
+
+Return format must be EXACTLY this JSON structure:
+{
+  "restaurant": "Restaurant Name",
+  "date": "YYYY-MM-DD",
+  "items": [
+    {"name": "Item Name", "price": 10.50}
+  ],
+  "adjustments": [
+    {"name": "Tax/VAT/Service Charge Name", "value": 1.50}
+  ],
+  "tip": 5.00
+}`
+                },
+                {
+                  inlineData: {
+                    mimeType: mimeType,
+                    data: base64Data
+                  }
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            responseMimeType: 'application/json'
+          }
+        }
+
+        const response = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(geminiPayload),
+          signal: controller.signal
+        })
+
+        if (!response.ok) {
+          const errorText = await response.text()
+          throw new Error(`Gemini API returned status ${response.status}: ${errorText}`)
+        }
+
+        resJson = await response.json()
+      } else {
+        const apiBase = isNative ? 'https://splat-chi.vercel.app' : ''
+        const response = await fetch(`${apiBase}/api/ocr`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: imageSrc }),
+          signal: controller.signal
+        })
+
+        if (!response.ok) {
+          const errJson = await response.json().catch(() => ({}))
+          throw new Error(errJson.error || `Serverless Error: Status ${response.status}`)
+        }
+
+        resJson = await response.json()
       }
-
-      const resJson = await response.json()
       const text = resJson.candidates?.[0]?.content?.parts?.[0]?.text
       if (!text) {
         throw new Error('Gemini API returned an empty response.')
@@ -211,8 +287,13 @@ export const store = reactive({
       this.step = 'edit'
     } catch (e: any) {
       console.error(e)
-      this.ocrError = e.message || 'Failed to parse receipt'
+      if (e.name === 'AbortError') {
+        this.ocrError = 'Request timed out after 30 seconds.'
+      } else {
+        this.ocrError = e.message || 'Failed to parse receipt'
+      }
     } finally {
+      clearTimeout(timeoutId)
       this.isParsing = false
       this.saveToLocalStorage()
     }
