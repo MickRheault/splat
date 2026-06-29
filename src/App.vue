@@ -630,7 +630,7 @@ const selectAllText = (event: Event) => {
       </div>
 
       <!-- Version Footer -->
-      <div class="text-center mt-6 text-[8px] font-medium text-secondary/20 tracking-wider">
+      <div class="text-center mt-6 text-[7px] font-medium text-slate-500 tracking-wider">
         VERSION: v{{ appVersion }}
       </div>
     </div>
