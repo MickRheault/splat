@@ -73,7 +73,7 @@ onMounted(async () => {
         
         // 3. Get current active version
         const currentInfo = await CapacitorUpdater.current()
-        const currentVersion = currentInfo.bundle.id === 'builtin' ? currentInfo.native : currentInfo.bundle.id
+        const currentVersion = currentInfo.bundle.id === 'builtin' ? currentInfo.native : currentInfo.bundle.version
         appVersion.value = currentVersion
 
         // 4. Compare and download update in the background if version is new
