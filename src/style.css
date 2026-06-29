@@ -201,6 +201,16 @@ h1, h2, h3, h4, h5, h6 {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* App Version Footer */
+.app-version {
+  text-align: center;
+  margin-top: 24px;
+  font-size: 8px;
+  font-weight: 500;
+  color: #57534e; /* Dark stone grey */
+  letter-spacing: 0.05em;
+}
+
 /* Capture View Container */
 .capture-container {
   display: flex;
