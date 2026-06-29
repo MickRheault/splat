@@ -49,7 +49,7 @@ jobs:
         
         # Zip the dist contents (index.html at root of zip)
         cd dist
-        zip -r ../public/updates/v$VERSION.zip *
+        zip -r ../public/updates/v$VERSION.zip * -x "updates/*"
         cd ..
         
         # Update the manifest pointing to Vercel
