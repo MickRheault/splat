@@ -1012,46 +1012,7 @@ const selectAllText = (event: Event) => {
       </div>
     </div>
 
-    <!-- Stepper Navigation bar -->
-    <nav class="app-nav" v-if="!store.isParsing && store.step !== 'capture'">
-      <!-- Left: Back Button -->
-      <Button 
-        label="Back" 
-        icon="pi pi-chevron-left" 
-        class="p-button-text p-button-sm text-secondary min-w-[70px]" 
-        @click="goBack" 
-      />
 
-      <!-- Center: Reset Button -->
-      <Button 
-        v-if="store.step !== 'share'" 
-        label="Reset" 
-        icon="pi pi-refresh" 
-        class="p-button-text p-button-sm text-rose-500/80 hover:text-rose-500" 
-        @click="handleReset" 
-      />
-      <div v-else></div> <!-- spacer -->
-
-      <!-- Right: Next Button -->
-      <Button 
-        v-slot:default
-        v-if="store.step !== 'share'" 
-        label="Next" 
-        icon="pi pi-chevron-right" 
-        iconPos="right" 
-        class="p-button-sm min-w-[70px]" 
-        :disabled="!canGoNext" 
-        @click="goNext" 
-      />
-      <Button 
-        v-slot:default
-        v-else
-        label="Start New Split" 
-        icon="pi pi-refresh" 
-        class="p-button-sm p-button-primary min-w-[140px]" 
-        @click="store.reset()" 
-      />
-    </nav>
 
     <!-- Modal dialogue for assignment selection -->
     <Dialog 
@@ -1200,4 +1161,43 @@ const selectAllText = (event: Event) => {
     </Dialog>
 
   </main>
+
+  <!-- Stepper Navigation bar -->
+  <nav class="app-nav" v-if="!store.isParsing && store.step !== 'capture'">
+    <!-- Left: Back Button -->
+    <Button 
+      label="Back" 
+      icon="pi pi-chevron-left" 
+      class="p-button-text p-button-sm text-secondary min-w-[70px]" 
+      @click="goBack" 
+    />
+
+    <!-- Center: Reset Button -->
+    <Button 
+      v-if="store.step !== 'share'" 
+      label="Reset" 
+      icon="pi pi-refresh" 
+      class="p-button-text p-button-sm text-rose-500/80 hover:text-rose-500" 
+      @click="handleReset" 
+    />
+    <div v-else></div> <!-- spacer -->
+
+    <!-- Right: Next Button -->
+    <Button 
+      v-if="store.step !== 'share'" 
+      label="Next" 
+      icon="pi pi-chevron-right" 
+      iconPos="right" 
+      class="p-button-sm min-w-[70px]" 
+      :disabled="!canGoNext" 
+      @click="goNext" 
+    />
+    <Button 
+      v-else
+      label="Start New Split" 
+      icon="pi pi-refresh" 
+      class="p-button-sm p-button-primary min-w-[140px]" 
+      @click="store.reset()" 
+    />
+  </nav>
 </template>
