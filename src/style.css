@@ -184,7 +184,7 @@ h1, h2, h3, h4, h5, h6 {
 /* App Main Content Area */
 .app-content {
   flex: 1;
-  padding: 24px 16px 90px 16px;
+  padding: 24px 16px 24px 16px;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -314,10 +314,6 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Custom Bottom Navigation Bar */
 .app-nav {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
   padding: 18px 16px;
   background-color: var(--surface-color);
   border-top: 4px solid var(--stroke-color);
@@ -1028,6 +1024,7 @@ input[type="text"]:focus, input[type="password"]:focus {
   body {
     padding: 0;
     align-items: stretch;
+    overflow: hidden;
   }
   #app {
     min-height: 100vh;
