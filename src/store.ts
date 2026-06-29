@@ -570,10 +570,10 @@ export const shareTextSummary = computed(() => {
   const breakdown = billBreakdown.value
   const currency = store.currencySymbol
   
-  let text = `💸 *Splat split: ${store.billName}* 💸\n\n`
+  let text = `💸 Splat split: ${store.billName} 💸\n\n`
   
   breakdown.forEach(p => {
-    text += `👤 *${p.name}* owes *${currency}${p.total.toFixed(2)}*\n`
+    text += `👤 ${p.name} owes ${currency}${p.total.toFixed(2)}\n`
     text += `   ↳ Subtotal: ${currency}${p.subtotal.toFixed(2)}\n`
     if (p.tax !== 0) text += `   ↳ Adjustments/Fees: ${currency}${p.tax.toFixed(2)}\n`
     if (p.tip > 0) text += `   ↳ Tip: ${currency}${p.tip.toFixed(2)}\n`
@@ -581,16 +581,16 @@ export const shareTextSummary = computed(() => {
   })
   
   text += `---------------------------\n`
-  text += `🧾 *Subtotal:* ${currency}${itemsSubtotal.value.toFixed(2)}\n`
+  text += `🧾 Subtotal: ${currency}${itemsSubtotal.value.toFixed(2)}\n`
   
   store.adjustments.forEach(adj => {
     if (adj.value !== 0) {
-      text += `🏛️ *${adj.name}:* ${currency}${adj.value.toFixed(2)}\n`
+      text += `🏛️ ${adj.name}: ${currency}${adj.value.toFixed(2)}\n`
     }
   })
   
-  if (tipAmount.value > 0) text += `💡 *Tip:* ${currency}${tipAmount.value.toFixed(2)}\n`
-  text += `💰 *Total Bill:* ${currency}${totalBill.value.toFixed(2)}\n\n`
+  if (tipAmount.value > 0) text += `💡 Tip: ${currency}${tipAmount.value.toFixed(2)}\n`
+  text += `💰 Total Bill: ${currency}${totalBill.value.toFixed(2)}\n\n`
   text += `Split proportionally using Splat!`
   
   return text

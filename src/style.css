@@ -465,13 +465,13 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-sans);
   font-weight: 500;
   white-space: pre-wrap;
-  font-size: 12px;
+  font-size: 10px;
   background-color: var(--bg-color);
-  padding: 18px;
+  padding: 10px 12px;
   border-radius: var(--radius-md);
   border: 3px solid var(--stroke-color);
   color: var(--text-color);
-  max-height: 250px;
+  max-height: 120px;
   overflow-y: auto;
   box-shadow: inset 3px 3px 0px rgba(217, 70, 239, 0.08); /* Pink inset glow shadow */
 }
