@@ -629,6 +629,10 @@ const selectAllText = (event: Event) => {
         </div>
       </div>
 
+      <!-- Version Footer -->
+      <div class="text-center mt-6 text-[10px] font-bold text-secondary/30 tracking-wider">
+        VERSION: v{{ appVersion }}
+      </div>
     </div>
 
     <!-- Step 2: Edit Items -->
@@ -1236,9 +1240,4 @@ const selectAllText = (event: Event) => {
       @click="store.reset()" 
     />
   </nav>
-
-  <!-- Version Footer -->
-  <div class="text-center py-4 text-[10px] font-bold text-secondary/30 tracking-wider">
-    VERSION: v{{ appVersion }}
-  </div>
 </template>
