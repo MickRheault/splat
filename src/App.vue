@@ -23,6 +23,9 @@ import {
   getStorageItem,
   setStorageItem
 } from './store'
+import pkg from '../package.json'
+
+const appVersion = ref(pkg.version || '0.0.0')
 
 // Local UI states
 const cameraInput = ref<HTMLInputElement | null>(null)
@@ -71,6 +74,7 @@ onMounted(async () => {
         // 3. Get current active version
         const currentInfo = await CapacitorUpdater.current()
         const currentVersion = currentInfo.bundle.id === 'builtin' ? currentInfo.native : currentInfo.bundle.id
+        appVersion.value = currentVersion
 
         // 4. Compare and download update in the background if version is new
         if (manifest.version && manifest.version !== currentVersion) {
@@ -1232,4 +1236,9 @@ const selectAllText = (event: Event) => {
       @click="store.reset()" 
     />
   </nav>
+
+  <!-- Version Footer -->
+  <div class="text-center py-4 text-[10px] font-bold text-secondary/30 tracking-wider">
+    VERSION: v{{ appVersion }}
+  </div>
 </template>
