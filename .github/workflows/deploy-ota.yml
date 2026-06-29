@@ -1,0 +1,70 @@
+name: Deploy OTA Update
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'public/updates/**'
+      - '.github/workflows/**'
+
+jobs:
+  deploy-ota:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+
+    - name: Setup git credentials
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+
+    - name: Bump Version
+      run: |
+        # Auto bump patch version (e.g. 1.0.0 -> 1.0.1) without creating a git tag
+        npm version patch --no-git-tag-version
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build web project
+      run: npm run build
+
+    - name: Package OTA Zip and Manifest
+      run: |
+        VERSION=$(node -p "require('./package.json').version")
+        echo "Packaging OTA version: $VERSION"
+        
+        # Ensure target folder exists
+        mkdir -p public/updates
+        
+        # Zip the dist contents (index.html at root of zip)
+        cd dist
+        zip -r ../public/updates/v$VERSION.zip *
+        cd ..
+        
+        # Update the manifest pointing to Vercel
+        cat <<EOF > public/updates/update.json
+        {
+          "version": "$VERSION",
+          "url": "https://splat-chi.vercel.app/updates/v$VERSION.zip"
+        }
+        EOF
+
+    - name: Commit and Push updates back to Main
+      run: |
+        # Stage the new OTA zip, updated manifest, package.json, and package-lock.json
+        git add package.json package-lock.json public/updates/
+        
+        # Commit and push
+        git commit -m "chore: release bump & OTA update v$(node -p "require('./package.json').version") [skip ci]"
+        git push

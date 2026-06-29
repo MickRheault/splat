@@ -10,6 +10,7 @@ import { Capacitor } from '@capacitor/core'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { Share } from '@capacitor/share'
 import { Clipboard } from '@capacitor/clipboard'
+import { CapacitorUpdater } from '@capgo/capacitor-updater'
 
 // Import reactive store and computed properties
 import { 
@@ -57,6 +58,36 @@ const loadSavedNames = async () => {
 }
 
 onMounted(async () => {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      // 1. Notify that app is ready to prevent rolling back
+      await CapacitorUpdater.notifyAppReady()
+
+      // 2. Fetch the update manifest from your Vercel deployment
+      const response = await fetch('https://splat-chi.vercel.app/updates/update.json')
+      if (response.ok) {
+        const manifest = await response.json()
+        
+        // 3. Get current active version
+        const currentInfo = await CapacitorUpdater.current()
+        const currentVersion = currentInfo.bundle.id === 'builtin' ? currentInfo.native : currentInfo.bundle.id
+
+        // 4. Compare and download update in the background if version is new
+        if (manifest.version && manifest.version !== currentVersion) {
+          const versionInfo = await CapacitorUpdater.download({
+            url: manifest.url,
+            version: manifest.version
+          })
+          
+          // Queue the update to be activated on next app launch/restart
+          await CapacitorUpdater.next(versionInfo)
+          console.log(`CapacitorUpdater: Downloaded version ${manifest.version}, queued for next restart.`)
+        }
+      }
+    } catch (e) {
+      console.warn('CapacitorUpdater check failed:', e)
+    }
+  }
   await store.loadFromLocalStorage()
   await loadHistoryFromStorage()
   await loadSavedNames()
