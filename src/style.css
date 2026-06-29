@@ -106,8 +106,6 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   gap: 16px;
   background-color: var(--surface-color);
-  position: sticky;
-  top: 0;
   z-index: 10;
 }
 
@@ -188,7 +186,6 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  overflow-y: auto;
 }
 
 /* Step Views Layouts */
@@ -1024,12 +1021,8 @@ input[type="text"]:focus, input[type="password"]:focus {
   body {
     padding: 0;
     align-items: stretch;
-    overflow: hidden;
   }
   #app {
-    min-height: 100vh;
-    min-height: 100dvh;
-    height: 100dvh;
     border: none;
     border-radius: 0;
   }
