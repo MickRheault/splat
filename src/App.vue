@@ -504,7 +504,8 @@ const selectAllText = (event: Event) => {
     <div v-if="store.isParsing" class="parsing-overlay">
       <div class="ocr-scanner"></div>
       <h3>Parsing Receipt Image...</h3>
-      <p class="text-secondary text-sm">Our AI is extracting line items, prices, tax, and tip shares.</p>
+      <p class="text-secondary text-sm">Please ensure the photo is clear and well-lit.</p>
+      <p class="text-secondary/80 text-xs mt-1">Scanning is limited to 30 seconds.</p>
     </div>
 
     <!-- Step 1: Image Capture -->
