@@ -194,6 +194,9 @@ export const store = reactive({
   },
 
   async parseWithGemini(imageSrc: string) {
+    // Refresh usage limits from DB before doing the scan check
+    await this.fetchUsage()
+
     if (this.usageInfo && !this.usageInfo.passType && this.usageInfo.freeScansRemaining <= 0) {
       this.showPaywall = true
       this.ocrError = 'Scan limit reached. Upgrade to continue!'

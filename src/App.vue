@@ -196,6 +196,13 @@ onMounted(async () => {
   await loadHistoryFromStorage()
   await loadSavedNames()
   await store.fetchUsage()
+
+  // Sync DB usage state when the phone app is resumed from background
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      store.fetchUsage()
+    }
+  })
 })
 
 const onParticipantNameChanged = async (name: string) => {
