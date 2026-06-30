@@ -178,11 +178,27 @@ onMounted(async () => {
   // 2. Fetch usage metrics from server in the background (Non-blocking)
   store.fetchUsage();
 
-  // 3. Run Vercel/CapacitorUpdater update checks in the background (Non-blocking)
+  // 3. Sync DB usage state when the phone app is resumed from background
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      store.fetchUsage()
+    }
+  })
+
+  // 4. Wait for local storage data to finish loading BEFORE hiding splash screen
+  await localDataPromise;
+
+  // 5. Notify Capgo updater that app is ready (this hides the splash screen natively)
   if (Capacitor.isNativePlatform()) {
+    try {
+      await CapacitorUpdater.notifyAppReady()
+    } catch (e) {
+      console.warn('CapacitorUpdater notifyAppReady failed:', e)
+    }
+
+    // Run background update checks without blocking startup
     (async () => {
       try {
-        await CapacitorUpdater.notifyAppReady()
         const response = await fetch('https://splat-chi.vercel.app/updates/update.json')
         if (response.ok) {
           const manifest = await response.json()
@@ -200,20 +216,10 @@ onMounted(async () => {
           }
         }
       } catch (e) {
-        console.warn('CapacitorUpdater check failed:', e)
+        console.warn('CapacitorUpdater background update check failed:', e)
       }
     })();
   }
-
-  // 4. Sync DB usage state when the phone app is resumed from background
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-      store.fetchUsage()
-    }
-  })
-
-  // Finally, wait for local data loading to finish so layout renders stably
-  await localDataPromise;
 })
 
 const onParticipantNameChanged = async (name: string) => {
