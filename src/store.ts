@@ -368,8 +368,8 @@ Return format must be EXACTLY this JSON structure:
     const usage = {
       passType,
       freeScansUsed,
-      freeScansLimit: 3,
-      freeScansRemaining: Math.max(0, 3 - freeScansUsed)
+      freeScansLimit: 5,
+      freeScansRemaining: Math.max(0, 5 - freeScansUsed)
     }
     this.simulatedUsage = usage
     this.usageInfo = { ...usage }

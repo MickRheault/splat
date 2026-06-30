@@ -29,15 +29,15 @@ export default async function handler(req: any, res: any) {
       res.status(200).json({
         passType,
         freeScansUsed,
-        freeScansLimit: 3,
-        freeScansRemaining: Math.max(0, 3 - freeScansUsed)
+        freeScansLimit: 5,
+        freeScansRemaining: Math.max(0, 5 - freeScansUsed)
       });
     } else {
       res.status(200).json({
         passType: 'dev_unlimited',
         freeScansUsed: 0,
-        freeScansLimit: 3,
-        freeScansRemaining: 3
+        freeScansLimit: 5,
+        freeScansRemaining: 5
       });
     }
   } catch (e: any) {
