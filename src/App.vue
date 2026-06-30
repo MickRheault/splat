@@ -161,48 +161,52 @@ const loadSavedNames = async () => {
 }
 
 onMounted(async () => {
+  // 1. Load local persistent data concurrently (Non-blocking)
+  const localDataPromise = Promise.all([
+    store.loadFromLocalStorage(),
+    loadHistoryFromStorage(),
+    loadSavedNames()
+  ]);
+
+  // 2. Fetch usage metrics from server in the background (Non-blocking)
+  store.fetchUsage();
+
+  // 3. Run Vercel/CapacitorUpdater update checks in the background (Non-blocking)
   if (Capacitor.isNativePlatform()) {
-    try {
-      // 1. Notify that app is ready to prevent rolling back
-      await CapacitorUpdater.notifyAppReady()
+    (async () => {
+      try {
+        await CapacitorUpdater.notifyAppReady()
+        const response = await fetch('https://splat-chi.vercel.app/updates/update.json')
+        if (response.ok) {
+          const manifest = await response.json()
+          const currentInfo = await CapacitorUpdater.current()
+          const currentVersion = currentInfo.bundle.id === 'builtin' ? currentInfo.native : currentInfo.bundle.version
+          appVersion.value = currentVersion
 
-      // 2. Fetch the update manifest from your Vercel deployment
-      const response = await fetch('https://splat-chi.vercel.app/updates/update.json')
-      if (response.ok) {
-        const manifest = await response.json()
-        
-        // 3. Get current active version
-        const currentInfo = await CapacitorUpdater.current()
-        const currentVersion = currentInfo.bundle.id === 'builtin' ? currentInfo.native : currentInfo.bundle.version
-        appVersion.value = currentVersion
-
-        // 4. Compare and download update in the background if version is new
-        if (manifest.version && manifest.version !== currentVersion) {
-          const versionInfo = await CapacitorUpdater.download({
-            url: manifest.url,
-            version: manifest.version
-          })
-          
-          // Queue the update to be activated on next app launch/restart
-          await CapacitorUpdater.next(versionInfo)
-          console.log(`CapacitorUpdater: Downloaded version ${manifest.version}, queued for next restart.`)
+          if (manifest.version && manifest.version !== currentVersion) {
+            const versionInfo = await CapacitorUpdater.download({
+              url: manifest.url,
+              version: manifest.version
+            })
+            await CapacitorUpdater.next(versionInfo)
+            console.log(`CapacitorUpdater: Downloaded version ${manifest.version}, queued for next restart.`)
+          }
         }
+      } catch (e) {
+        console.warn('CapacitorUpdater check failed:', e)
       }
-    } catch (e) {
-      console.warn('CapacitorUpdater check failed:', e)
-    }
+    })();
   }
-  await store.loadFromLocalStorage()
-  await loadHistoryFromStorage()
-  await loadSavedNames()
-  await store.fetchUsage()
 
-  // Sync DB usage state when the phone app is resumed from background
+  // 4. Sync DB usage state when the phone app is resumed from background
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       store.fetchUsage()
     }
   })
+
+  // Finally, wait for local data loading to finish so layout renders stably
+  await localDataPromise;
 })
 
 const onParticipantNameChanged = async (name: string) => {
@@ -763,40 +767,42 @@ const selectAllText = (event: Event) => {
       </div>
 
       <!-- Saved Splits History Section -->
-      <div v-if="savedSplits.length > 0" class="mt-6 flex flex-col gap-2">
-        <div class="flex justify-between items-center px-1">
-          <label class="text-xs font-semibold text-secondary uppercase tracking-wider">Saved Splits / History</label>
-          <Button 
-            icon="pi pi-trash" 
-            label="Clear" 
-            class="p-button-text p-button-sm text-[10px] text-rose-500" 
-            :style="{ height: 'auto', padding: '0 !important' }"
-            @click="clearHistory"
-          />
-        </div>
-        
-        <div class="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
-          <div 
-            v-for="split in savedSplits" 
-            :key="split.splitId" 
-            class="history-card"
-            @click="loadSavedSplit(split)"
-          >
-            <div class="flex-1 min-w-0 pr-2">
-              <h5 class="font-bold text-sm text-slate-800 dark:text-slate-100 truncate text-left m-0">{{ split.billName }}</h5>
-              <div class="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5 font-medium">
-                <span>{{ formatDate(split.timestamp) }}</span>
-                <span>•</span>
-                <span>{{ split.participantsCount }} people</span>
+      <Transition name="fade" appear>
+        <div v-if="savedSplits.length > 0" class="mt-6 flex flex-col gap-2">
+          <div class="flex justify-between items-center px-1">
+            <label class="text-xs font-semibold text-secondary uppercase tracking-wider">Saved Splits / History</label>
+            <Button 
+              icon="pi pi-trash" 
+              label="Clear" 
+              class="p-button-text p-button-sm text-[10px] text-rose-500" 
+              :style="{ height: 'auto', padding: '0 !important' }"
+              @click="clearHistory"
+            />
+          </div>
+          
+          <div class="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
+            <div 
+              v-for="split in savedSplits" 
+              :key="split.splitId" 
+              class="history-card"
+              @click="loadSavedSplit(split)"
+            >
+              <div class="flex-1 min-w-0 pr-2">
+                <h5 class="font-bold text-sm text-slate-800 dark:text-slate-100 truncate text-left m-0">{{ split.billName }}</h5>
+                <div class="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5 font-medium">
+                  <span>{{ formatDate(split.timestamp) }}</span>
+                  <span>•</span>
+                  <span>{{ split.participantsCount }} people</span>
+                </div>
               </div>
-            </div>
-            <div class="flex items-center gap-1.5 shrink-0">
-              <span class="font-bold text-primary text-sm">{{ split.currencySymbol }}{{ split.totalBill.toFixed(2) }}</span>
-              <i class="pi pi-chevron-right text-xs text-slate-400"></i>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="font-bold text-primary text-sm">{{ split.currencySymbol }}{{ split.totalBill.toFixed(2) }}</span>
+                <i class="pi pi-chevron-right text-xs text-slate-400"></i>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </Transition>
 
       <!-- Version Footer -->
       <div class="app-version" @click="handleVersionTap">

@@ -1061,3 +1061,14 @@ input[type="text"]:focus, input[type="password"]:focus {
   }
 }
 
+/* Fade Transition for Smooth Mounting */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
