@@ -21,7 +21,8 @@ import {
   billBreakdown, 
   shareTextSummary,
   getStorageItem,
-  setStorageItem
+  setStorageItem,
+  getDeviceId
 } from './store'
 import pkg from '../package.json'
 
@@ -50,6 +51,40 @@ const loadHistoryFromStorage = async () => {
 const isQuickPickerOpen = ref(false)
 const activePickerParticipantId = ref<string | null>(null)
 const savedCustomNames = ref<string[]>([])
+
+// Paywall / Subscription States
+const selectedPaywallOption = ref<'trip' | 'yearly'>('trip')
+const isPurchasing = ref(false)
+
+const handlePaywallPurchase = async () => {
+  if (isPurchasing.value) return
+  isPurchasing.value = true
+  try {
+    const isNative = Capacitor.isNativePlatform()
+    const apiBase = isNative ? 'https://splat-chi.vercel.app' : ''
+    const deviceId = await getDeviceId()
+
+    const response = await fetch(`${apiBase}/api/mock-purchase`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId, type: selectedPaywallOption.value })
+    })
+
+    if (response.ok) {
+      store.ocrError = null
+      store.showPaywall = false
+      await store.fetchUsage()
+      alert(`Purchase Activated! Your ${selectedPaywallOption.value === 'trip' ? '7-Day Pass' : 'Yearly Pro'} plan is now active. Try scanning your receipt again!`)
+    } else {
+      throw new Error('Server activation failed')
+    }
+  } catch (e: any) {
+    console.error('Purchase simulation error:', e)
+    alert('Simulated purchase failed. Check your internet connection.')
+  } finally {
+    isPurchasing.value = false
+  }
+}
 
 const loadSavedNames = async () => {
   try {
@@ -95,6 +130,7 @@ onMounted(async () => {
   await store.loadFromLocalStorage()
   await loadHistoryFromStorage()
   await loadSavedNames()
+  await store.fetchUsage()
 })
 
 const onParticipantNameChanged = async (name: string) => {
@@ -590,6 +626,31 @@ const selectAllText = (event: Event) => {
             class="p-button-outlined p-button-sm" 
             @click="startManualEntry" 
           />
+        </div>
+      </div>
+
+      <!-- Usage Limit / Plan Info Indicator -->
+      <div v-if="store.usageInfo" class="text-center mt-5 p-3 rounded-xl border border-dashed border-slate-800 bg-slate-950/20">
+        <p v-if="store.usageInfo.passType === 'trip'" class="text-xs text-primary font-extrabold flex justify-center items-center gap-1.5">
+          <i class="pi pi-bolt"></i> 7-Day Pass Active (Unlimited Scans)
+        </p>
+        <p v-else-if="store.usageInfo.passType === 'yearly'" class="text-xs text-emerald-400 font-extrabold flex justify-center items-center gap-1.5">
+          <i class="pi pi-star-fill"></i> Yearly Pro Active (100 scans/mo)
+        </p>
+        <p v-else-if="store.usageInfo.passType === 'dev_unlimited'" class="text-xs text-secondary font-bold italic">
+          🛠️ Dev Mode (Bypassed / Unlimited)
+        </p>
+        <div v-else class="flex flex-col items-center gap-1">
+          <p class="text-xs text-secondary font-semibold">
+            Free scans left this month: 
+            <span class="text-primary font-black">{{ store.usageInfo.freeScansRemaining }} / {{ store.usageInfo.freeScansLimit }}</span>
+          </p>
+          <div class="w-24 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+            <div 
+              class="bg-primary h-full transition-all duration-300"
+              :style="{ width: `${(store.usageInfo.freeScansRemaining / store.usageInfo.freeScansLimit) * 100}%` }"
+            ></div>
+          </div>
         </div>
       </div>
 
@@ -1197,6 +1258,71 @@ const selectAllText = (event: Event) => {
             No saved names yet. Type a name to save it automatically!
           </div>
         </div>
+      </div>
+    </Dialog>
+
+    <!-- Paywall / Premium Upgrade Dialogue -->
+    <Dialog 
+      v-model:visible="store.showPaywall" 
+      modal 
+      header="Unlock Pro Features ⚡" 
+      :style="{ width: '90%', maxWidth: '400px' }"
+      :draggable="false"
+      class="dark:bg-slate-900"
+    >
+      <div class="flex flex-col gap-4">
+        <p class="text-xs text-secondary text-center leading-relaxed">
+          You've reached your free scan limit. Upgrade to continue splitting bills instantly with advanced AI!
+        </p>
+
+        <!-- Pricing Cards -->
+        <div class="flex flex-col gap-3">
+          <!-- Option 1: 7-Day Pass -->
+          <div 
+            class="p-4 rounded-xl border-2 cursor-pointer transition-all duration-200"
+            :class="selectedPaywallOption === 'trip' ? 'border-primary bg-primary/5' : 'border-slate-800 bg-slate-900/50'"
+            @click="selectedPaywallOption = 'trip'"
+          >
+            <div class="flex justify-between items-center mb-1">
+              <span class="font-bold text-sm text-slate-100">7-Day Trip Pass</span>
+              <span class="font-black text-primary text-base">$1.99</span>
+            </div>
+            <p class="text-[11px] text-secondary">
+              Unlimited scans for 7 days. One-time payment, no subscription. Best for holidays!
+            </p>
+          </div>
+
+          <!-- Option 2: Yearly subscription -->
+          <div 
+            class="p-4 rounded-xl border-2 cursor-pointer transition-all duration-200"
+            :class="selectedPaywallOption === 'yearly' ? 'border-primary bg-primary/5' : 'border-slate-800 bg-slate-900/50'"
+            @click="selectedPaywallOption = 'yearly'"
+          >
+            <div class="flex justify-between items-center mb-1">
+              <span class="font-bold text-sm text-slate-100">Yearly Pro Plan</span>
+              <div class="flex flex-col items-end">
+                <span class="font-black text-primary text-base">$4.99/year</span>
+                <span class="text-[9px] text-emerald-400 font-bold uppercase">Save 60%</span>
+              </div>
+            </div>
+            <p class="text-[11px] text-secondary">
+              100 scans per month. Auto-renews annually. Cancel anytime.
+            </p>
+          </div>
+        </div>
+
+        <!-- Call to Action button -->
+        <Button 
+          :label="isPurchasing ? 'Processing...' : 'Purchase Plan'" 
+          icon="pi pi-bolt" 
+          class="w-full p-button-lg mt-2" 
+          :loading="isPurchasing"
+          @click="handlePaywallPurchase" 
+        />
+
+        <p class="text-[10px] text-slate-500 text-center leading-normal">
+          By upgrading, you agree to our Terms and Privacy Policy. Secure processing powered by App Store / Google Play.
+        </p>
       </div>
     </Dialog>
 

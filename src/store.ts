@@ -1,6 +1,28 @@
 import { reactive, computed } from 'vue'
 import { Capacitor } from '@capacitor/core'
 import { Preferences } from '@capacitor/preferences'
+import { CapacitorUpdater } from '@capgo/capacitor-updater'
+
+export const getDeviceId = async (): Promise<string> => {
+  try {
+    if (Capacitor.isNativePlatform()) {
+      const res = await CapacitorUpdater.getDeviceId()
+      if (res && res.deviceId) {
+        return res.deviceId
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to get Capacitor Device ID', err)
+  }
+  
+  // Fallback to localStorage uuid for local web development
+  let devId = localStorage.getItem('splat_dev_device_id')
+  if (!devId) {
+    devId = `web_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    localStorage.setItem('splat_dev_device_id', devId)
+  }
+  return devId
+}
 
 export const getStorageItem = async (key: string): Promise<string | null> => {
   if (Capacitor.isNativePlatform()) {
@@ -85,6 +107,8 @@ export const store = reactive({
   isParsing: false,
   apiKey: import.meta.env.VITE_GEMINI_API_KEY || '',
   ocrError: null as string | null,
+  showPaywall: false,
+  usageInfo: null as any,
 
   reset() {
     this.step = 'capture'
@@ -97,6 +121,7 @@ export const store = reactive({
     this.tipInput = 0
     this.tipType = 'percentage'
     this.ocrError = null
+    this.showPaywall = false
     this.saveToLocalStorage()
   },
 
@@ -106,7 +131,8 @@ export const store = reactive({
     this.ocrError = null
     this.saveToLocalStorage()
 
-    if (this.apiKey && !imageSrc.startsWith('demo_image_uri_')) {
+    const isTest = import.meta.env.MODE === 'test'
+    if (!isTest && !imageSrc.startsWith('demo_image_uri_')) {
       this.parseWithGemini(imageSrc)
     } else {
       setTimeout(() => {
@@ -239,10 +265,11 @@ Return format must be EXACTLY this JSON structure:
         resJson = await response.json()
       } else {
         const apiBase = isNative ? 'https://splat-chi.vercel.app' : ''
+        const deviceId = await getDeviceId()
         const response = await fetch(`${apiBase}/api/ocr`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: imageSrc }),
+          body: JSON.stringify({ image: imageSrc, deviceId }),
           signal: controller.signal
         })
 
@@ -282,12 +309,17 @@ Return format must be EXACTLY this JSON structure:
       const parsedDate = result.date ? result.date.trim() : getTodayFormatted()
       const parsedRestaurant = result.restaurant ? result.restaurant.trim() : 'Restaurant Split'
       this.billName = `${parsedDate} - ${parsedRestaurant}`
-
+ 
       this.currencySymbol = result.currency || '$'
       this.step = 'edit'
     } catch (e: any) {
       console.error(e)
-      if (e.name === 'AbortError') {
+      if (e.message && e.message.includes('LIMIT_EXCEEDED')) {
+        this.showPaywall = true
+        this.ocrError = 'Scan limit reached. Upgrade to continue!'
+      } else if (e.message && e.message.includes('RATE_LIMIT_EXCEEDED')) {
+        this.ocrError = 'Please wait 1 minute between scans.'
+      } else if (e.name === 'AbortError') {
         this.ocrError = 'Request timed out after 30 seconds.'
       } else {
         this.ocrError = e.message || 'Failed to parse receipt'
@@ -296,6 +328,20 @@ Return format must be EXACTLY this JSON structure:
       clearTimeout(timeoutId)
       this.isParsing = false
       this.saveToLocalStorage()
+    }
+  },
+
+  async fetchUsage() {
+    try {
+      const deviceId = await getDeviceId()
+      const isNative = Capacitor.isNativePlatform()
+      const apiBase = isNative ? 'https://splat-chi.vercel.app' : ''
+      const res = await fetch(`${apiBase}/api/usage?deviceId=${deviceId}`)
+      if (res.ok) {
+        this.usageInfo = await res.json()
+      }
+    } catch (err) {
+      console.warn('Failed to fetch usage limits', err)
     }
   },
 

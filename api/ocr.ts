@@ -1,6 +1,16 @@
+import { kv } from '@vercel/kv';
+
 export const config = {
   maxDuration: 30,
 };
+
+function getWeekKey(deviceId: string) {
+  const d = new Date();
+  const oneJan = new Date(d.getFullYear(), 0, 1);
+  const numberOfDays = Math.floor((d.getTime() - oneJan.getTime()) / (24 * 60 * 60 * 1000));
+  const weekNumber = Math.ceil((numberOfDays + oneJan.getDay() + 1) / 7);
+  return `usage:${deviceId}:${d.getFullYear()}-W${weekNumber}`;
+}
 
 export default async function handler(req: any, res: any) {
   // Handle CORS preflight options
@@ -20,10 +30,70 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { image } = req.body;
+    const { image, deviceId } = req.body;
     if (!image) {
       res.status(400).json({ error: 'Missing image data' });
       return;
+    }
+
+    // 1. Vercel KV limits and subscription checks (only run if KV env vars are set)
+    const hasKV = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN;
+    if (hasKV && deviceId) {
+      // A. Rate Limiting: Max 1 scan per 60 seconds per device ID
+      const rateLimitKey = `ratelimit:${deviceId}`;
+      const isRateLimited = await kv.get(rateLimitKey);
+      if (isRateLimited) {
+        res.status(429).json({ 
+          error: 'RATE_LIMIT_EXCEEDED', 
+          message: 'Please wait a minute before scanning another receipt.' 
+        });
+        return;
+      }
+
+      // B. Check subscription / pass status
+      const passKey = `pass:${deviceId}`;
+      const passType = await kv.get(passKey); // e.g. "trip" or "yearly"
+
+      if (!passType) {
+        // No active pass. Check monthly free scan limit (cap of 3)
+        const currentMonth = new Date().toISOString().slice(0, 7); // e.g. "2026-06"
+        const freeScansKey = `free:${deviceId}:${currentMonth}`;
+        const freeScansUsed = (await kv.get<number>(freeScansKey)) || 0;
+
+        if (freeScansUsed >= 3) {
+          res.status(403).json({ 
+            error: 'LIMIT_EXCEEDED', 
+            message: 'You have used all 3 free scans for this month. Upgrade to continue!' 
+          });
+          return;
+        }
+
+        // Set rate limit cooldown (60 seconds)
+        await kv.set(rateLimitKey, '1', { ex: 60 });
+        // Increment free scan count
+        await kv.incr(freeScansKey);
+        // Set TTL on free scan key for 35 days so it auto-deletes later
+        await kv.expire(freeScansKey, 35 * 24 * 60 * 60);
+      } else {
+        // Active pass exists! Enforce weekly fair-use limit of 50 scans
+        const weekKey = getWeekKey(deviceId);
+        const scansThisWeek = (await kv.get<number>(weekKey)) || 0;
+
+        if (scansThisWeek >= 50) {
+          res.status(403).json({ 
+            error: 'LIMIT_EXCEEDED', 
+            message: 'Fair Use limit of 50 scans per week reached. Please wait until next week!' 
+          });
+          return;
+        }
+
+        // Set rate limit cooldown (60 seconds)
+        await kv.set(rateLimitKey, '1', { ex: 60 });
+        // Increment weekly usage count
+        await kv.incr(weekKey);
+        // Set TTL on week key for 8 days
+        await kv.expire(weekKey, 8 * 24 * 60 * 60);
+      }
     }
 
     const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
