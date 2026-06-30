@@ -38,13 +38,6 @@ const showFullNames = ref(false)
 
 // History List State
 const savedSplits = ref<any[]>([])
-const showAllHistory = ref(false)
-const visibleSplits = computed(() => {
-  if (showAllHistory.value) {
-    return savedSplits.value
-  }
-  return savedSplits.value.slice(0, 3)
-})
 
 const loadHistoryFromStorage = async () => {
   try {
@@ -167,52 +160,49 @@ const loadSavedNames = async () => {
   }
 }
 
-onMounted(() => {
-  // 1. Load local persistent data concurrently in the background
-  store.loadFromLocalStorage();
-  loadHistoryFromStorage();
-  loadSavedNames();
+onMounted(async () => {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      // 1. Notify that app is ready to prevent rolling back
+      await CapacitorUpdater.notifyAppReady()
 
-  // 2. Fetch usage metrics from server in the background
-  store.fetchUsage();
+      // 2. Fetch the update manifest from your Vercel deployment
+      const response = await fetch('https://splat-chi.vercel.app/updates/update.json')
+      if (response.ok) {
+        const manifest = await response.json()
+        
+        // 3. Get current active version
+        const currentInfo = await CapacitorUpdater.current()
+        const currentVersion = currentInfo.bundle.id === 'builtin' ? currentInfo.native : currentInfo.bundle.version
+        appVersion.value = currentVersion
 
-  // 3. Sync DB usage state when the phone app is resumed from background
+        // 4. Compare and download update in the background if version is new
+        if (manifest.version && manifest.version !== currentVersion) {
+          const versionInfo = await CapacitorUpdater.download({
+            url: manifest.url,
+            version: manifest.version
+          })
+          
+          // Queue the update to be activated on next app launch/restart
+          await CapacitorUpdater.next(versionInfo)
+          console.log(`CapacitorUpdater: Downloaded version ${manifest.version}, queued for next restart.`)
+        }
+      }
+    } catch (e) {
+      console.warn('CapacitorUpdater check failed:', e)
+    }
+  }
+  await store.loadFromLocalStorage()
+  await loadHistoryFromStorage()
+  await loadSavedNames()
+  await store.fetchUsage()
+
+  // Sync DB usage state when the phone app is resumed from background
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       store.fetchUsage()
     }
   })
-
-  // 4. Notify Capgo updater immediately so splash screen hides instantly on startup
-  if (Capacitor.isNativePlatform()) {
-    CapacitorUpdater.notifyAppReady().catch(e => {
-      console.warn('CapacitorUpdater notifyAppReady failed:', e)
-    });
-
-    // Run background update checks
-    (async () => {
-      try {
-        const response = await fetch('https://splat-chi.vercel.app/updates/update.json')
-        if (response.ok) {
-          const manifest = await response.json()
-          const currentInfo = await CapacitorUpdater.current()
-          const currentVersion = currentInfo.bundle.id === 'builtin' ? currentInfo.native : currentInfo.bundle.version
-          appVersion.value = currentVersion
-
-          if (manifest.version && manifest.version !== currentVersion) {
-            const versionInfo = await CapacitorUpdater.download({
-              url: manifest.url,
-              version: manifest.version
-            })
-            await CapacitorUpdater.next(versionInfo)
-            console.log(`CapacitorUpdater: Downloaded version ${manifest.version}, queued for next restart.`)
-          }
-        }
-      } catch (e) {
-        console.warn('CapacitorUpdater background update check failed:', e)
-      }
-    })();
-  }
 })
 
 const onParticipantNameChanged = async (name: string) => {
@@ -773,55 +763,40 @@ const selectAllText = (event: Event) => {
       </div>
 
       <!-- Saved Splits History Section -->
-      <Transition name="fade" appear>
-        <div v-if="savedSplits.length > 0" class="mt-6 flex flex-col gap-2">
-          <div class="flex justify-between items-center px-1">
-            <label class="text-xs font-semibold text-secondary uppercase tracking-wider">Saved Splits / History</label>
-            <Button 
-              icon="pi pi-trash" 
-              label="Clear" 
-              class="p-button-text p-button-sm text-[10px] text-rose-500" 
-              :style="{ height: 'auto', padding: '0 !important' }"
-              @click="clearHistory"
-            />
-          </div>
-          
-          <TransitionGroup 
-            name="list" 
-            tag="div" 
-            class="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1"
-          >
-            <div 
-              v-for="split in visibleSplits" 
-              :key="split.splitId" 
-              class="history-card"
-              @click="loadSavedSplit(split)"
-            >
-              <div class="flex-1 min-w-0 pr-2">
-                <h5 class="font-bold text-sm text-slate-800 dark:text-slate-100 truncate text-left m-0">{{ split.billName }}</h5>
-                <div class="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5 font-medium">
-                  <span>{{ formatDate(split.timestamp) }}</span>
-                  <span>•</span>
-                  <span>{{ split.participantsCount }} people</span>
-                </div>
-              </div>
-              <div class="flex items-center gap-1.5 shrink-0">
-                <span class="font-bold text-primary text-sm">{{ split.currencySymbol }}{{ split.totalBill.toFixed(2) }}</span>
-                <i class="pi pi-chevron-right text-xs text-slate-400"></i>
-              </div>
-            </div>
-          </TransitionGroup>
-
-          <!-- Show More / Less button -->
+      <div v-if="savedSplits.length > 0" class="mt-6 flex flex-col gap-2">
+        <div class="flex justify-between items-center px-1">
+          <label class="text-xs font-semibold text-secondary uppercase tracking-wider">Saved Splits / History</label>
           <Button 
-            v-if="savedSplits.length > 3"
-            :label="showAllHistory ? 'Show Less' : `Show More (${savedSplits.length - 3} more)`" 
-            :icon="showAllHistory ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
-            class="p-button-text p-button-sm w-full mt-1 text-slate-400 hover:text-slate-200 text-xs font-bold" 
-            @click="showAllHistory = !showAllHistory"
+            icon="pi pi-trash" 
+            label="Clear" 
+            class="p-button-text p-button-sm text-[10px] text-rose-500" 
+            :style="{ height: 'auto', padding: '0 !important' }"
+            @click="clearHistory"
           />
         </div>
-      </Transition>
+        
+        <div class="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
+          <div 
+            v-for="split in savedSplits" 
+            :key="split.splitId" 
+            class="history-card"
+            @click="loadSavedSplit(split)"
+          >
+            <div class="flex-1 min-w-0 pr-2">
+              <h5 class="font-bold text-sm text-slate-800 dark:text-slate-100 truncate text-left m-0">{{ split.billName }}</h5>
+              <div class="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5 font-medium">
+                <span>{{ formatDate(split.timestamp) }}</span>
+                <span>•</span>
+                <span>{{ split.participantsCount }} people</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span class="font-bold text-primary text-sm">{{ split.currencySymbol }}{{ split.totalBill.toFixed(2) }}</span>
+              <i class="pi pi-chevron-right text-xs text-slate-400"></i>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Version Footer -->
       <div class="app-version" @click="handleVersionTap">
