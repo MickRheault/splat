@@ -109,6 +109,7 @@ export const store = reactive({
   ocrError: null as string | null,
   showPaywall: false,
   usageInfo: null as any,
+  simulatedUsage: null as any,
 
   reset() {
     this.step = 'capture'
@@ -126,6 +127,12 @@ export const store = reactive({
   },
 
   simulateOCR(imageSrc: string) {
+    if (this.usageInfo && !this.usageInfo.passType && this.usageInfo.freeScansRemaining <= 0) {
+      this.showPaywall = true
+      this.ocrError = 'Scan limit reached. Upgrade to continue!'
+      return
+    }
+
     this.isParsing = true
     this.receiptImage = imageSrc
     this.ocrError = null
@@ -165,6 +172,7 @@ export const store = reactive({
         this.tipType = 'percentage'
         
         this.isParsing = false
+        this.decrementSimulatedScan()
         this.step = 'edit'
         this.saveToLocalStorage()
       }, 1500)
@@ -186,6 +194,12 @@ export const store = reactive({
   },
 
   async parseWithGemini(imageSrc: string) {
+    if (this.usageInfo && !this.usageInfo.passType && this.usageInfo.freeScansRemaining <= 0) {
+      this.showPaywall = true
+      this.ocrError = 'Scan limit reached. Upgrade to continue!'
+      return
+    }
+
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 30000)
 
@@ -311,6 +325,7 @@ Return format must be EXACTLY this JSON structure:
       this.billName = `${parsedDate} - ${parsedRestaurant}`
  
       this.currencySymbol = result.currency || '$'
+      this.decrementSimulatedScan()
       this.step = 'edit'
     } catch (e: any) {
       console.error(e)
@@ -332,6 +347,10 @@ Return format must be EXACTLY this JSON structure:
   },
 
   async fetchUsage() {
+    if (this.simulatedUsage) {
+      this.usageInfo = { ...this.simulatedUsage }
+      return
+    }
     try {
       const deviceId = await getDeviceId()
       const isNative = Capacitor.isNativePlatform()
@@ -342,6 +361,36 @@ Return format must be EXACTLY this JSON structure:
       }
     } catch (err) {
       console.warn('Failed to fetch usage limits', err)
+    }
+  },
+
+  setSimulatedUsage(passType: string | null, freeScansUsed: number) {
+    const usage = {
+      passType,
+      freeScansUsed,
+      freeScansLimit: 3,
+      freeScansRemaining: Math.max(0, 3 - freeScansUsed)
+    }
+    this.simulatedUsage = usage
+    this.usageInfo = { ...usage }
+    setStorageItem('splat_simulated_usage', JSON.stringify(usage))
+  },
+
+  clearSimulatedUsage() {
+    this.simulatedUsage = null
+    if (Capacitor.isNativePlatform()) {
+      Preferences.remove({ key: 'splat_simulated_usage' })
+    } else {
+      localStorage.removeItem('splat_simulated_usage')
+    }
+    this.fetchUsage()
+  },
+
+  decrementSimulatedScan() {
+    if (this.simulatedUsage) {
+      if (this.simulatedUsage.passType) return
+      const newUsed = this.simulatedUsage.freeScansUsed + 1
+      this.setSimulatedUsage(null, newUsed)
     }
   },
 
@@ -461,6 +510,12 @@ Return format must be EXACTLY this JSON structure:
 
   async loadFromLocalStorage() {
     try {
+      const simUsageStr = await getStorageItem('splat_simulated_usage')
+      if (simUsageStr) {
+        this.simulatedUsage = JSON.parse(simUsageStr)
+        this.usageInfo = { ...this.simulatedUsage }
+      }
+      
       const dataStr = await getStorageItem('splat_store')
       if (!dataStr) return
       const data = JSON.parse(dataStr)

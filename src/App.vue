@@ -105,6 +105,21 @@ const handleDevAction = async (type: 'trip' | 'yearly' | 'reset') => {
   if (isPerformingDevAction.value) return
   isPerformingDevAction.value = true
   try {
+    // If simulated usage mode is active (or we want client-side simulation), mock it client-side
+    if (store.simulatedUsage || import.meta.env.DEV) {
+      if (type === 'reset') {
+        store.setSimulatedUsage(null, 0)
+        store.ocrError = null
+        alert('Simulated usage reset! Active passes removed.')
+      } else {
+        const currentUsed = store.simulatedUsage?.freeScansUsed || 0
+        store.setSimulatedUsage(type, currentUsed)
+        alert(`Simulated purchase success: Active ${type === 'trip' ? '7-Day' : 'Yearly'} pass registered client-side!`)
+      }
+      isDevMenuOpen.value = false
+      return
+    }
+
     const isNative = Capacitor.isNativePlatform()
     const apiBase = isNative ? 'https://splat-chi.vercel.app' : ''
     const deviceId = await getDeviceId()
@@ -1426,34 +1441,78 @@ const selectAllText = (event: Event) => {
           </div>
         </div>
 
-        <div class="flex flex-col gap-2">
+        <div class="flex flex-col gap-3">
+          <!-- Force Show UI option -->
           <Button 
             label="Force Show Paywall" 
             icon="pi pi-exclamation-circle" 
             class="p-button-outlined p-button-sm w-full" 
             @click="store.showPaywall = true; isDevMenuOpen = false" 
           />
-          <Button 
-            label="Simulate 7-Day Pass Purchase" 
-            icon="pi pi-bolt" 
-            class="p-button-outlined p-button-success p-button-sm w-full" 
-            :loading="isPerformingDevAction"
-            @click="handleDevAction('trip')" 
-          />
-          <Button 
-            label="Simulate Yearly Subscription" 
-            icon="pi pi-star" 
-            class="p-button-outlined p-button-success p-button-sm w-full" 
-            :loading="isPerformingDevAction"
-            @click="handleDevAction('yearly')" 
-          />
-          <Button 
-            label="Reset Usage & Remove Passes" 
-            icon="pi pi-trash" 
-            class="p-button-outlined p-button-danger p-button-sm w-full" 
-            :loading="isPerformingDevAction"
-            @click="handleDevAction('reset')" 
-          />
+
+          <!-- Client-Side Simulation Mode -->
+          <div class="flex flex-col gap-1.5 border-t border-slate-800 pt-3">
+            <label class="text-[10px] font-semibold text-secondary uppercase tracking-wider">Simulate Scan Limits</label>
+            <div class="grid grid-cols-3 gap-1.5">
+              <Button 
+                label="3 Left" 
+                class="p-button-outlined p-button-sm text-xs py-1 px-0" 
+                :class="{ 'p-button-primary': store.simulatedUsage && store.simulatedUsage.freeScansRemaining === 3 && !store.simulatedUsage.passType }"
+                @click="store.setSimulatedUsage(null, 0); isDevMenuOpen = false" 
+              />
+              <Button 
+                label="1 Left" 
+                class="p-button-outlined p-button-sm text-xs py-1 px-0" 
+                :class="{ 'p-button-primary': store.simulatedUsage && store.simulatedUsage.freeScansRemaining === 1 && !store.simulatedUsage.passType }"
+                @click="store.setSimulatedUsage(null, 2); isDevMenuOpen = false" 
+              />
+              <Button 
+                label="0 Left" 
+                class="p-button-outlined p-button-sm text-xs py-1 px-0" 
+                :class="{ 'p-button-primary': store.simulatedUsage && store.simulatedUsage.freeScansRemaining === 0 && !store.simulatedUsage.passType }"
+                @click="store.setSimulatedUsage(null, 3); isDevMenuOpen = false" 
+              />
+            </div>
+          </div>
+
+          <!-- Purchase Pass Simulation -->
+          <div class="flex flex-col gap-2 border-t border-slate-800 pt-3">
+            <label class="text-[10px] font-semibold text-secondary uppercase tracking-wider">Simulate Purchases</label>
+            <Button 
+              label="Simulate 7-Day Pass" 
+              icon="pi pi-bolt" 
+              class="p-button-outlined p-button-success p-button-sm w-full" 
+              :class="{ 'p-button-primary': store.simulatedUsage && store.simulatedUsage.passType === 'trip' }"
+              :loading="isPerformingDevAction"
+              @click="handleDevAction('trip')" 
+            />
+            <Button 
+              label="Simulate Yearly Subscription" 
+              icon="pi pi-star" 
+              class="p-button-outlined p-button-success p-button-sm w-full" 
+              :class="{ 'p-button-primary': store.simulatedUsage && store.simulatedUsage.passType === 'yearly' }"
+              :loading="isPerformingDevAction"
+              @click="handleDevAction('yearly')" 
+            />
+          </div>
+
+          <!-- Reset / Remove Mode -->
+          <div class="flex flex-col gap-2 border-t border-slate-800 pt-3">
+            <Button 
+              label="Reset Usage & Remove Passes" 
+              icon="pi pi-trash" 
+              class="p-button-outlined p-button-danger p-button-sm w-full" 
+              :loading="isPerformingDevAction"
+              @click="handleDevAction('reset')" 
+            />
+            <Button 
+              v-if="store.simulatedUsage"
+              label="Exit Simulation (Dev Mode)" 
+              icon="pi pi-refresh" 
+              class="p-button-text p-button-sm w-full text-slate-400 hover:text-slate-100" 
+              @click="store.clearSimulatedUsage(); isDevMenuOpen = false" 
+            />
+          </div>
         </div>
       </div>
     </Dialog>
