@@ -25,16 +25,26 @@ export default async function handler(req: any, res: any) {
     const hasKV = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN;
     if (hasKV) {
       const passKey = `pass:${deviceId}`;
-      const seconds = type === 'trip' ? 7 * 24 * 60 * 60 : 365 * 24 * 60 * 60;
-      await kv.set(passKey, type, { ex: seconds });
-      
-      // Also clear rate limits and monthly caps for testing
       const rateLimitKey = `ratelimit:${deviceId}`;
-      await kv.del(rateLimitKey);
       
-      res.status(200).json({ success: true, message: `Activated ${type} pass for ${deviceId}` });
+      if (type === 'reset') {
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        const freeScansKey = `free:${deviceId}:${currentMonth}`;
+        
+        await kv.del(passKey);
+        await kv.del(rateLimitKey);
+        await kv.del(freeScansKey);
+        
+        res.status(200).json({ success: true, message: `Reset usage and passes for ${deviceId}` });
+      } else {
+        const seconds = type === 'trip' ? 7 * 24 * 60 * 60 : 365 * 24 * 60 * 60;
+        await kv.set(passKey, type, { ex: seconds });
+        await kv.del(rateLimitKey);
+        
+        res.status(200).json({ success: true, message: `Activated ${type} pass for ${deviceId}` });
+      }
     } else {
-      res.status(200).json({ success: true, message: 'No KV database linked, simulated purchase successfully!' });
+      res.status(200).json({ success: true, message: 'No KV database linked, simulated operation successfully!' });
     }
   } catch (e: any) {
     res.status(500).json({ error: e.message || 'Internal Server Error' });

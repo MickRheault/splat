@@ -86,6 +86,55 @@ const handlePaywallPurchase = async () => {
   }
 }
 
+// Developer Menu States
+const versionTapCount = ref(0)
+const isDevMenuOpen = ref(false)
+const isPerformingDevAction = ref(false)
+const localDeviceId = ref('')
+
+const handleVersionTap = async () => {
+  versionTapCount.value++
+  if (versionTapCount.value >= 5) {
+    versionTapCount.value = 0
+    localDeviceId.value = await getDeviceId()
+    isDevMenuOpen.value = true
+  }
+}
+
+const handleDevAction = async (type: 'trip' | 'yearly' | 'reset') => {
+  if (isPerformingDevAction.value) return
+  isPerformingDevAction.value = true
+  try {
+    const isNative = Capacitor.isNativePlatform()
+    const apiBase = isNative ? 'https://splat-chi.vercel.app' : ''
+    const deviceId = await getDeviceId()
+
+    const response = await fetch(`${apiBase}/api/mock-purchase`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId, type })
+    })
+
+    if (response.ok) {
+      await store.fetchUsage()
+      if (type === 'reset') {
+        store.ocrError = null
+        alert('Successfully reset scan usage and removed all active passes!')
+      } else {
+        alert(`Simulated purchase success: Active ${type} pass registered!`)
+      }
+      isDevMenuOpen.value = false
+    } else {
+      throw new Error('Failed to run dev action')
+    }
+  } catch (e: any) {
+    console.error('Dev action failed', e)
+    alert('Simulated action failed. Check network.')
+  } finally {
+    isPerformingDevAction.value = false
+  }
+}
+
 const loadSavedNames = async () => {
   try {
     const savedStr = await getStorageItem('splat_saved_names') || '[]'
@@ -691,7 +740,7 @@ const selectAllText = (event: Event) => {
       </div>
 
       <!-- Version Footer -->
-      <div class="app-version">
+      <div class="app-version" @click="handleVersionTap">
         VERSION: v{{ appVersion }}
       </div>
     </div>
@@ -1323,6 +1372,55 @@ const selectAllText = (event: Event) => {
         <p class="text-[10px] text-slate-500 text-center leading-normal">
           By upgrading, you agree to our Terms and Privacy Policy. Secure processing powered by App Store / Google Play.
         </p>
+      </div>
+    </Dialog>
+
+    <!-- Developer Menu Dialog -->
+    <Dialog 
+      v-model:visible="isDevMenuOpen" 
+      modal 
+      header="🛠️ Developer Options" 
+      :style="{ width: '90%', maxWidth: '360px' }"
+      :draggable="false"
+      class="dark:bg-slate-900"
+    >
+      <div class="flex flex-col gap-4">
+        <div>
+          <label class="text-[10px] font-semibold text-secondary uppercase tracking-wider">Device ID</label>
+          <div class="bg-slate-950 p-2 rounded-lg text-slate-300 font-mono text-[9px] break-all select-all border border-slate-800">
+            {{ localDeviceId }}
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <Button 
+            label="Force Show Paywall" 
+            icon="pi pi-exclamation-circle" 
+            class="p-button-outlined p-button-sm w-full" 
+            @click="store.showPaywall = true; isDevMenuOpen = false" 
+          />
+          <Button 
+            label="Simulate 7-Day Pass Purchase" 
+            icon="pi pi-bolt" 
+            class="p-button-outlined p-button-success p-button-sm w-full" 
+            :loading="isPerformingDevAction"
+            @click="handleDevAction('trip')" 
+          />
+          <Button 
+            label="Simulate Yearly Subscription" 
+            icon="pi pi-star" 
+            class="p-button-outlined p-button-success p-button-sm w-full" 
+            :loading="isPerformingDevAction"
+            @click="handleDevAction('yearly')" 
+          />
+          <Button 
+            label="Reset Usage & Remove Passes" 
+            icon="pi pi-trash" 
+            class="p-button-outlined p-button-danger p-button-sm w-full" 
+            :loading="isPerformingDevAction"
+            @click="handleDevAction('reset')" 
+          />
+        </div>
       </div>
     </Dialog>
 
