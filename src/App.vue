@@ -314,15 +314,41 @@ const startManualEntry = () => {
 
 
 // Handle navigation validation
+const isEditValid = computed(() => store.items.length > 0 && itemsSubtotal.value > 0)
+const isParticipantsValid = computed(() => store.participants.length > 0)
+
+const isStepSelectable = (targetStep: 'edit' | 'participants' | 'allocate' | 'share') => {
+  if (targetStep === 'edit') return true
+  if (targetStep === 'participants') return isEditValid.value
+  if (targetStep === 'allocate') return isEditValid.value && isParticipantsValid.value
+  if (targetStep === 'share') return isEditValid.value && isParticipantsValid.value
+  return false
+}
+
+const navigateToStep = (targetStep: 'edit' | 'participants' | 'allocate' | 'share') => {
+  if (!isStepSelectable(targetStep)) return
+
+  if (targetStep === 'allocate' || targetStep === 'share') {
+    // Automatically assign everyone to all items if they haven't been customized yet
+    store.items.forEach(item => {
+      if (item.assignedTo.length === 0) {
+        store.assignAllToItem(item.id)
+      }
+    })
+  }
+
+  store.step = targetStep
+}
+
 const canGoNext = computed(() => {
   if (store.step === 'capture') {
     return false
   }
   if (store.step === 'edit') {
-    return store.items.length > 0 && itemsSubtotal.value > 0
+    return isEditValid.value
   }
   if (store.step === 'participants') {
-    return store.participants.length > 0
+    return isParticipantsValid.value
   }
   return true
 })
@@ -560,28 +586,36 @@ const selectAllText = (event: Event) => {
         class="step-node" 
         :class="{ 
           'active': store.step === 'edit', 
-          'completed': store.step !== 'edit' 
+          'completed': store.step !== 'edit',
+          'selectable': isStepSelectable('edit')
         }"
+        @click="navigateToStep('edit')"
       >1</div>
       <div 
         class="step-node" 
         :class="{ 
           'active': store.step === 'participants', 
-          'completed': store.step !== 'edit' && store.step !== 'participants' 
+          'completed': store.step !== 'edit' && store.step !== 'participants',
+          'selectable': isStepSelectable('participants')
         }"
+        @click="navigateToStep('participants')"
       >2</div>
       <div 
         class="step-node" 
         :class="{ 
           'active': store.step === 'allocate', 
-          'completed': store.step === 'share' 
+          'completed': store.step === 'share',
+          'selectable': isStepSelectable('allocate')
         }"
+        @click="navigateToStep('allocate')"
       >3</div>
       <div 
         class="step-node" 
         :class="{ 
-          'active': store.step === 'share' 
+          'active': store.step === 'share',
+          'selectable': isStepSelectable('share')
         }"
+        @click="navigateToStep('share')"
       >4</div>
     </div>
   </header>

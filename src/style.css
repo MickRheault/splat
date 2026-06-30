@@ -179,6 +179,23 @@ h1, h2, h3, h4, h5, h6 {
   transform: rotate(5deg);
 }
 
+.step-node.selectable {
+  cursor: pointer;
+}
+
+.step-node.selectable:hover {
+  transform: translateY(-2px) scale(1.05);
+}
+
+.step-node.selectable.active:hover {
+  transform: scale(1.15) rotate(-5deg);
+}
+
+.step-node:not(.selectable):not(.active) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* App Main Content Area */
 .app-content {
   flex: 1;
