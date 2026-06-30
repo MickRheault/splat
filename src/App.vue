@@ -167,15 +167,13 @@ const loadSavedNames = async () => {
   }
 }
 
-onMounted(async () => {
-  // 1. Load local persistent data concurrently (Non-blocking)
-  const localDataPromise = Promise.all([
-    store.loadFromLocalStorage(),
-    loadHistoryFromStorage(),
-    loadSavedNames()
-  ]);
+onMounted(() => {
+  // 1. Load local persistent data concurrently in the background
+  store.loadFromLocalStorage();
+  loadHistoryFromStorage();
+  loadSavedNames();
 
-  // 2. Fetch usage metrics from server in the background (Non-blocking)
+  // 2. Fetch usage metrics from server in the background
   store.fetchUsage();
 
   // 3. Sync DB usage state when the phone app is resumed from background
@@ -185,18 +183,13 @@ onMounted(async () => {
     }
   })
 
-  // 4. Wait for local storage data to finish loading BEFORE hiding splash screen
-  await localDataPromise;
-
-  // 5. Notify Capgo updater that app is ready (this hides the splash screen natively)
+  // 4. Notify Capgo updater immediately so splash screen hides instantly on startup
   if (Capacitor.isNativePlatform()) {
-    try {
-      await CapacitorUpdater.notifyAppReady()
-    } catch (e) {
+    CapacitorUpdater.notifyAppReady().catch(e => {
       console.warn('CapacitorUpdater notifyAppReady failed:', e)
-    }
+    });
 
-    // Run background update checks without blocking startup
+    // Run background update checks
     (async () => {
       try {
         const response = await fetch('https://splat-chi.vercel.app/updates/update.json')
