@@ -327,6 +327,9 @@ Return format must be EXACTLY this JSON structure:
       this.currencySymbol = result.currency || '$'
       this.decrementSimulatedScan()
       this.step = 'edit'
+      if (!this.simulatedUsage) {
+        await this.fetchUsage()
+      }
     } catch (e: any) {
       console.error(e)
       if (e.message && e.message.includes('LIMIT_EXCEEDED')) {
