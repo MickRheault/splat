@@ -1351,8 +1351,8 @@ const selectAllText = (event: Event) => {
     <!-- Right: Next Button -->
     <Button 
       v-if="store.step !== 'share'" 
-      label="Next" 
-      icon="pi pi-chevron-right" 
+      :label="store.step === 'allocate' ? 'Finish' : 'Next'" 
+      :icon="store.step === 'allocate' ? 'pi pi-check' : 'pi pi-chevron-right'" 
       iconPos="right" 
       class="p-button-sm min-w-[70px]" 
       :disabled="!canGoNext" 
