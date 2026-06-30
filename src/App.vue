@@ -27,6 +27,7 @@ import {
 import pkg from '../package.json'
 
 const appVersion = ref(pkg.version || '0.0.0')
+const isDev = import.meta.env.DEV
 
 // Local UI states
 const cameraInput = ref<HTMLInputElement | null>(null)
@@ -710,13 +711,13 @@ const selectAllText = (event: Event) => {
         <p class="text-secondary text-xs mb-2 font-semibold uppercase tracking-wider">Or start splitting manually</p>
         <div class="flex gap-2 justify-center flex-wrap">
           <Button 
-            v-if="store.usageInfo && store.usageInfo.passType === 'dev_unlimited'"
+            v-if="isDev"
             label="🥞 Brunch" 
             class="p-button-outlined p-button-sm" 
             @click="loadDemoReceipt(0)" 
           />
           <Button 
-            v-if="store.usageInfo && store.usageInfo.passType === 'dev_unlimited'"
+            v-if="isDev"
             label="🍷 Dinner" 
             class="p-button-outlined p-button-sm" 
             @click="loadDemoReceipt(1)" 
