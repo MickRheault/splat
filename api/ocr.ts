@@ -55,6 +55,24 @@ export default async function handler(req: any, res: any) {
       const passType = await kv.get(passKey); // e.g. "trip" or "yearly"
 
       if (!passType) {
+        // IP-based Rate Limiting for Free Scans: Max 10 scans per day per IP
+        const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.headers['x-real-ip'] || 'unknown';
+        if (ip !== 'unknown') {
+          const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+          const ipKey = `ipfree:${ip}:${today}`;
+          const ipScans = (await kv.get<number>(ipKey)) || 0;
+          if (ipScans >= 10) {
+            res.status(403).json({
+              error: 'LIMIT_EXCEEDED',
+              message: 'Daily limit of 10 free scans reached for this network. Please try again tomorrow!'
+            });
+            return;
+          }
+          // Increment IP scan count
+          await kv.incr(ipKey);
+          await kv.expire(ipKey, 24 * 60 * 60); // 24 hours expiry
+        }
+
         // No active pass. Check monthly free scan limit (cap of 3)
         const currentMonth = new Date().toISOString().slice(0, 7); // e.g. "2026-06"
         const freeScansKey = `free:${deviceId}:${currentMonth}`;
