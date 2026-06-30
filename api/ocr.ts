@@ -1,4 +1,11 @@
-import { kv } from '@vercel/kv';
+import { Redis } from '@upstash/redis';
+
+const kv = (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
+  ? new Redis({
+      url: process.env.KV_REST_API_URL,
+      token: process.env.KV_REST_API_TOKEN,
+    })
+  : null;
 
 export const config = {
   maxDuration: 30,
@@ -38,7 +45,7 @@ export default async function handler(req: any, res: any) {
 
     // 1. Vercel KV limits and subscription checks (only run if KV env vars are set)
     const hasKV = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN;
-    if (hasKV && deviceId) {
+    if (hasKV && deviceId && kv) {
       // A. Rate Limiting: Max 1 scan per 60 seconds per device ID
       const rateLimitKey = `ratelimit:${deviceId}`;
       const isRateLimited = await kv.get(rateLimitKey);

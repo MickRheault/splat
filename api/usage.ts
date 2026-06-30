@@ -1,4 +1,11 @@
-import { kv } from '@vercel/kv';
+import { Redis } from '@upstash/redis';
+
+const kv = (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
+  ? new Redis({
+      url: process.env.KV_REST_API_URL,
+      token: process.env.KV_REST_API_TOKEN,
+    })
+  : null;
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -18,7 +25,7 @@ export default async function handler(req: any, res: any) {
 
   try {
     const hasKV = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN;
-    if (hasKV) {
+    if (hasKV && kv) {
       const passKey = `pass:${deviceId}`;
       const passType = await kv.get(passKey); // "trip", "yearly", or null
 
