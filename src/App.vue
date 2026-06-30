@@ -710,11 +710,13 @@ const selectAllText = (event: Event) => {
         <p class="text-secondary text-xs mb-2 font-semibold uppercase tracking-wider">Or start splitting manually</p>
         <div class="flex gap-2 justify-center flex-wrap">
           <Button 
+            v-if="store.usageInfo && store.usageInfo.passType === 'dev_unlimited'"
             label="🥞 Brunch" 
             class="p-button-outlined p-button-sm" 
             @click="loadDemoReceipt(0)" 
           />
           <Button 
+            v-if="store.usageInfo && store.usageInfo.passType === 'dev_unlimited'"
             label="🍷 Dinner" 
             class="p-button-outlined p-button-sm" 
             @click="loadDemoReceipt(1)" 
