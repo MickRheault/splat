@@ -160,41 +160,63 @@ const loadSavedNames = async () => {
 }
 
 onMounted(async () => {
+  // 1. Load local persistent data concurrently (Non-blocking)
+  const localDataPromise = Promise.all([
+    store.loadFromLocalStorage(),
+    loadHistoryFromStorage(),
+    loadSavedNames()
+  ]);
+
+  // 2. Fetch usage metrics from server in the background (Non-blocking)
+  store.fetchUsage();
+
+  // 3. Sync DB usage state when the phone app is resumed from background
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      store.fetchUsage()
+    }
+  })
+
+  // 4. Wait for local storage data to finish loading BEFORE hiding splash screen
+  await localDataPromise;
+
+  // 5. Notify Capgo updater that app is ready (this hides the splash screen natively)
   if (Capacitor.isNativePlatform()) {
     try {
-      // 1. Notify that app is ready to prevent rolling back
       await CapacitorUpdater.notifyAppReady()
-
-      // 2. Fetch the update manifest from your Vercel deployment
-      const response = await fetch('https://splat-chi.vercel.app/updates/update.json')
-      if (response.ok) {
-        const manifest = await response.json()
-        
-        // 3. Get current active version
-        const currentInfo = await CapacitorUpdater.current()
-        const currentVersion = currentInfo.bundle.id === 'builtin' ? currentInfo.native : currentInfo.bundle.version
-        appVersion.value = currentVersion
-
-        // 4. Compare and download update in the background if version is new
-        if (manifest.version && manifest.version !== currentVersion) {
-          const versionInfo = await CapacitorUpdater.download({
-            url: manifest.url,
-            version: manifest.version
-          })
-          
-          // Queue the update to be activated on next app launch/restart
-          await CapacitorUpdater.next(versionInfo)
-          console.log(`CapacitorUpdater: Downloaded version ${manifest.version}, queued for next restart.`)
-        }
-      }
     } catch (e) {
-      console.warn('CapacitorUpdater check failed:', e)
+      console.warn('CapacitorUpdater notifyAppReady failed:', e)
     }
+
+    // Run background update checks without blocking startup
+    (async () => {
+      try {
+        const response = await fetch('https://splat-chi.vercel.app/updates/update.json')
+        if (response.ok) {
+          const manifest = await response.json()
+          
+          // Get current active version
+          const currentInfo = await CapacitorUpdater.current()
+          const currentVersion = currentInfo.bundle.id === 'builtin' ? currentInfo.native : currentInfo.bundle.version
+          appVersion.value = currentVersion
+
+          // Compare and download update in the background if version is new
+          if (manifest.version && manifest.version !== currentVersion) {
+            const versionInfo = await CapacitorUpdater.download({
+              url: manifest.url,
+              version: manifest.version
+            })
+            
+            // Queue the update to be activated on next app launch/restart
+            await CapacitorUpdater.next(versionInfo)
+            console.log(`CapacitorUpdater: Downloaded version ${manifest.version}, queued for next restart.`)
+          }
+        }
+      } catch (e) {
+        console.warn('CapacitorUpdater background update check failed:', e)
+      }
+    })();
   }
-  await store.loadFromLocalStorage()
-  await loadHistoryFromStorage()
-  await loadSavedNames()
-  await store.fetchUsage()
 })
 
 const onParticipantNameChanged = async (name: string) => {
