@@ -1,3 +1,6 @@
+(window as any).__bootstrapStart = performance.now();
+console.log('[PERF] main.ts execution started at:', (window as any).__bootstrapStart);
+
 import { createApp } from 'vue'
 import PrimeVue from 'primevue/config'
 import Aura from '@primevue/themes/aura'

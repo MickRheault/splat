@@ -161,7 +161,15 @@ const loadSavedNames = async () => {
 }
 
 onMounted(async () => {
+  const mountStart = performance.now();
+  const getElapsed = () => {
+    const base = (window as any).__bootstrapStart || mountStart;
+    return (performance.now() - base).toFixed(1) + 'ms';
+  };
+  console.log('[PERF] App.vue onMounted started. Elapsed since bootstrap:', getElapsed());
+
   // 1. Load local persistent data concurrently (Non-blocking)
+  const dbLoadStart = performance.now();
   const localDataPromise = Promise.all([
     store.loadFromLocalStorage(),
     loadHistoryFromStorage(),
@@ -180,17 +188,22 @@ onMounted(async () => {
 
   // 4. Wait for local storage data to finish loading BEFORE hiding splash screen
   await localDataPromise;
+  console.log(`[PERF] Local database loaded in ${(performance.now() - dbLoadStart).toFixed(1)}ms. Total elapsed:`, getElapsed());
 
   // 5. Notify Capgo updater and hide native splash screen when ready
   if (Capacitor.isNativePlatform()) {
+    const capReadyStart = performance.now();
     try {
       await CapacitorUpdater.notifyAppReady()
+      console.log(`[PERF] CapacitorUpdater notifyAppReady done in ${(performance.now() - capReadyStart).toFixed(1)}ms. Total elapsed:`, getElapsed());
     } catch (e) {
       console.warn('CapacitorUpdater notifyAppReady failed:', e)
     }
 
+    const splashHideStart = performance.now();
     try {
       await SplashScreen.hide()
+      console.log(`[PERF] SplashScreen hide done in ${(performance.now() - splashHideStart).toFixed(1)}ms. Total elapsed:`, getElapsed());
     } catch (e) {
       console.warn('SplashScreen hide failed:', e)
     }
