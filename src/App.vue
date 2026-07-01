@@ -38,6 +38,13 @@ const showFullNames = ref(false)
 
 // History List State
 const savedSplits = ref<any[]>([])
+const showAllHistory = ref(false)
+const visibleSplits = computed(() => {
+  if (showAllHistory.value) {
+    return savedSplits.value
+  }
+  return savedSplits.value.slice(0, 3)
+})
 
 const loadHistoryFromStorage = async () => {
   try {
@@ -797,40 +804,55 @@ const selectAllText = (event: Event) => {
       </div>
 
       <!-- Saved Splits History Section -->
-      <div v-if="savedSplits.length > 0" class="mt-6 flex flex-col gap-2">
-        <div class="flex justify-between items-center px-1">
-          <label class="text-xs font-semibold text-secondary uppercase tracking-wider">Saved Splits / History</label>
-          <Button 
-            icon="pi pi-trash" 
-            label="Clear" 
-            class="p-button-text p-button-sm text-[10px] text-rose-500" 
-            :style="{ height: 'auto', padding: '0 !important' }"
-            @click="clearHistory"
-          />
-        </div>
-        
-        <div class="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
-          <div 
-            v-for="split in savedSplits" 
-            :key="split.splitId" 
-            class="history-card"
-            @click="loadSavedSplit(split)"
+      <Transition name="fade" appear>
+        <div v-if="savedSplits.length > 0" class="mt-6 flex flex-col gap-2">
+          <div class="flex justify-between items-center px-1">
+            <label class="text-xs font-semibold text-secondary uppercase tracking-wider">Saved Splits / History</label>
+            <Button 
+              icon="pi pi-trash" 
+              label="Clear" 
+              class="p-button-text p-button-sm text-[10px] text-rose-500" 
+              :style="{ height: 'auto', padding: '0 !important' }"
+              @click="clearHistory"
+            />
+          </div>
+          
+          <TransitionGroup 
+            name="list" 
+            tag="div" 
+            class="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1"
           >
-            <div class="flex-1 min-w-0 pr-2">
-              <h5 class="font-bold text-sm text-slate-800 dark:text-slate-100 truncate text-left m-0">{{ split.billName }}</h5>
-              <div class="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5 font-medium">
-                <span>{{ formatDate(split.timestamp) }}</span>
-                <span>•</span>
-                <span>{{ split.participantsCount }} people</span>
+            <div 
+              v-for="split in visibleSplits" 
+              :key="split.splitId" 
+              class="history-card"
+              @click="loadSavedSplit(split)"
+            >
+              <div class="flex-1 min-w-0 pr-2">
+                <h5 class="font-bold text-sm text-slate-800 dark:text-slate-100 truncate text-left m-0">{{ split.billName }}</h5>
+                <div class="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5 font-medium">
+                  <span>{{ formatDate(split.timestamp) }}</span>
+                  <span>•</span>
+                  <span>{{ split.participantsCount }} people</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="font-bold text-primary text-sm">{{ split.currencySymbol }}{{ split.totalBill.toFixed(2) }}</span>
+                <i class="pi pi-chevron-right text-xs text-slate-400"></i>
               </div>
             </div>
-            <div class="flex items-center gap-1.5 shrink-0">
-              <span class="font-bold text-primary text-sm">{{ split.currencySymbol }}{{ split.totalBill.toFixed(2) }}</span>
-              <i class="pi pi-chevron-right text-xs text-slate-400"></i>
-            </div>
-          </div>
+          </TransitionGroup>
+
+          <!-- Show More / Less button -->
+          <Button 
+            v-if="savedSplits.length > 3"
+            :label="showAllHistory ? 'Show Less' : `Show More (${savedSplits.length - 3} more)`" 
+            :icon="showAllHistory ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"
+            class="p-button-text p-button-sm w-full mt-1 text-slate-400 hover:text-slate-200 text-xs font-bold" 
+            @click="showAllHistory = !showAllHistory"
+          />
         </div>
-      </div>
+      </Transition>
 
       <!-- Version Footer -->
       <div class="app-version" @click="handleVersionTap">
