@@ -185,9 +185,14 @@ onMounted(async () => {
   if (Capacitor.isNativePlatform()) {
     try {
       await CapacitorUpdater.notifyAppReady()
+    } catch (e) {
+      console.warn('CapacitorUpdater notifyAppReady failed:', e)
+    }
+
+    try {
       await SplashScreen.hide()
     } catch (e) {
-      console.warn('CapacitorUpdater/SplashScreen init failed:', e)
+      console.warn('SplashScreen hide failed:', e)
     }
 
     // Run background update checks without blocking startup
