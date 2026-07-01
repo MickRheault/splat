@@ -536,12 +536,8 @@ const navigateToStep = (targetStep: 'edit' | 'participants' | 'allocate' | 'shar
   if (!isStepSelectable(targetStep)) return
 
   if (targetStep === 'allocate' || targetStep === 'share') {
-    // Automatically assign everyone to all items if they haven't been customized yet
-    store.items.forEach(item => {
-      if (item.assignedTo.length === 0) {
-        store.assignAllToItem(item.id)
-      }
-    })
+    // Automatically assign everyone to unallocated single-quantity items
+    store.autoAssignUnallocatedItems()
   }
 
   store.step = targetStep
@@ -573,12 +569,8 @@ const goNext = () => {
     store.step = 'participants'
   } else if (store.step === 'participants') {
     store.step = 'allocate'
-    // Automatically assign everyone to all items if they haven't been customized yet
-    store.items.forEach(item => {
-      if (item.assignedTo.length === 0) {
-        store.assignAllToItem(item.id)
-      }
-    })
+    // Automatically assign everyone to unallocated single-quantity items
+    store.autoAssignUnallocatedItems()
   } else if (store.step === 'allocate') {
     store.step = 'share'
   }

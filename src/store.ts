@@ -526,6 +526,15 @@ Return format must be EXACTLY this JSON structure:
     this.saveToLocalStorage()
   },
 
+  autoAssignUnallocatedItems() {
+    this.items.forEach(item => {
+      if (item.assignedTo.length === 0 && item.quantity === 1) {
+        this.assignAllToItem(item.id)
+      }
+    })
+  },
+
+
   async saveToLocalStorage() {
     try {
       const data = {

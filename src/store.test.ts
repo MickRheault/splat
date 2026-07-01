@@ -392,6 +392,37 @@ describe('Splat Core Store & Math Logic', () => {
       expect(item.assignedQuantities?.[bobId]).toBe(1)
     })
 
+    test('should auto-assign unallocated items of quantity 1, but leave multi-quantity items unassigned', () => {
+      store.addParticipant('Alice')
+      store.addParticipant('Bob')
+      const aliceId = store.participants[0].id
+      const bobId = store.participants[1].id
+
+      // Item 1: Quantity 1
+      store.addItem('Pizza', 20, 1)
+      const item1 = store.items[0]
+      // Clear auto-assignment done by addItem for quantity 1
+      store.clearAllFromItem(item1.id)
+
+      // Item 2: Quantity 2
+      store.addItem('Beer', 10, 2)
+      const item2 = store.items[1]
+
+      expect(item1.assignedTo).toEqual([])
+      expect(item2.assignedTo).toEqual([])
+
+      store.autoAssignUnallocatedItems()
+
+      // Item 1 (qty 1) should be assigned to everyone
+      expect(item1.assignedTo).toContain(aliceId)
+      expect(item1.assignedTo).toContain(bobId)
+      
+      // Item 2 (qty > 1) should remain unassigned (nobody by default)
+      expect(item2.assignedTo).toEqual([])
+      expect(item2.assignedQuantities).toEqual({})
+    })
+
+
     test('should split multi-quantity item cost evenly when isSplitEvenly is true', () => {
       store.addParticipant('Alice')
       store.addParticipant('Bob')
