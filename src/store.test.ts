@@ -333,4 +333,62 @@ describe('Splat Core Store & Math Logic', () => {
       expect(summary).toContain('Total Bill: $20.80')
     })
   })
+
+  describe('Multi-Quantity Splits & Math', () => {
+    test('should split cost proportionally based on assigned counts', () => {
+      store.addParticipant('Alice')
+      store.addParticipant('Bob')
+      const aliceId = store.participants[0].id
+      const bobId = store.participants[1].id
+
+      // 3 beers for $15 ($5 each)
+      store.addItem('Beer', 15)
+      const item = store.items[0]
+      item.quantity = 3
+      item.assignedQuantities = {
+        [aliceId]: 2,
+        [bobId]: 1
+      }
+      item.assignedTo = [aliceId, bobId]
+
+      const breakdown = billBreakdown.value
+      const aliceBreakdown = breakdown.find(p => p.id === aliceId)
+      const bobBreakdown = breakdown.find(p => p.id === bobId)
+
+      expect(aliceBreakdown?.subtotal).toBe(10.00)
+      expect(bobBreakdown?.subtotal).toBe(5.00)
+    })
+
+    test('should clear assignments for multi-quantity items correctly', () => {
+      store.addParticipant('Alice')
+      const aliceId = store.participants[0].id
+
+      store.addItem('Beer', 15)
+      const item = store.items[0]
+      item.quantity = 3
+      item.assignedQuantities = { [aliceId]: 2 }
+      item.assignedTo = [aliceId]
+
+      store.clearAllFromItem(item.id)
+      expect(item.assignedTo).toEqual([])
+      expect(item.assignedQuantities).toEqual({})
+    })
+
+    test('should assign all participants with 1 count using assignAllToItem', () => {
+      store.addParticipant('Alice')
+      store.addParticipant('Bob')
+      const aliceId = store.participants[0].id
+      const bobId = store.participants[1].id
+
+      store.addItem('Beer', 15)
+      const item = store.items[0]
+      item.quantity = 2
+
+      store.assignAllToItem(item.id)
+      expect(item.assignedTo).toContain(aliceId)
+      expect(item.assignedTo).toContain(bobId)
+      expect(item.assignedQuantities?.[aliceId]).toBe(1)
+      expect(item.assignedQuantities?.[bobId]).toBe(1)
+    })
+  })
 })

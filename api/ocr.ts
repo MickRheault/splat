@@ -146,7 +146,7 @@ export default async function handler(req: any, res: any) {
               text: `You are an expert receipt parser. Analyze this receipt and return a clean JSON object.
 Follow these rules strictly:
 1. Extract the merchant/restaurant name and target date if present.
-2. Extract all individual line items (name, price).
+2. Extract all individual line items (name, total price, quantity count). If an item has a quantity/count specified (e.g. '3 - Beer : 15$'), return the quantity as 3, and the price as the total line price ($15.00). If no quantity is specified, default to 1.
 3. Do NOT include tax, service charges, VAT, or card fees in the items list.
 4. Extract tax, service charge, card fee, or roundings as individual entries in an adjustments array:
    Example: [{"name": "Tax", "value": 3.50}, {"name": "Service Charge", "value": 5.00}]
@@ -158,7 +158,7 @@ Return format must be EXACTLY this JSON structure:
   "restaurant": "Restaurant Name",
   "date": "YYYY-MM-DD",
   "items": [
-    {"name": "Item Name", "price": 10.50}
+    {"name": "Item Name", "price": 10.50, "quantity": 3}
   ],
   "adjustments": [
     {"name": "Tax/VAT/Service Charge Name", "value": 1.50}

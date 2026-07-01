@@ -113,25 +113,11 @@ const handleDevAction = async (type: 'trip' | 'yearly' | 'reset') => {
   if (isPerformingDevAction.value) return
   isPerformingDevAction.value = true
   try {
-    // If simulated usage mode is active (or we want client-side simulation), mock it client-side
-    if (store.simulatedUsage || import.meta.env.DEV) {
-      if (type === 'reset') {
-        store.setSimulatedUsage(null, 0)
-        store.ocrError = null
-        alert('Simulated usage reset! Active passes removed.')
-      } else {
-        const currentUsed = store.simulatedUsage?.freeScansUsed || 0
-        store.setSimulatedUsage(type, currentUsed)
-        alert(`Simulated purchase success: Active ${type === 'trip' ? '7-Day' : 'Yearly'} pass registered client-side!`)
-      }
-      isDevMenuOpen.value = false
-      return
-    }
-
     const isNative = Capacitor.isNativePlatform()
     const apiBase = isNative ? 'https://splat-chi.vercel.app' : ''
     const deviceId = await getDeviceId()
 
+    // 1. Try to synchronize with Vercel backend KV database
     const response = await fetch(`${apiBase}/api/mock-purchase`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -140,19 +126,32 @@ const handleDevAction = async (type: 'trip' | 'yearly' | 'reset') => {
 
     if (response.ok) {
       await store.fetchUsage()
-      if (type === 'reset') {
-        store.ocrError = null
-        alert('Successfully reset scan usage and removed all active passes!')
-      } else {
-        alert(`Simulated purchase success: Active ${type} pass registered!`)
-      }
-      isDevMenuOpen.value = false
-    } else {
-      throw new Error('Failed to run dev action')
     }
-  } catch (e: any) {
-    console.error('Dev action failed', e)
-    alert('Simulated action failed. Check network.')
+
+    // 2. Register client-side simulation state
+    if (type === 'reset') {
+      store.setSimulatedUsage(null, 0)
+      store.ocrError = null
+      alert('Usage and active passes reset client and server-side!')
+    } else {
+      const currentUsed = store.simulatedUsage?.freeScansUsed || 0
+      store.setSimulatedUsage(type, currentUsed)
+      alert(`Simulated purchase success: Active ${type === 'trip' ? '7-Day' : 'Yearly'} pass registered client and server-side!`)
+    }
+    isDevMenuOpen.value = false
+  } catch (err: any) {
+    console.warn('Failed to sync dev action with server:', err)
+    // Fall back to client-only simulation if server is offline or unreachable
+    if (type === 'reset') {
+      store.setSimulatedUsage(null, 0)
+      store.ocrError = null
+      alert('Simulated usage reset client-side (failed to sync with server).')
+    } else {
+      const currentUsed = store.simulatedUsage?.freeScansUsed || 0
+      store.setSimulatedUsage(type, currentUsed)
+      alert(`Simulated purchase success: Active ${type === 'trip' ? '7-Day' : 'Yearly'} pass registered client-side (failed to sync with server).`)
+    }
+    isDevMenuOpen.value = false
   } finally {
     isPerformingDevAction.value = false
   }
@@ -314,6 +313,111 @@ const selectedItem = computed(() => {
   return store.items.find(item => item.id === selectedItemId.value) || null
 })
 
+// Edit Item details modal state
+const isEditItemOpen = ref(false)
+const editingItemId = ref<string | null>(null)
+const editingItemName = ref('')
+const editingItemPrice = ref(0)
+const editingItemQuantity = ref(1)
+
+const openEditItemModal = (itemId: string) => {
+  const item = store.items.find(i => i.id === itemId)
+  if (!item) return
+  editingItemId.value = itemId
+  editingItemName.value = item.name
+  editingItemPrice.value = item.price
+  editingItemQuantity.value = item.quantity || 1
+  isEditItemOpen.value = true
+}
+
+const saveEditItem = () => {
+  if (!editingItemId.value) return
+  const item = store.items.find(i => i.id === editingItemId.value)
+  if (item) {
+    item.name = editingItemName.value
+    item.price = Number(editingItemPrice.value) || 0
+    
+    const prevQty = item.quantity
+    const newQty = Math.max(1, Math.floor(Number(editingItemQuantity.value) || 1))
+    item.quantity = newQty
+    
+    if (!item.assignedQuantities) item.assignedQuantities = {}
+    
+    if (newQty === 1) {
+      item.assignedQuantities = {}
+      item.assignedTo.forEach(pId => {
+        item.assignedQuantities![pId] = 1
+      })
+    } else if (newQty !== prevQty) {
+      Object.keys(item.assignedQuantities).forEach(pId => {
+        if (item.assignedQuantities![pId] > newQty) {
+          item.assignedQuantities![pId] = 1
+        }
+      })
+    }
+    store.saveToLocalStorage()
+  }
+  isEditItemOpen.value = false
+  editingItemId.value = null
+}
+
+// Quantity-based allocation helpers
+const getRemainingQuantity = (item: any) => {
+  if (!item) return 0
+  const qty = item.quantity || 1
+  const assigned = Object.values(item.assignedQuantities || {}).reduce((sum: number, val: any) => sum + (Number(val) || 0), 0)
+  return Math.max(0, qty - assigned)
+}
+
+const incrementAssignment = (itemId: string, participantId: string) => {
+  const item = store.items.find(i => i.id === itemId)
+  if (!item) return
+  if (!item.assignedQuantities) item.assignedQuantities = {}
+  
+  const remaining = getRemainingQuantity(item)
+  if (remaining <= 0) return
+  
+  const current = item.assignedQuantities[participantId] || 0
+  item.assignedQuantities[participantId] = current + 1
+  
+  if (!item.assignedTo.includes(participantId)) {
+    item.assignedTo.push(participantId)
+  }
+  store.saveToLocalStorage()
+}
+
+const decrementAssignment = (itemId: string, participantId: string) => {
+  const item = store.items.find(i => i.id === itemId)
+  if (!item) return
+  if (!item.assignedQuantities) return
+  
+  const current = item.assignedQuantities[participantId] || 0
+  if (current <= 0) return
+  
+  if (current === 1) {
+    delete item.assignedQuantities[participantId]
+    item.assignedTo = item.assignedTo.filter(pId => pId !== participantId)
+  } else {
+    item.assignedQuantities[participantId] = current - 1
+  }
+  store.saveToLocalStorage()
+}
+
+// Allocation validation helpers
+const isItemFullyAllocated = (item: any) => {
+  if (!item) return false
+  const qty = item.quantity || 1
+  if (qty === 1) {
+    return item.assignedTo.length > 0
+  }
+  const assigned = Object.values(item.assignedQuantities || {}).reduce((sum: number, val: any) => sum + (Number(val) || 0), 0)
+  return assigned === qty
+}
+
+const hasAllocationErrors = computed(() => {
+  return store.items.some(item => !isItemFullyAllocated(item))
+})
+
 const captureNativeImage = async (source: CameraSource) => {
   try {
     const image = await Camera.getPhoto({
@@ -385,7 +489,7 @@ const isStepSelectable = (targetStep: 'edit' | 'participants' | 'allocate' | 'sh
   if (targetStep === 'edit') return true
   if (targetStep === 'participants') return isEditValid.value
   if (targetStep === 'allocate') return isEditValid.value && isParticipantsValid.value
-  if (targetStep === 'share') return isEditValid.value && isParticipantsValid.value
+  if (targetStep === 'share') return isEditValid.value && isParticipantsValid.value && !hasAllocationErrors.value
   return false
 }
 
@@ -413,6 +517,9 @@ const canGoNext = computed(() => {
   }
   if (store.step === 'participants') {
     return isParticipantsValid.value
+  }
+  if (store.step === 'allocate') {
+    return !hasAllocationErrors.value
   }
   return true
 })
@@ -909,6 +1016,12 @@ const selectAllText = (event: Event) => {
               @focus="selectAllText"
             />
             <Button 
+              icon="pi pi-cog" 
+              class="p-button-text p-button-secondary p-button-sm shrink-0" 
+              :style="{ width: '32px', minWidth: '32px', height: '32px', padding: '0' }"
+              @click="openEditItemModal(item.id)" 
+            />
+            <Button 
               icon="pi pi-trash" 
               class="item-delete-btn" 
               @click="store.removeItem(item.id)" 
@@ -1101,6 +1214,12 @@ const selectAllText = (event: Event) => {
 
     <!-- Step 4: Cost Allocation -->
     <div v-else-if="store.step === 'allocate'" class="step-view">
+      <!-- Validation warning banner -->
+      <div v-if="hasAllocationErrors" class="bg-amber-500/10 border-2 border-amber-500 text-amber-500 p-2.5 rounded-lg text-xs font-bold flex items-center gap-2 mb-3">
+        <i class="pi pi-exclamation-triangle"></i>
+        <span>Some items are not fully allocated. Tap them to assign quantities.</span>
+      </div>
+
       <div class="mb-2 flex justify-between items-center px-1">
         <div class="text-left">
           <h3 class="font-extrabold text-lg">Assign Items</h3>
@@ -1128,46 +1247,71 @@ const selectAllText = (event: Event) => {
             ></i>
             <div class="flex-1 min-w-0">
               <div class="alloc-item-header">
-                <span>{{ item.name }}</span>
+                <span>{{ item.name }} <span v-if="item.quantity > 1" class="text-xs text-slate-400 font-normal">(x{{ item.quantity }})</span></span>
                 <span class="text-primary">{{ store.currencySymbol }}{{ item.price.toFixed(2) }}</span>
               </div>
               
               <div class="alloc-badges mt-1">
-                <!-- Case 1: Everyone or empty (which defaults to everyone) -->
-                <span 
-                  v-if="item.assignedTo.length === store.participants.length || item.assignedTo.length === 0" 
-                  class="avatar-badge everyone"
-                >
-                  Everyone
-                </span>
-                
-                <!-- Case 2: 50% or greater assigned (Everyone minus the excluded) -->
-                <template v-else-if="item.assignedTo.length >= store.participants.length / 2">
-                  <span class="avatar-badge everyone">Everyone</span>
-                  <span 
-                    v-for="p in store.participants.filter(p => !item.assignedTo.includes(p.id))" 
-                    :key="p.id" 
-                    class="avatar-badge excluded"
-                    :class="{ 'full-name': showFullNames }"
-                    :title="`Excluded: ${p.name}`"
-                  >
-                    -{{ showFullNames ? p.name : getInitials(p.name) }}
-                  </span>
+                <!-- Case 0: Multi-Quantity Item Allocation Displays -->
+                <template v-if="item.quantity > 1">
+                  <div class="flex flex-wrap gap-1.5">
+                    <span 
+                      v-for="(count, pId) in item.assignedQuantities" 
+                      :key="pId"
+                      v-show="count > 0"
+                      class="avatar-badge"
+                      :class="{ 'full-name': showFullNames }"
+                    >
+                      {{ showFullNames ? (store.participants.find(p => p.id === pId)?.name || '??') : getInitials(store.participants.find(p => p.id === pId)?.name || '??') }} ({{ count }})
+                    </span>
+                  </div>
                 </template>
-                
-                <!-- Case 3: Minority assigned (<50%) (List assigned participants in cyan) -->
+
                 <template v-else>
-                  <!-- Included (Assigned) Participants -->
+                  <!-- Case 1: Everyone or empty (which defaults to everyone) -->
                   <span 
-                    v-for="pId in item.assignedTo" 
-                    :key="pId" 
-                    class="avatar-badge"
-                    :class="{ 'full-name': showFullNames }"
-                    :title="store.participants.find(p => p.id === pId)?.name"
+                    v-if="item.assignedTo.length === store.participants.length || item.assignedTo.length === 0" 
+                    class="avatar-badge everyone"
                   >
-                    {{ showFullNames ? (store.participants.find(p => p.id === pId)?.name || '??') : getInitials(store.participants.find(p => p.id === pId)?.name || '??') }}
+                    Everyone
                   </span>
+                  
+                  <!-- Case 2: 50% or greater assigned (Everyone minus the excluded) -->
+                  <template v-else-if="item.assignedTo.length >= store.participants.length / 2">
+                    <span class="avatar-badge everyone">Everyone</span>
+                    <span 
+                      v-for="p in store.participants.filter(p => !item.assignedTo.includes(p.id))" 
+                      :key="p.id" 
+                      class="avatar-badge excluded"
+                      :class="{ 'full-name': showFullNames }"
+                      :title="`Excluded: ${p.name}`"
+                    >
+                      -{{ showFullNames ? p.name : getInitials(p.name) }}
+                    </span>
+                  </template>
+                  
+                  <!-- Case 3: Minority assigned (<50%) (List assigned participants in cyan) -->
+                  <template v-else>
+                    <!-- Included (Assigned) Participants -->
+                    <span 
+                      v-for="pId in item.assignedTo" 
+                      :key="pId" 
+                      class="avatar-badge"
+                      :class="{ 'full-name': showFullNames }"
+                      :title="store.participants.find(p => p.id === pId)?.name"
+                    >
+                      {{ showFullNames ? (store.participants.find(p => p.id === pId)?.name || '??') : getInitials(store.participants.find(p => p.id === pId)?.name || '??') }}
+                    </span>
+                  </template>
                 </template>
+              </div>
+
+              <!-- Validation badge -->
+              <div v-if="!isItemFullyAllocated(item)" class="text-amber-500 text-[10px] font-black uppercase flex items-center gap-1 mt-1">
+                <i class="pi pi-exclamation-circle"></i>
+                <span>
+                  {{ item.quantity > 1 ? `${getRemainingQuantity(item)} unassigned` : 'unassigned' }}
+                </span>
               </div>
             </div>
           </div>
@@ -1241,7 +1385,7 @@ const selectAllText = (event: Event) => {
           <div 
             v-for="p in billBreakdown" 
             :key="p.id" 
-            class="split-badge-row"
+            class="flex flex-col gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-3 last:border-b-0 last:pb-0"
           >
             <div class="flex justify-between items-center font-bold text-sm">
               <span class="flex items-center gap-2">
@@ -1249,6 +1393,22 @@ const selectAllText = (event: Event) => {
                 {{ p.name }}
               </span>
               <span class="text-lg text-primary">{{ store.currencySymbol }}{{ p.total.toFixed(2) }}</span>
+            </div>
+            
+            <!-- Itemized list of shares for this participant -->
+            <div class="flex flex-col gap-0.5 pl-9 text-xs text-secondary text-left">
+              <div v-for="item in p.items" :key="item.name" class="flex justify-between">
+                <span>{{ item.name }}</span>
+                <span>{{ store.currencySymbol }}{{ item.sharePrice.toFixed(2) }}</span>
+              </div>
+              <div v-if="p.tax !== 0" class="flex justify-between text-slate-400 italic">
+                <span>Adjustments / Fees</span>
+                <span>{{ store.currencySymbol }}{{ p.tax.toFixed(2) }}</span>
+              </div>
+              <div v-if="p.tip > 0" class="flex justify-between text-slate-400 italic">
+                <span>Tip</span>
+                <span>{{ store.currencySymbol }}{{ p.tip.toFixed(2) }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1286,53 +1446,163 @@ const selectAllText = (event: Event) => {
       class="dark:bg-slate-900"
     >
       <div v-if="selectedItem" class="flex flex-col gap-4">
-        <div class="flex justify-between items-center bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
-          <span class="text-sm font-semibold">Price per share:</span>
-          <span class="text-lg font-black text-indigo-500">
-            {{ store.currencySymbol }}{{ 
-              (selectedItem.price / (selectedItem.assignedTo.length || store.participants.length)).toFixed(2) 
-            }}
-          </span>
-        </div>
-
-        <p class="text-xs text-secondary">Toggle participants assigned to this item:</p>
-        
-        <!-- Toggle List -->
-        <div class="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
-          <div 
-            v-for="p in store.participants" 
-            :key="p.id" 
-            class="selection-row"
-            :class="{ 'selected': selectedItem.assignedTo.includes(p.id) }"
-            @click="store.toggleItemAssignment(selectedItem.id, p.id)"
-          >
-            <div class="flex items-center gap-3">
-              <div class="avatar-badge">{{ getInitials(p.name) }}</div>
-              <span class="text-sm font-bold">{{ p.name }}</span>
+        <!-- Case 1: Multi-Quantity Item -->
+        <template v-if="selectedItem.quantity > 1">
+          <div class="flex justify-between items-center bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
+            <div class="flex flex-col text-left">
+              <span class="text-[10px] font-semibold text-secondary uppercase">Unit Price</span>
+              <span class="text-sm font-bold">{{ store.currencySymbol }}{{ (selectedItem.price / selectedItem.quantity).toFixed(2) }} each</span>
             </div>
-            <div class="custom-checkbox" :class="{ 'checked': selectedItem.assignedTo.includes(p.id) }">
-              <i class="pi pi-check" v-if="selectedItem.assignedTo.includes(p.id)"></i>
+            <div class="flex flex-col text-right">
+              <span class="text-[10px] font-semibold text-secondary uppercase">Unassigned</span>
+              <span class="text-sm font-bold" :class="getRemainingQuantity(selectedItem) > 0 ? 'text-amber-500' : 'text-emerald-500'">
+                {{ getRemainingQuantity(selectedItem) }} / {{ selectedItem.quantity }} left
+              </span>
             </div>
           </div>
-        </div>
 
-        <div class="flex gap-2 mt-2">
-          <Button 
-            label="Select Everyone" 
-            class="p-button-outlined p-button-sm flex-1" 
-            @click="store.assignAllToItem(selectedItem.id)" 
-          />
-          <Button 
-            label="Clear All" 
-            class="p-button-outlined p-button-danger p-button-sm flex-1" 
-            @click="store.clearAllFromItem(selectedItem.id)" 
-          />
-        </div>
+          <p class="text-xs text-secondary">Allocate item quantities to participants:</p>
+
+          <!-- Counters List -->
+          <div class="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
+            <div 
+              v-for="p in store.participants" 
+              :key="p.id" 
+              class="flex justify-between items-center p-2 rounded-lg border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900"
+            >
+              <div class="flex items-center gap-3">
+                <div class="avatar-badge">{{ getInitials(p.name) }}</div>
+                <span class="text-sm font-bold">{{ p.name }}</span>
+              </div>
+              
+              <div class="flex items-center gap-2">
+                <Button 
+                  icon="pi pi-minus" 
+                  class="p-button-rounded p-button-text p-button-sm" 
+                  :disabled="!(selectedItem.assignedQuantities && selectedItem.assignedQuantities[p.id] > 0)"
+                  @click="decrementAssignment(selectedItem.id, p.id)" 
+                />
+                <span class="text-sm font-bold w-6 text-center">
+                  {{ (selectedItem.assignedQuantities && selectedItem.assignedQuantities[p.id]) || 0 }}
+                </span>
+                <Button 
+                  icon="pi pi-plus" 
+                  class="p-button-rounded p-button-text p-button-sm" 
+                  :disabled="getRemainingQuantity(selectedItem) <= 0"
+                  @click="incrementAssignment(selectedItem.id, p.id)" 
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-2 mt-2">
+            <Button 
+              label="Clear All" 
+              class="p-button-outlined p-button-danger p-button-sm w-full" 
+              @click="store.clearAllFromItem(selectedItem.id)" 
+            />
+          </div>
+        </template>
+
+        <!-- Case 2: Single-Quantity Item (Existing flow) -->
+        <template v-else>
+          <div class="flex justify-between items-center bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
+            <span class="text-sm font-semibold">Price per share:</span>
+            <span class="text-lg font-black text-indigo-500">
+              {{ store.currencySymbol }}{{ 
+                (selectedItem.price / (selectedItem.assignedTo.length || store.participants.length)).toFixed(2) 
+              }}
+            </span>
+          </div>
+
+          <p class="text-xs text-secondary">Toggle participants assigned to this item:</p>
+          
+          <!-- Toggle List -->
+          <div class="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
+            <div 
+              v-for="p in store.participants" 
+              :key="p.id" 
+              class="selection-row"
+              :class="{ 'selected': selectedItem.assignedTo.includes(p.id) }"
+              @click="store.toggleItemAssignment(selectedItem.id, p.id)"
+            >
+              <div class="flex items-center gap-3">
+                <div class="avatar-badge">{{ getInitials(p.name) }}</div>
+                <span class="text-sm font-bold">{{ p.name }}</span>
+              </div>
+              <div class="custom-checkbox" :class="{ 'checked': selectedItem.assignedTo.includes(p.id) }">
+                <i class="pi pi-check" v-if="selectedItem.assignedTo.includes(p.id)"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-2 mt-2">
+            <Button 
+              label="Select Everyone" 
+              class="p-button-outlined p-button-sm flex-1" 
+              @click="store.assignAllToItem(selectedItem.id)" 
+            />
+            <Button 
+              label="Clear All" 
+              class="p-button-outlined p-button-danger p-button-sm flex-1" 
+              @click="store.clearAllFromItem(selectedItem.id)" 
+            />
+          </div>
+        </template>
+
         <Button 
           label="Submit" 
           class="p-button-primary w-full mt-1" 
           @click="isAllocationOpen = false" 
         />
+      </div>
+    </Dialog>
+
+    <!-- Edit Item Details Modal Dialog -->
+    <Dialog 
+      v-model:visible="isEditItemOpen" 
+      modal 
+      header="Edit Item Details" 
+      :style="{ width: '90%', maxWidth: '350px' }"
+      :draggable="false"
+      class="dark:bg-slate-900"
+    >
+      <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-secondary uppercase">Item Name</label>
+          <InputText v-model="editingItemName" class="p-inputtext-sm w-full" />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-secondary uppercase">Total Price</label>
+          <InputNumber 
+            v-model="editingItemPrice" 
+            mode="decimal" 
+            :minFractionDigits="2" 
+            :maxFractionDigits="2" 
+            class="w-full p-inputtext-sm" 
+          />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-bold text-secondary uppercase">Quantity</label>
+          <InputNumber 
+            v-model="editingItemQuantity" 
+            showButtons 
+            :min="1" 
+            class="w-full p-inputtext-sm" 
+          />
+        </div>
+        <div class="flex gap-2 mt-2">
+          <Button 
+            label="Cancel" 
+            class="p-button-outlined p-button-secondary flex-1" 
+            @click="isEditItemOpen = false" 
+          />
+          <Button 
+            label="Save" 
+            class="p-button-primary flex-1" 
+            @click="saveEditItem" 
+          />
+        </div>
       </div>
     </Dialog>
 

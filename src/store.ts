@@ -45,6 +45,8 @@ export interface Item {
   name: string
   price: number
   assignedTo: string[] // Participant IDs
+  quantity: number
+  assignedQuantities?: Record<string, number>
 }
 
 export interface Participant {
@@ -65,7 +67,7 @@ const MOCK_RECEIPT_TEMPLATES = [
       { name: 'Truffle Fries', price: 14.50 },
       { name: 'Margherita Pizza', price: 21.00 },
       { name: 'Ribeye Steak', price: 42.00 },
-      { name: 'Craft Beer IPA', price: 9.00 },
+      { name: 'Craft Beer IPA', price: 27.00, quantity: 3 },
       { name: 'Red Wine Glass', price: 12.00 },
       { name: 'Chocolate Lava Cake', price: 11.50 }
     ],
@@ -162,7 +164,9 @@ export const store = reactive({
           id: `item_${Date.now()}_${idx}`,
           name: item.name,
           price: item.price,
-          assignedTo: []
+          assignedTo: [],
+          quantity: (item as any).quantity || 1,
+          assignedQuantities: {}
         }))
         
         this.adjustments = [
@@ -230,7 +234,7 @@ export const store = reactive({
                   text: `You are an expert receipt parser. Analyze this receipt and return a clean JSON object.
 Follow these rules strictly:
 1. Extract the merchant/restaurant name and target date if present.
-2. Extract all individual line items (name, price).
+2. Extract all individual line items (name, total price, quantity count). If an item has a quantity/count specified (e.g. '3 - Beer : 15$'), return the quantity as 3, and the price as the total line price ($15.00). If no quantity is specified, default to 1.
 3. Do NOT include tax, service charges, VAT, or card fees in the items list.
 4. Extract tax, service charge, card fee, or roundings as individual entries in an adjustments array:
    Example: [{"name": "Tax", "value": 3.50}, {"name": "Service Charge", "value": 5.00}]
@@ -242,7 +246,7 @@ Return format must be EXACTLY this JSON structure:
   "restaurant": "Restaurant Name",
   "date": "YYYY-MM-DD",
   "items": [
-    {"name": "Item Name", "price": 10.50}
+    {"name": "Item Name", "price": 10.50, "quantity": 3}
   ],
   "adjustments": [
     {"name": "Tax/VAT/Service Charge Name", "value": 1.50}
@@ -309,7 +313,9 @@ Return format must be EXACTLY this JSON structure:
         id: `item_${Date.now()}_${idx}`,
         name: item.name || 'Unknown Item',
         price: Number(item.price) || 0,
-        assignedTo: []
+        assignedTo: [],
+        quantity: Number(item.quantity) || 1,
+        assignedQuantities: {}
       }))
       this.adjustments = (result.adjustments || []).map((adj: any, idx: number) => ({
         id: `adj_${Date.now()}_${idx}`,
@@ -402,11 +408,13 @@ Return format must be EXACTLY this JSON structure:
     
     // Auto-assign new participant to items that are currently assigned to everyone
     this.items.forEach(item => {
+      if (!item.assignedQuantities) item.assignedQuantities = {}
       if (item.assignedTo.length > 0) {
         const allPrev = this.participants.slice(0, -1).map(p => p.id)
         const isEveryoneAssigned = allPrev.every(pId => item.assignedTo.includes(pId))
         if (isEveryoneAssigned) {
           item.assignedTo.push(id)
+          item.assignedQuantities[id] = 1
         }
       }
     })
@@ -417,6 +425,9 @@ Return format must be EXACTLY this JSON structure:
     this.participants = this.participants.filter(p => p.id !== id)
     this.items.forEach(item => {
       item.assignedTo = item.assignedTo.filter(pId => pId !== id)
+      if (item.assignedQuantities) {
+        delete item.assignedQuantities[id]
+      }
     })
     this.saveToLocalStorage()
   },
@@ -434,6 +445,14 @@ Return format must be EXACTLY this JSON structure:
       // Clean up item assignments for deleted participants
       this.items.forEach(item => {
         item.assignedTo = item.assignedTo.filter(pId => keptIds.includes(pId))
+        const aq = item.assignedQuantities
+        if (aq) {
+          Object.keys(aq).forEach(pId => {
+            if (!keptIds.includes(pId)) {
+              delete aq[pId]
+            }
+          })
+        }
       })
     } else if (count > currentCount) {
       // Append: keep all existing, and add new ones
@@ -449,10 +468,16 @@ Return format must be EXACTLY this JSON structure:
     this.saveToLocalStorage()
   },
 
-  addItem(name = 'New Item', price = 0) {
+  addItem(name = 'New Item', price = 0, quantity = 1) {
     const id = `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     const assignedTo = this.participants.map(p => p.id)
-    this.items.push({ id, name, price, assignedTo })
+    const assignedQuantities: Record<string, number> = {}
+    if (quantity === 1) {
+      assignedTo.forEach(pId => {
+        assignedQuantities[pId] = 1
+      })
+    }
+    this.items.push({ id, name, price, assignedTo, quantity, assignedQuantities })
     this.saveToLocalStorage()
   },
 
@@ -465,11 +490,15 @@ Return format must be EXACTLY this JSON structure:
     const item = this.items.find(i => i.id === itemId)
     if (!item) return
     
+    if (!item.assignedQuantities) item.assignedQuantities = {}
+    
     const index = item.assignedTo.indexOf(participantId)
     if (index > -1) {
       item.assignedTo.splice(index, 1)
+      delete item.assignedQuantities[participantId]
     } else {
       item.assignedTo.push(participantId)
+      item.assignedQuantities[participantId] = 1
     }
     this.saveToLocalStorage()
   },
@@ -478,6 +507,10 @@ Return format must be EXACTLY this JSON structure:
     const item = this.items.find(i => i.id === itemId)
     if (!item) return
     item.assignedTo = this.participants.map(p => p.id)
+    if (!item.assignedQuantities) item.assignedQuantities = {}
+    this.participants.forEach(p => {
+      item.assignedQuantities![p.id] = 1
+    })
     this.saveToLocalStorage()
   },
 
@@ -485,6 +518,7 @@ Return format must be EXACTLY this JSON structure:
     const item = this.items.find(i => i.id === itemId)
     if (!item) return
     item.assignedTo = []
+    item.assignedQuantities = {}
     this.saveToLocalStorage()
   },
 
@@ -523,7 +557,22 @@ Return format must be EXACTLY this JSON structure:
       if (data.receiptImage !== undefined) this.receiptImage = data.receiptImage
       if (data.splitId) this.splitId = data.splitId
       if (data.billName) this.billName = data.billName
-      if (data.items) this.items = data.items
+      if (data.items) {
+        this.items = data.items.map((item: any) => {
+          const qty = Number(item.quantity) || 1
+          const assignedQ: Record<string, number> = item.assignedQuantities || {}
+          if (qty === 1 && Object.keys(assignedQ).length === 0 && item.assignedTo) {
+            item.assignedTo.forEach((pId: string) => {
+              assignedQ[pId] = 1
+            })
+          }
+          return {
+            ...item,
+            quantity: qty,
+            assignedQuantities: assignedQ
+          }
+        })
+      }
       if (data.participants) this.participants = data.participants
       if (data.adjustments) this.adjustments = data.adjustments
       if (data.tipInput !== undefined) this.tipInput = Number(data.tipInput) || 0
@@ -616,13 +665,24 @@ export const billBreakdown = computed(() => {
 
   activeItems.forEach(item => {
     const price = Number(item.price) || 0
-    const assignees = item.assignedTo.length > 0 ? item.assignedTo : activeParticipants.map(p => p.id)
-    const share = price / assignees.length
-    assignees.forEach(pId => {
-      if (subtotals[pId] !== undefined) {
-        subtotals[pId] += share
-      }
-    })
+    const qty = Number(item.quantity) || 1
+    
+    if (qty > 1) {
+      const assignedQ = item.assignedQuantities || {}
+      Object.entries(assignedQ).forEach(([pId, assignedCount]) => {
+        if (subtotals[pId] !== undefined && assignedCount > 0) {
+          subtotals[pId] += (assignedCount / qty) * price
+        }
+      })
+    } else {
+      const assignees = item.assignedTo.length > 0 ? item.assignedTo : activeParticipants.map(p => p.id)
+      const share = price / assignees.length
+      assignees.forEach(pId => {
+        if (subtotals[pId] !== undefined) {
+          subtotals[pId] += share
+        }
+      })
+    }
   })
 
   let calculatedGrandTotal = 0
@@ -640,13 +700,40 @@ export const billBreakdown = computed(() => {
     
     calculatedGrandTotal += totalRounded
 
+    // Build participant item shares
+    const participantItems: { name: string; sharePrice: number }[] = []
+    activeItems.forEach(item => {
+      const price = Number(item.price) || 0
+      const qty = Number(item.quantity) || 1
+      
+      if (qty > 1) {
+        const assignedQ = item.assignedQuantities || {}
+        const count = assignedQ[p.id] || 0
+        if (count > 0) {
+          participantItems.push({
+            name: `${count}x ${item.name}`,
+            sharePrice: Math.round(((count / qty) * price) * 100) / 100
+          })
+        }
+      } else {
+        const assignees = item.assignedTo.length > 0 ? item.assignedTo : activeParticipants.map(pr => pr.id)
+        if (assignees.includes(p.id)) {
+          participantItems.push({
+            name: item.name,
+            sharePrice: Math.round((price / assignees.length) * 100) / 100
+          })
+        }
+      }
+    })
+
     return {
       id: p.id,
       name: p.name,
       subtotal: subtotalRounded,
       tax: taxRounded,
       tip: tipRounded,
-      total: totalRounded
+      total: totalRounded,
+      items: participantItems
     }
   })
 
@@ -676,6 +763,11 @@ export const shareTextSummary = computed(() => {
   breakdown.forEach(p => {
     text += `👤 ${p.name} owes ${currency}${p.total.toFixed(2)}\n`
     text += `   ↳ Subtotal: ${currency}${p.subtotal.toFixed(2)}\n`
+    if (p.items && p.items.length > 0) {
+      p.items.forEach((item: any) => {
+        text += `     - ${item.name} (${currency}${item.sharePrice.toFixed(2)})\n`
+      })
+    }
     if (p.tax !== 0) text += `   ↳ Adjustments/Fees: ${currency}${p.tax.toFixed(2)}\n`
     if (p.tip > 0) text += `   ↳ Tip: ${currency}${p.tip.toFixed(2)}\n`
     text += `\n`
