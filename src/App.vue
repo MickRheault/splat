@@ -34,7 +34,7 @@ const cameraInput = ref<HTMLInputElement | null>(null)
 const galleryInput = ref<HTMLInputElement | null>(null)
 
 const copySuccess = ref(false)
-const showFullNames = ref(false)
+const showFullNames = true
 
 // History List State
 const savedSplits = ref<any[]>([])
@@ -1105,10 +1105,6 @@ const selectAllText = (event: Event) => {
         <div class="text-left">
           <h3 class="font-extrabold text-lg">Assign Items</h3>
           <p class="text-secondary text-xs">Tap an item to select who shares it.</p>
-        </div>
-        <div class="flex items-center gap-1.5 cursor-pointer select-none" @click="showFullNames = !showFullNames">
-          <span class="text-xs font-bold text-secondary uppercase">Full Names</span>
-          <i class="pi" :class="showFullNames ? 'pi-check-square text-primary text-sm' : 'pi-stop text-secondary text-sm'"></i>
         </div>
       </div>
 
