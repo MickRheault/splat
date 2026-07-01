@@ -39,7 +39,7 @@
 
 body {
   font-family: var(--font-sans);
-  background-color: var(--bg-color);
+  background-color: var(--bg-color) !important;
   /* Concrete texture grid using hot pink dots! */
   background-image: 
     radial-gradient(rgba(236, 72, 153, 0.1) 2px, transparent 0),
