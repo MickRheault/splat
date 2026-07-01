@@ -47,6 +47,7 @@ export interface Item {
   assignedTo: string[] // Participant IDs
   quantity: number
   assignedQuantities?: Record<string, number>
+  isSplitEvenly?: boolean
 }
 
 export interface Participant {
@@ -569,7 +570,8 @@ Return format must be EXACTLY this JSON structure:
           return {
             ...item,
             quantity: qty,
-            assignedQuantities: assignedQ
+            assignedQuantities: assignedQ,
+            isSplitEvenly: !!item.isSplitEvenly
           }
         })
       }
@@ -667,7 +669,7 @@ export const billBreakdown = computed(() => {
     const price = Number(item.price) || 0
     const qty = Number(item.quantity) || 1
     
-    if (qty > 1) {
+    if (qty > 1 && !item.isSplitEvenly) {
       const assignedQ = item.assignedQuantities || {}
       Object.entries(assignedQ).forEach(([pId, assignedCount]) => {
         if (subtotals[pId] !== undefined && assignedCount > 0) {
@@ -706,7 +708,7 @@ export const billBreakdown = computed(() => {
       const price = Number(item.price) || 0
       const qty = Number(item.quantity) || 1
       
-      if (qty > 1) {
+      if (qty > 1 && !item.isSplitEvenly) {
         const assignedQ = item.assignedQuantities || {}
         const count = assignedQ[p.id] || 0
         if (count > 0) {
@@ -718,8 +720,9 @@ export const billBreakdown = computed(() => {
       } else {
         const assignees = item.assignedTo.length > 0 ? item.assignedTo : activeParticipants.map(pr => pr.id)
         if (assignees.includes(p.id)) {
+          const suffix = (qty > 1 && item.isSplitEvenly) ? ' (Shared)' : ''
           participantItems.push({
-            name: item.name,
+            name: `${item.name}${suffix}`,
             sharePrice: Math.round((price / assignees.length) * 100) / 100
           })
         }

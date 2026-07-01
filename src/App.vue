@@ -407,7 +407,7 @@ const decrementAssignment = (itemId: string, participantId: string) => {
 const isItemFullyAllocated = (item: any) => {
   if (!item) return false
   const qty = item.quantity || 1
-  if (qty === 1) {
+  if (qty === 1 || item.isSplitEvenly) {
     return item.assignedTo.length > 0
   }
   const assigned = Object.values(item.assignedQuantities || {}).reduce((sum: number, val: any) => sum + (Number(val) || 0), 0)
@@ -417,6 +417,19 @@ const isItemFullyAllocated = (item: any) => {
 const hasAllocationErrors = computed(() => {
   return store.items.some(item => !isItemFullyAllocated(item))
 })
+
+const toggleSplitEvenly = (item: any) => {
+  if (!item) return
+  item.isSplitEvenly = !item.isSplitEvenly
+  
+  if (item.isSplitEvenly) {
+    item.assignedQuantities = {}
+  } else {
+    item.assignedQuantities = {}
+    item.assignedTo = []
+  }
+  store.saveToLocalStorage()
+}
 
 const captureNativeImage = async (source: CameraSource) => {
   try {
@@ -1247,13 +1260,13 @@ const selectAllText = (event: Event) => {
             ></i>
             <div class="flex-1 min-w-0">
               <div class="alloc-item-header">
-                <span>{{ item.name }} <span v-if="item.quantity > 1" class="text-xs text-slate-400 font-normal">(x{{ item.quantity }})</span></span>
+                <span>{{ item.name }} <span v-if="item.quantity > 1" class="text-xs text-slate-400 font-normal">(x{{ item.quantity }}{{ item.isSplitEvenly ? ' - Shared' : '' }})</span></span>
                 <span class="text-primary">{{ store.currencySymbol }}{{ item.price.toFixed(2) }}</span>
               </div>
               
               <div class="alloc-badges mt-1">
                 <!-- Case 0: Multi-Quantity Item Allocation Displays -->
-                <template v-if="item.quantity > 1">
+                <template v-if="item.quantity > 1 && !item.isSplitEvenly">
                   <div class="flex flex-wrap gap-1.5">
                     <span 
                       v-for="(count, pId) in item.assignedQuantities" 
@@ -1448,59 +1461,120 @@ const selectAllText = (event: Event) => {
       <div v-if="selectedItem" class="flex flex-col gap-4">
         <!-- Case 1: Multi-Quantity Item -->
         <template v-if="selectedItem.quantity > 1">
-          <div class="flex justify-between items-center bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
-            <div class="flex flex-col text-left">
-              <span class="text-[10px] font-semibold text-secondary uppercase">Unit Price</span>
-              <span class="text-sm font-bold">{{ store.currencySymbol }}{{ (selectedItem.price / selectedItem.quantity).toFixed(2) }} each</span>
-            </div>
-            <div class="flex flex-col text-right">
-              <span class="text-[10px] font-semibold text-secondary uppercase">Unassigned</span>
-              <span class="text-sm font-bold" :class="getRemainingQuantity(selectedItem) > 0 ? 'text-amber-500' : 'text-emerald-500'">
-                {{ getRemainingQuantity(selectedItem) }} / {{ selectedItem.quantity }} left
+          <!-- Split mode switcher -->
+          <div class="flex justify-between items-center bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-lg">
+            <span class="text-xs font-bold text-slate-700 dark:text-slate-300">Split evenly among selected people</span>
+            <Button 
+              :icon="selectedItem.isSplitEvenly ? 'pi pi-check-circle' : 'pi pi-circle'" 
+              :label="selectedItem.isSplitEvenly ? 'Enabled' : 'Disabled'"
+              class="p-button-sm py-1 px-2 text-xs shrink-0"
+              :class="selectedItem.isSplitEvenly ? 'p-button-success' : 'p-button-outlined p-button-secondary'"
+              @click="toggleSplitEvenly(selectedItem)"
+            />
+          </div>
+
+          <!-- Split Evenly Mode ON (Checkboxes) -->
+          <div v-if="selectedItem.isSplitEvenly" class="flex flex-col gap-3">
+            <div class="flex justify-between items-center bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
+              <span class="text-sm font-semibold">Price per share:</span>
+              <span class="text-lg font-black text-indigo-500">
+                {{ store.currencySymbol }}{{ 
+                  (selectedItem.price / (selectedItem.assignedTo.length || store.participants.length)).toFixed(2) 
+                }}
               </span>
             </div>
-          </div>
 
-          <p class="text-xs text-secondary">Allocate item quantities to participants:</p>
+            <p class="text-xs text-secondary">Toggle participants assigned to this item:</p>
+            
+            <!-- Toggle List -->
+            <div class="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
+              <div 
+                v-for="p in store.participants" 
+                :key="p.id" 
+                class="selection-row"
+                :class="{ 'selected': selectedItem.assignedTo.includes(p.id) }"
+                @click="store.toggleItemAssignment(selectedItem.id, p.id)"
+              >
+                <div class="flex items-center gap-3">
+                  <div class="avatar-badge">{{ getInitials(p.name) }}</div>
+                  <span class="text-sm font-bold">{{ p.name }}</span>
+                </div>
+                <div class="custom-checkbox" :class="{ 'checked': selectedItem.assignedTo.includes(p.id) }">
+                  <i class="pi pi-check" v-if="selectedItem.assignedTo.includes(p.id)"></i>
+                </div>
+              </div>
+            </div>
 
-          <!-- Counters List -->
-          <div class="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
-            <div 
-              v-for="p in store.participants" 
-              :key="p.id" 
-              class="flex justify-between items-center p-2 rounded-lg border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900"
-            >
-              <div class="flex items-center gap-3">
-                <div class="avatar-badge">{{ getInitials(p.name) }}</div>
-                <span class="text-sm font-bold">{{ p.name }}</span>
-              </div>
-              
-              <div class="flex items-center gap-2">
-                <Button 
-                  icon="pi pi-minus" 
-                  class="p-button-rounded p-button-text p-button-sm" 
-                  :disabled="!(selectedItem.assignedQuantities && selectedItem.assignedQuantities[p.id] > 0)"
-                  @click="decrementAssignment(selectedItem.id, p.id)" 
-                />
-                <span class="text-sm font-bold w-6 text-center">
-                  {{ (selectedItem.assignedQuantities && selectedItem.assignedQuantities[p.id]) || 0 }}
-                </span>
-                <Button 
-                  icon="pi pi-plus" 
-                  class="p-button-rounded p-button-text p-button-sm" 
-                  :disabled="getRemainingQuantity(selectedItem) <= 0"
-                  @click="incrementAssignment(selectedItem.id, p.id)" 
-                />
-              </div>
+            <div class="flex gap-2 mt-2">
+              <Button 
+                label="Select Everyone" 
+                class="p-button-outlined p-button-sm flex-1" 
+                @click="store.assignAllToItem(selectedItem.id)" 
+              />
+              <Button 
+                label="Clear All" 
+                class="p-button-outlined p-button-danger p-button-sm flex-1" 
+                @click="store.clearAllFromItem(selectedItem.id)" 
+              />
             </div>
           </div>
 
-          <div class="flex gap-2 mt-2">
-            <Button 
-              label="Clear All" 
-              class="p-button-outlined p-button-danger p-button-sm w-full" 
-              @click="store.clearAllFromItem(selectedItem.id)" 
-            />
+          <!-- Split Evenly Mode OFF (Counters) -->
+          <div v-else class="flex flex-col gap-3">
+            <div class="flex justify-between items-center bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
+              <div class="flex flex-col text-left">
+                <span class="text-[10px] font-semibold text-secondary uppercase">Unit Price</span>
+                <span class="text-sm font-bold">{{ store.currencySymbol }}{{ (selectedItem.price / selectedItem.quantity).toFixed(2) }} each</span>
+              </div>
+              <div class="flex flex-col text-right">
+                <span class="text-[10px] font-semibold text-secondary uppercase">Unassigned</span>
+                <span class="text-sm font-bold" :class="getRemainingQuantity(selectedItem) > 0 ? 'text-amber-500' : 'text-emerald-500'">
+                  {{ getRemainingQuantity(selectedItem) }} / {{ selectedItem.quantity }} left
+                </span>
+              </div>
+            </div>
+
+            <p class="text-xs text-secondary">Allocate item quantities to participants:</p>
+
+            <!-- Counters List -->
+            <div class="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-1">
+              <div 
+                v-for="p in store.participants" 
+                :key="p.id" 
+                class="flex justify-between items-center p-2 rounded-lg border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900"
+              >
+                <div class="flex items-center gap-3">
+                  <div class="avatar-badge">{{ getInitials(p.name) }}</div>
+                  <span class="text-sm font-bold">{{ p.name }}</span>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                  <Button 
+                    icon="pi pi-minus" 
+                    class="p-button-rounded p-button-text p-button-sm" 
+                    :disabled="!(selectedItem.assignedQuantities && selectedItem.assignedQuantities[p.id] > 0)"
+                    @click="decrementAssignment(selectedItem.id, p.id)" 
+                  />
+                  <span class="text-sm font-bold w-6 text-center">
+                    {{ (selectedItem.assignedQuantities && selectedItem.assignedQuantities[p.id]) || 0 }}
+                  </span>
+                  <Button 
+                    icon="pi pi-plus" 
+                    class="p-button-rounded p-button-text p-button-sm" 
+                    :disabled="getRemainingQuantity(selectedItem) <= 0"
+                    @click="incrementAssignment(selectedItem.id, p.id)" 
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="flex gap-2 mt-2">
+              <Button 
+                label="Clear All" 
+                class="p-button-outlined p-button-danger p-button-sm w-full" 
+                @click="store.clearAllFromItem(selectedItem.id)" 
+              />
+            </div>
           </div>
         </template>
 

@@ -390,5 +390,30 @@ describe('Splat Core Store & Math Logic', () => {
       expect(item.assignedQuantities?.[aliceId]).toBe(1)
       expect(item.assignedQuantities?.[bobId]).toBe(1)
     })
+
+    test('should split multi-quantity item cost evenly when isSplitEvenly is true', () => {
+      store.addParticipant('Alice')
+      store.addParticipant('Bob')
+      const aliceId = store.participants[0].id
+      const bobId = store.participants[1].id
+
+      // 4 bottles of wine for $100, split evenly between 2 people (Alice and Bob)
+      store.addItem('Wine', 100)
+      const item = store.items[0]
+      item.quantity = 4
+      item.isSplitEvenly = true
+      item.assignedTo = [aliceId, bobId]
+
+      const breakdown = billBreakdown.value
+      const aliceBreakdown = breakdown.find(p => p.id === aliceId)
+      const bobBreakdown = breakdown.find(p => p.id === bobId)
+
+      // Even split: $50 each
+      expect(aliceBreakdown?.subtotal).toBe(50.00)
+      expect(bobBreakdown?.subtotal).toBe(50.00)
+      
+      // Verification of suffix name in list
+      expect(aliceBreakdown?.items[0].name).toBe('Wine (Shared)')
+    })
   })
 })
