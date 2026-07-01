@@ -604,12 +604,14 @@ const onItemPointerDown = (event: PointerEvent, itemId: string) => {
   }, 600) // 600ms hold triggers bulk selection mode
 }
 
-const onItemPointerUp = (event: PointerEvent, itemId: string) => {
+const onItemPointerUp = () => {
   if (longPressTimer) {
     clearTimeout(longPressTimer)
     longPressTimer = null
   }
-  
+}
+
+const onItemClick = (event: Event, itemId: string) => {
   if (longPressTriggered) {
     event.preventDefault()
     event.stopPropagation()
@@ -1248,9 +1250,10 @@ const selectAllText = (event: Event) => {
           class="alloc-item-card" 
           :class="{ 'bulk-selected': bulkSelectedItems.includes(item.id), 'bulk-mode-item': isBulkMode }"
           @pointerdown="onItemPointerDown($event, item.id)"
-          @pointerup="onItemPointerUp($event, item.id)"
+          @pointerup="onItemPointerUp"
           @pointermove="onItemPointerMove($event)"
           @pointerleave="onItemPointerLeave"
+          @click="onItemClick($event, item.id)"
         >
           <div class="flex items-center gap-3 w-full">
             <i 
