@@ -493,6 +493,31 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: inset 3px 3px 0px rgba(217, 70, 239, 0.08); /* Pink inset glow shadow */
 }
 
+/* Person split card on Step 4 */
+.person-split-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border: 3px solid var(--stroke-color);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-color);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: var(--shadow-block-sm);
+}
+
+.person-split-card:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 6px 6px 0px var(--primary-color);
+  background-color: rgba(217, 70, 239, 0.04);
+}
+
+.person-split-card:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0px var(--primary-color);
+}
+
 /* Form inputs & elements */
 input[type="text"], input[type="password"] {
   font-family: var(--font-sans) !important;

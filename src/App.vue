@@ -36,6 +36,32 @@ const galleryInput = ref<HTMLInputElement | null>(null)
 const copySuccess = ref(false)
 const showFullNames = true
 
+// Person detail popup state (Step 4)
+const isPersonDetailOpen = ref(false)
+const selectedBreakdownPerson = ref<any>(null)
+
+const openPersonDetail = (person: any) => {
+  selectedBreakdownPerson.value = person
+  isPersonDetailOpen.value = true
+}
+
+const personShareText = computed(() => {
+  const p = selectedBreakdownPerson.value
+  if (!p) return ''
+  const currency = store.currencySymbol
+  let text = `💸 ${p.name}'s split for ${store.billName}\n\n`
+  text += `👤 ${p.name} owes ${currency}${p.total.toFixed(2)}\n`
+  if (p.items && p.items.length > 0) {
+    p.items.forEach((item: any) => {
+      text += `  - ${item.name}: ${currency}${item.sharePrice.toFixed(2)}\n`
+    })
+  }
+  if (p.tax !== 0) text += `  ↳ Adjustments/Fees: ${currency}${p.tax.toFixed(2)}\n`
+  if (p.tip > 0) text += `  ↳ Tip: ${currency}${p.tip.toFixed(2)}\n`
+  text += `\nSplit using Splat!`
+  return text
+})
+
 // History List State
 const savedSplits = ref<any[]>([])
 const showAllHistory = ref(false)
@@ -723,20 +749,11 @@ const getInitials = (name: string) => {
   return name.trim().split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
 }
 
-// Copy sharing plain text summary to clipboard
+// Copy full summary to clipboard
 const copyToClipboard = async () => {
   const text = shareTextSummary.value
   try {
     if (Capacitor.isNativePlatform()) {
-      const canShare = await Share.canShare()
-      if (canShare.value) {
-        await Share.share({
-          title: store.billName,
-          text: text,
-          dialogTitle: 'Share Split Summary'
-        })
-        return
-      }
       await Clipboard.write({ string: text })
     } else {
       await navigator.clipboard.writeText(text)
@@ -746,7 +763,69 @@ const copyToClipboard = async () => {
       copySuccess.value = false
     }, 2000)
   } catch (e) {
-    console.error('Failed to copy or share', e)
+    console.error('Failed to copy', e)
+  }
+}
+
+// Share full summary via native share sheet
+const shareToNative = async () => {
+  const text = shareTextSummary.value
+  try {
+    if (Capacitor.isNativePlatform()) {
+      await Share.share({
+        title: store.billName,
+        text: text,
+        dialogTitle: 'Share Split Summary'
+      })
+    } else if (navigator.share) {
+      await navigator.share({ title: store.billName, text })
+    } else {
+      // Fallback: just copy
+      await copyToClipboard()
+    }
+  } catch (e) {
+    console.error('Failed to share', e)
+  }
+}
+
+// Copy single person's breakdown to clipboard
+const copyPersonToClipboard = async () => {
+  const text = personShareText.value
+  if (!text) return
+  try {
+    if (Capacitor.isNativePlatform()) {
+      await Clipboard.write({ string: text })
+    } else {
+      await navigator.clipboard.writeText(text)
+    }
+    copySuccess.value = true
+    setTimeout(() => {
+      copySuccess.value = false
+    }, 2000)
+  } catch (e) {
+    console.error('Failed to copy', e)
+  }
+}
+
+// Share single person's breakdown via native share sheet
+const sharePersonToNative = async () => {
+  const text = personShareText.value
+  const p = selectedBreakdownPerson.value
+  if (!text || !p) return
+  try {
+    if (Capacitor.isNativePlatform()) {
+      await Share.share({
+        title: `${p.name}'s split`,
+        text: text,
+        dialogTitle: `Share ${p.name}'s Split`
+      })
+    } else if (navigator.share) {
+      await navigator.share({ title: `${p.name}'s split`, text })
+    } else {
+      await copyPersonToClipboard()
+    }
+  } catch (e) {
+    console.error('Failed to share', e)
   }
 }
 
@@ -1390,65 +1469,105 @@ const selectAllText = (event: Event) => {
     <div v-else-if="store.step === 'share'" class="step-view">
       <div class="text-center">
         <h2 class="text-2xl font-black text-indigo-500">All Splatted! 💸</h2>
-        <p class="text-secondary text-sm">Review the proportional split and share.</p>
+        <p class="text-secondary text-sm">Tap a person to see their breakdown.</p>
       </div>
 
-      <!-- Grand breakdown details card -->
+      <!-- Compact person cards -->
       <div class="bill-card">
         <h3 class="font-bold border-b border-slate-200 dark:border-slate-700 pb-2 mb-2">Final Splits</h3>
         
-        <div class="flex flex-col gap-3">
+        <div class="flex flex-col gap-1.5">
           <div 
             v-for="p in billBreakdown" 
             :key="p.id" 
-            class="flex flex-col gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-3 last:border-b-0 last:pb-0"
+            class="person-split-card"
+            @click="openPersonDetail(p)"
           >
-            <div class="flex justify-between items-center font-bold text-sm">
-              <span class="flex items-center gap-2">
-                <span class="avatar-badge">{{ getInitials(p.name) }}</span>
-                {{ p.name }}
-              </span>
-              <span class="text-lg text-primary">{{ store.currencySymbol }}{{ p.total.toFixed(2) }}</span>
-            </div>
-            
-            <!-- Itemized list of shares for this participant -->
-            <div class="flex flex-col gap-0.5 pl-9 text-xs text-secondary text-left">
-              <div v-for="item in p.items" :key="item.name" class="flex justify-between">
-                <span>{{ item.name }}</span>
-                <span>{{ store.currencySymbol }}{{ item.sharePrice.toFixed(2) }}</span>
-              </div>
-              <div v-if="p.tax !== 0" class="flex justify-between text-slate-400 italic">
-                <span>Adjustments / Fees</span>
-                <span>{{ store.currencySymbol }}{{ p.tax.toFixed(2) }}</span>
-              </div>
-              <div v-if="p.tip > 0" class="flex justify-between text-slate-400 italic">
-                <span>Tip</span>
-                <span>{{ store.currencySymbol }}{{ p.tip.toFixed(2) }}</span>
-              </div>
-            </div>
+            <span class="flex items-center gap-2">
+              <span class="avatar-badge">{{ getInitials(p.name) }}</span>
+              <span class="font-semibold text-sm">{{ p.name }}</span>
+            </span>
+            <span class="flex items-center gap-2">
+              <span class="text-lg font-bold text-primary">{{ store.currencySymbol }}{{ p.total.toFixed(2) }}</span>
+              <i class="pi pi-chevron-right text-xs text-secondary"></i>
+            </span>
           </div>
         </div>
       </div>
 
-      <!-- Plain Text Formatting area -->
-      <div class="flex flex-col gap-2">
-        <label class="text-xs font-semibold text-secondary uppercase tracking-wider">Copied text layout preview</label>
-        <div class="summary-text-box">
-          {{ shareTextSummary }}
-        </div>
-      </div>
-
       <!-- Buttons -->
-      <div class="flex flex-col gap-2">
+      <div class="flex gap-2">
         <Button 
-          :label="copySuccess ? 'Copied to Clipboard! ✓' : 'Copy Split Summary'" 
+          :label="copySuccess ? 'Copied! ✓' : 'Copy'" 
           :icon="copySuccess ? 'pi pi-check' : 'pi pi-copy'" 
-          class="w-full p-button-lg"
-          :class="copySuccess ? 'p-button-success' : 'p-button-primary'"
+          class="flex-1 p-button-lg"
+          :class="copySuccess ? 'p-button-success' : 'p-button-outlined'"
           @click="copyToClipboard" 
+        />
+        <Button 
+          label="Share" 
+          icon="pi pi-share-alt" 
+          class="flex-1 p-button-lg p-button-primary"
+          @click="shareToNative" 
         />
       </div>
     </div>
+
+    <!-- Person detail popup -->
+    <Dialog 
+      v-model:visible="isPersonDetailOpen" 
+      modal 
+      :header="selectedBreakdownPerson ? `${selectedBreakdownPerson.name}'s Split` : 'Details'" 
+      :style="{ width: '90%', maxWidth: '400px' }"
+      :draggable="false"
+    >
+      <template v-if="selectedBreakdownPerson">
+        <div class="flex flex-col gap-3">
+          <!-- Total highlight -->
+          <div class="text-center py-2">
+            <span class="text-3xl font-black text-primary">{{ store.currencySymbol }}{{ selectedBreakdownPerson.total.toFixed(2) }}</span>
+            <p class="text-xs text-secondary mt-1">Total owed</p>
+          </div>
+
+          <!-- Itemized breakdown -->
+          <div class="flex flex-col gap-1 border-t border-slate-200 dark:border-slate-700 pt-3">
+            <div v-for="item in selectedBreakdownPerson.items" :key="item.name" class="flex justify-between text-sm py-0.5">
+              <span>{{ item.name }}</span>
+              <span class="font-semibold">{{ store.currencySymbol }}{{ item.sharePrice.toFixed(2) }}</span>
+            </div>
+            <div class="flex justify-between text-sm text-secondary border-t border-slate-100 dark:border-slate-800 pt-1 mt-1">
+              <span>Subtotal</span>
+              <span>{{ store.currencySymbol }}{{ selectedBreakdownPerson.subtotal.toFixed(2) }}</span>
+            </div>
+            <div v-if="selectedBreakdownPerson.tax !== 0" class="flex justify-between text-sm text-secondary">
+              <span>Adjustments / Fees</span>
+              <span>{{ store.currencySymbol }}{{ selectedBreakdownPerson.tax.toFixed(2) }}</span>
+            </div>
+            <div v-if="selectedBreakdownPerson.tip > 0" class="flex justify-between text-sm text-secondary">
+              <span>Tip</span>
+              <span>{{ store.currencySymbol }}{{ selectedBreakdownPerson.tip.toFixed(2) }}</span>
+            </div>
+          </div>
+
+          <!-- Popup buttons -->
+          <div class="flex gap-2 pt-2">
+            <Button 
+              :label="copySuccess ? 'Copied! ✓' : 'Copy'" 
+              :icon="copySuccess ? 'pi pi-check' : 'pi pi-copy'" 
+              class="flex-1"
+              :class="copySuccess ? 'p-button-success' : 'p-button-outlined'"
+              @click="copyPersonToClipboard" 
+            />
+            <Button 
+              label="Share" 
+              icon="pi pi-share-alt" 
+              class="flex-1 p-button-primary"
+              @click="sharePersonToNative" 
+            />
+          </div>
+        </div>
+      </template>
+    </Dialog>
 
 
 
@@ -1466,7 +1585,7 @@ const selectAllText = (event: Event) => {
         <template v-if="selectedItem.quantity > 1">
           <!-- Split mode switcher -->
           <div class="flex justify-between items-center bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-lg">
-            <span class="text-xs font-bold text-slate-700 dark:text-slate-300">Split evenly among selected people</span>
+            <span class="text-xs font-bold text-slate-700 dark:text-slate-300">Split Evenly</span>
             <Button 
               :icon="selectedItem.isSplitEvenly ? 'pi pi-check-circle' : 'pi pi-circle'" 
               :label="selectedItem.isSplitEvenly ? 'Enabled' : 'Disabled'"
