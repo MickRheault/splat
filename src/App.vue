@@ -1584,12 +1584,22 @@ const selectAllText = (event: Event) => {
         </div>
         <div class="flex flex-col gap-1">
           <label class="text-xs font-bold text-secondary uppercase">Quantity</label>
-          <InputNumber 
-            v-model="editingItemQuantity" 
-            showButtons 
-            :min="1" 
-            class="w-full p-inputtext-sm" 
-          />
+          <div class="flex items-center justify-between p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+            <Button 
+              icon="pi pi-minus" 
+              class="p-button-rounded p-button-text p-button-sm" 
+              :disabled="editingItemQuantity <= 1"
+              @click="editingItemQuantity = Math.max(1, editingItemQuantity - 1)" 
+            />
+            <span class="text-lg font-black w-12 text-center text-slate-800 dark:text-slate-200">
+              {{ editingItemQuantity }}
+            </span>
+            <Button 
+              icon="pi pi-plus" 
+              class="p-button-rounded p-button-text p-button-sm" 
+              @click="editingItemQuantity = editingItemQuantity + 1" 
+            />
+          </div>
         </div>
         <div class="flex gap-2 mt-2">
           <Button 
