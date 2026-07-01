@@ -554,7 +554,8 @@ Return format must be EXACTLY this JSON structure:
       const dataStr = await getStorageItem('splat_store')
       if (!dataStr) return
       const data = JSON.parse(dataStr)
-      if (data.step) this.step = data.step
+      // Always open on home page (capture step) on cold start
+      // Intentionally skip restoring data.step
       if (data.receiptImage !== undefined) this.receiptImage = data.receiptImage
       if (data.splitId) this.splitId = data.splitId
       if (data.billName) this.billName = data.billName

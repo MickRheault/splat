@@ -248,7 +248,8 @@ describe('Splat Core Store & Math Logic', () => {
       
       await store.loadFromLocalStorage()
       
-      expect(store.step).toBe('edit')
+      // Cold open always starts on home (capture), step not restored
+      expect(store.step).toBe('capture')
       expect(store.participants).toHaveLength(1)
       expect(store.participants[0].name).toBe('Bob')
       expect(store.items).toHaveLength(1)
