@@ -1041,7 +1041,8 @@ const selectAllText = (event: Event) => {
     <!-- Step 3: Participants -->
     <div v-else-if="store.step === 'participants'" class="step-view">
       <div class="bill-card">
-        <h3 class="font-bold mb-2">Who is Splitting?</h3>
+        <h3 class="font-bold mb-1">Who is Splitting?</h3>
+        <p class="text-secondary text-[11px] mb-3 italic">Tip: Tap the initial badge to pick from saved custom names.</p>
         
         <!-- Quick Split buttons -->
         <div class="mb-2 py-2">
