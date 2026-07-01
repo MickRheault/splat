@@ -471,12 +471,15 @@ Return format must be EXACTLY this JSON structure:
 
   addItem(name = 'New Item', price = 0, quantity = 1) {
     const id = `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    const assignedTo = this.participants.map(p => p.id)
     const assignedQuantities: Record<string, number> = {}
+    let assignedTo: string[]
     if (quantity === 1) {
+      assignedTo = this.participants.map(p => p.id)
       assignedTo.forEach(pId => {
         assignedQuantities[pId] = 1
       })
+    } else {
+      assignedTo = []
     }
     this.items.push({ id, name, price, assignedTo, quantity, assignedQuantities })
     this.saveToLocalStorage()
