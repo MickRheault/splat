@@ -11,6 +11,7 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import { Share } from '@capacitor/share'
 import { Clipboard } from '@capacitor/clipboard'
 import { CapacitorUpdater } from '@capgo/capacitor-updater'
+import { SplashScreen } from '@capacitor/splash-screen'
 
 // Import reactive store and computed properties
 import { 
@@ -180,12 +181,13 @@ onMounted(async () => {
   // 4. Wait for local storage data to finish loading BEFORE hiding splash screen
   await localDataPromise;
 
-  // 5. Notify Capgo updater that app is ready (this hides the splash screen natively)
+  // 5. Notify Capgo updater and hide native splash screen when ready
   if (Capacitor.isNativePlatform()) {
     try {
       await CapacitorUpdater.notifyAppReady()
+      await SplashScreen.hide()
     } catch (e) {
-      console.warn('CapacitorUpdater notifyAppReady failed:', e)
+      console.warn('CapacitorUpdater/SplashScreen init failed:', e)
     }
 
     // Run background update checks without blocking startup
