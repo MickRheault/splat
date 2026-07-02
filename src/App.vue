@@ -12,7 +12,6 @@ import { Share } from '@capacitor/share'
 import { Clipboard } from '@capacitor/clipboard'
 import { CapacitorUpdater } from '@capgo/capacitor-updater'
 import { SplashScreen } from '@capacitor/splash-screen'
-import { StatusBar, Style } from '@capacitor/status-bar'
 
 // Import reactive store and computed properties
 import { 
@@ -272,28 +271,7 @@ onMounted(async () => {
       }
     })();
 
-    // Setup native status bar color matching theme background
-    (async () => {
-      const updateStatusBar = async (isDark: boolean) => {
-        try {
-          await StatusBar.setBackgroundColor({ color: isDark ? '#0f172a' : '#f8fafc' })
-        } catch (e) {
-          // Silent catch since iOS throws on setBackgroundColor
-        }
-        try {
-          await StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light })
-        } catch (e) {
-          console.warn('StatusBar setStyle failed:', e)
-        }
-      }
 
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-      await updateStatusBar(mediaQuery.matches)
-      
-      mediaQuery.addEventListener('change', async (e) => {
-        await updateStatusBar(e.matches)
-      })
-    })();
   }
 })
 
