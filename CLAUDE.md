@@ -2,7 +2,7 @@
 
 ### Issue tracker
 
-GitHub issues tracked via the `gh` CLI. External PRs are not treated as a request surface. See `docs/agents/issue-tracker.md`.
+Local Markdown files under docs/prd/ and docs/issues/. External PRs are not treated as a request surface. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
