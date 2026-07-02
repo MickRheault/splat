@@ -496,15 +496,17 @@ h1, h2, h3, h4, h5, h6 {
 /* Person split card on Step 4 */
 .person-split-card {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  padding: 12px 14px;
+  justify-content: center;
+  padding: 16px 10px;
   border: 3px solid var(--stroke-color);
   border-radius: var(--radius-md);
   background-color: var(--surface-color);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   box-shadow: var(--shadow-block-sm);
+  text-align: center;
 }
 
 .person-split-card:hover {
