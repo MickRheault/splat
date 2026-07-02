@@ -490,7 +490,6 @@ const captureNativeImage = async (source: CameraSource) => {
 const triggerCamera = () => {
   if (isScanLimitReached.value) {
     store.showPaywall = true
-    store.ocrError = 'Scan limit reached. Upgrade to continue!'
     return
   }
   if (Capacitor.isNativePlatform()) {
@@ -504,7 +503,6 @@ const triggerCamera = () => {
 const triggerGallery = () => {
   if (isScanLimitReached.value) {
     store.showPaywall = true
-    store.ocrError = 'Scan limit reached. Upgrade to continue!'
     return
   }
   if (Capacitor.isNativePlatform()) {
