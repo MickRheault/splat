@@ -1,6 +1,6 @@
 # Issue: Integrate Native Back Button Support
 
-Status: ready-for-agent
+Status: closed
 
 ## Parent
 

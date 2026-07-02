@@ -12,6 +12,7 @@ import { Share } from '@capacitor/share'
 import { Clipboard } from '@capacitor/clipboard'
 import { CapacitorUpdater } from '@capgo/capacitor-updater'
 import { SplashScreen } from '@capacitor/splash-screen'
+import { App } from '@capacitor/app'
 
 // Import reactive store and computed properties
 import { 
@@ -275,7 +276,16 @@ onMounted(async () => {
       }
     })();
 
-
+    // Handle native hardware back button presses
+    if (Capacitor.isNativePlatform()) {
+      App.addListener('backButton', () => {
+        if (store.step !== 'capture') {
+          goBack()
+        } else {
+          App.exitApp()
+        }
+      })
+    }
   }
 })
 

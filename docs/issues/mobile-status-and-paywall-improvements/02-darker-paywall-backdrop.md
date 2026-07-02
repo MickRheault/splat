@@ -1,6 +1,6 @@
 # Issue: Darken and Blur Paywall Modal Backdrop
 
-Status: ready-for-agent
+Status: closed
 
 ## Parent
 
