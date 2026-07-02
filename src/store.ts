@@ -204,9 +204,16 @@ export const store = reactive({
       return
     }
 
+    // Reset active split state for the new scan
+    this.participants = []
+    this.items = []
+    this.adjustments = []
+    this.tipInput = 0
+    this.ocrError = null
+    this.splitId = `split_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
     this.isParsing = true
     this.receiptImage = imageSrc
-    this.ocrError = null
     this.saveToLocalStorage()
 
     const isTest = import.meta.env.MODE === 'test'

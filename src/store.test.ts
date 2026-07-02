@@ -277,9 +277,21 @@ describe('Splat Core Store & Math Logic', () => {
       expect(store.items.length).toBeGreaterThan(0)
       expect(totalAdjustments.value).toBeGreaterThan(0)
       expect(store.tipInput).toBe(0)
-      
-      vi.useRealTimers()
     })
+
+    test('should reset participants list when starting a new OCR scan', () => {
+      // 1. Populate store with previous split data
+      store.addParticipant('Alice')
+      store.addItem('Pizza', 20)
+      expect(store.participants).toHaveLength(1)
+
+      // 2. Start a new scan
+      store.simulateOCR('demo_image_uri_0')
+
+      // 3. Verify participants list is reset to empty
+      expect(store.participants).toHaveLength(0)
+    })
+
 
     test('should throw error if Gemini returns receipt validation error', async () => {
       store.apiKey = 'fake_key'
