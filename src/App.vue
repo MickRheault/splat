@@ -88,6 +88,10 @@ const isQuickPickerOpen = ref(false)
 const activePickerParticipantId = ref<string | null>(null)
 const savedCustomNames = ref<string[]>([])
 
+const isScanLimitReached = computed(() => {
+  return !!(store.usageInfo && !store.usageInfo.passType && store.usageInfo.freeScansRemaining <= 0)
+})
+
 // Paywall / Subscription States
 const selectedPaywallOption = ref<'trip' | 'yearly'>('trip')
 const isPurchasing = ref(false)
@@ -484,6 +488,11 @@ const captureNativeImage = async (source: CameraSource) => {
 
 // Trigger native device camera
 const triggerCamera = () => {
+  if (isScanLimitReached.value) {
+    store.showPaywall = true
+    store.ocrError = 'Scan limit reached. Upgrade to continue!'
+    return
+  }
   if (Capacitor.isNativePlatform()) {
     captureNativeImage(CameraSource.Camera)
   } else if (cameraInput.value) {
@@ -493,6 +502,11 @@ const triggerCamera = () => {
 
 // Trigger gallery file picker
 const triggerGallery = () => {
+  if (isScanLimitReached.value) {
+    store.showPaywall = true
+    store.ocrError = 'Scan limit reached. Upgrade to continue!'
+    return
+  }
   if (Capacitor.isNativePlatform()) {
     captureNativeImage(CameraSource.Photos)
   } else if (galleryInput.value) {
@@ -922,11 +936,20 @@ const selectAllText = (event: Event) => {
 
       <div class="flex flex-col gap-4">
         <!-- Option 1: Live Camera Snap -->
-        <div class="capture-option-card" @click="triggerCamera">
-          <i class="pi pi-camera capture-icon-sm" style="font-size: 48px !important;"></i>
+        <div 
+          class="capture-option-card" 
+          :class="{ 'locked-option': isScanLimitReached }"
+          @click="triggerCamera"
+        >
+          <i :class="isScanLimitReached ? 'pi pi-lock text-rose-500/80 capture-icon-sm' : 'pi pi-camera capture-icon-sm'" style="font-size: 48px !important;"></i>
           <div>
-            <h4 class="font-bold text-lg">Take Live Photo</h4>
-            <p class="text-secondary text-sm">Snap a photo of your receipt</p>
+            <h4 class="font-bold text-lg flex items-center gap-1.5 justify-center xs:justify-start">
+              Take Live Photo
+              <span v-if="isScanLimitReached" class="text-xs text-rose-500/90 font-black uppercase tracking-wider">(Locked)</span>
+            </h4>
+            <p class="text-secondary text-sm">
+              {{ isScanLimitReached ? 'Upgrade to scan physical receipts' : 'Snap a photo of your receipt' }}
+            </p>
           </div>
           <input 
             type="file" 
@@ -939,11 +962,20 @@ const selectAllText = (event: Event) => {
         </div>
 
         <!-- Option 2: Gallery Upload -->
-        <div class="capture-option-card" @click="triggerGallery">
-          <i class="pi pi-images capture-icon-sm" style="font-size: 48px !important;"></i>
+        <div 
+          class="capture-option-card" 
+          :class="{ 'locked-option': isScanLimitReached }"
+          @click="triggerGallery"
+        >
+          <i :class="isScanLimitReached ? 'pi pi-lock text-rose-500/80 capture-icon-sm' : 'pi pi-images capture-icon-sm'" style="font-size: 48px !important;"></i>
           <div>
-            <h4 class="font-bold text-lg">Choose from Gallery</h4>
-            <p class="text-secondary text-sm">Upload an existing photo or screenshot</p>
+            <h4 class="font-bold text-lg flex items-center gap-1.5 justify-center xs:justify-start">
+              Choose from Gallery
+              <span v-if="isScanLimitReached" class="text-xs text-rose-500/90 font-black uppercase tracking-wider">(Locked)</span>
+            </h4>
+            <p class="text-secondary text-sm">
+              {{ isScanLimitReached ? 'Upgrade to upload images' : 'Upload an existing photo or screenshot' }}
+            </p>
           </div>
           <input 
             type="file" 
@@ -953,6 +985,20 @@ const selectAllText = (event: Event) => {
             @change="onFileCaptured" 
           />
         </div>
+      </div>
+
+      <!-- Free scan usage indicator -->
+      <div v-if="store.usageInfo" class="text-center mt-3 text-xs font-bold text-slate-500 dark:text-slate-400">
+        <span v-if="store.usageInfo.passType" class="text-emerald-500/90 flex items-center justify-center gap-1">
+          <i class="pi pi-verified text-xs"></i>
+          Unlimited Scans Active ({{ store.usageInfo.passType }} pass)
+        </span>
+        <span v-else-if="store.usageInfo.freeScansRemaining <= 0" class="text-rose-500/80">
+          0 free scans remaining (Upgrade to unlock scanning)
+        </span>
+        <span v-else>
+          {{ store.usageInfo.freeScansRemaining }} of 5 free monthly scans remaining
+        </span>
       </div>
 
       <div class="text-center mt-4">
