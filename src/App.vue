@@ -1473,7 +1473,7 @@ const selectAllText = (event: Event) => {
       <div class="bill-card">
         <h3 class="font-bold border-b border-slate-200 dark:border-slate-700 pb-2 mb-2">Final Splits</h3>
         
-        <div class="flex flex-col gap-3.5">
+        <div class="flex flex-col gap-5">
           <div 
             v-for="p in billBreakdown" 
             :key="p.id" 
