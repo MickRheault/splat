@@ -1473,7 +1473,7 @@ const selectAllText = (event: Event) => {
       <div class="bill-card">
         <h3 class="font-bold border-b border-slate-200 dark:border-slate-700 pb-2 mb-2">Final Splits</h3>
         
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-2 gap-4">
           <div 
             v-for="p in billBreakdown" 
             :key="p.id" 
