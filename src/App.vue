@@ -1473,16 +1473,21 @@ const selectAllText = (event: Event) => {
       <div class="bill-card">
         <h3 class="font-bold border-b border-slate-200 dark:border-slate-700 pb-2 mb-2">Final Splits</h3>
         
-        <div class="grid grid-cols-2 gap-4">
+        <div class="flex flex-col gap-3.5">
           <div 
             v-for="p in billBreakdown" 
             :key="p.id" 
             class="person-split-card"
             @click="openPersonDetail(p)"
           >
-            <span class="avatar-badge mb-1">{{ getInitials(p.name) }}</span>
-            <span class="font-bold text-sm truncate max-w-full text-slate-800 dark:text-slate-100">{{ p.name }}</span>
-            <span class="text-base font-black text-primary mt-1">{{ store.currencySymbol }}{{ p.total.toFixed(2) }}</span>
+            <span class="flex items-center gap-2">
+              <span class="avatar-badge">{{ getInitials(p.name) }}</span>
+              <span class="font-semibold text-sm">{{ p.name }}</span>
+            </span>
+            <span class="flex items-center gap-2">
+              <span class="text-lg font-bold text-primary">{{ store.currencySymbol }}{{ p.total.toFixed(2) }}</span>
+              <i class="pi pi-chevron-right text-xs text-secondary"></i>
+            </span>
           </div>
         </div>
       </div>
