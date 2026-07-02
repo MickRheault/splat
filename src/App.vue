@@ -23,6 +23,7 @@ import {
   shareTextSummary,
   getStorageItem,
   setStorageItem,
+  removeStorageItem,
   getDeviceId
 } from './store'
 import pkg from '../package.json'
@@ -34,6 +35,7 @@ const cameraInput = ref<HTMLInputElement | null>(null)
 const galleryInput = ref<HTMLInputElement | null>(null)
 
 const copySuccess = ref(false)
+const showOriginalBill = ref(false)
 const showFullNames = true
 
 // Person detail popup state (Step 4)
@@ -312,9 +314,12 @@ const loadSavedSplit = (split: any) => {
   store.loadSplit(split)
 }
 
-const clearHistory = () => {
+const clearHistory = async () => {
   if (window.confirm("Are you sure you want to clear your saved splits history?")) {
-    localStorage.removeItem('splat_history')
+    for (const split of savedSplits.value) {
+      await removeStorageItem(`splat_image_${split.splitId}`)
+    }
+    await removeStorageItem('splat_history')
     savedSplits.value = []
   }
 }
@@ -1487,6 +1492,15 @@ const selectAllText = (event: Event) => {
         </div>
       </div>
 
+      <!-- View Original Bill Button -->
+      <Button 
+        v-if="store.receiptImage"
+        label="View Original Bill" 
+        icon="pi pi-image" 
+        class="w-full p-button-outlined p-button-secondary mb-2"
+        @click="showOriginalBill = true" 
+      />
+
       <!-- Buttons -->
       <div class="flex gap-2">
         <Button 
@@ -1504,6 +1518,37 @@ const selectAllText = (event: Event) => {
         />
       </div>
     </div>
+
+    <!-- Original Bill View Dialog -->
+    <Dialog 
+      v-model:visible="showOriginalBill" 
+      modal 
+      header="Original Bill" 
+      :style="{ width: '95%', maxWidth: '500px' }"
+      :draggable="false"
+      class="dark:bg-slate-900"
+    >
+      <div v-if="store.receiptImage" class="flex flex-col gap-4 items-center">
+        <template v-if="store.receiptImage.startsWith('demo_image_uri_')">
+          <div class="p-8 bg-slate-100 dark:bg-slate-800 rounded-lg text-center w-full border border-dashed border-slate-300">
+            <i class="pi pi-info-circle text-4xl text-slate-400 mb-2"></i>
+            <p class="text-sm font-bold text-slate-700 dark:text-slate-300">Demo Bill</p>
+            <p class="text-xs text-slate-500 mt-1">No scanned image available for demo templates.</p>
+          </div>
+        </template>
+        <template v-else>
+          <div class="overflow-auto max-h-[70vh] border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-850 w-full flex justify-center items-center">
+            <img :src="store.receiptImage" alt="Original Scanned Bill" class="max-w-full h-auto object-contain" />
+          </div>
+        </template>
+        <Button 
+          label="Close" 
+          class="p-button-outlined p-button-secondary w-full" 
+          @click="showOriginalBill = false" 
+        />
+      </div>
+    </Dialog>
+
 
     <!-- Person detail popup -->
     <Dialog 

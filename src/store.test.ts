@@ -448,4 +448,55 @@ describe('Splat Core Store & Math Logic', () => {
       expect(aliceBreakdown?.items[0].name).toBe('Wine (Shared)')
     })
   })
+
+  describe('History & Image Storage', () => {
+    test('should save split to history and handle separate image storage', async () => {
+      store.addParticipant('Alice')
+      store.addItem('Pizza', 20)
+      store.receiptImage = 'data:image/png;base64,fakeimagecontent'
+
+      await store.saveToHistory()
+
+      // Verify it was added to splat_history in localStorage
+      const historyStr = localStorage.getItem('splat_history')
+      expect(historyStr).toBeDefined()
+      const history = JSON.parse(historyStr || '[]')
+      expect(history).toHaveLength(1)
+      expect(history[0].splitId).toBe(store.splitId)
+      // Confirm the image is NOT in the main history JSON object to keep it light
+      expect(history[0].receiptImage).toBeUndefined()
+
+      // Verify the image was stored in its own key
+      const storedImage = localStorage.getItem(`splat_image_${store.splitId}`)
+      expect(storedImage).toBe('data:image/png;base64,fakeimagecontent')
+    })
+
+    test('should load split and restore the image correctly', async () => {
+      store.addParticipant('Alice')
+      store.addItem('Pizza', 20)
+      
+      const splitId = 'test_split_id'
+      const historyEntry = {
+        splitId,
+        billName: 'Test Bill',
+        timestamp: Date.now(),
+        participantsCount: 1,
+        totalBill: 20,
+        items: [{ id: 'item_1', name: 'Pizza', price: 20, quantity: 1, assignedTo: [] }],
+        participants: [{ id: 'p_1', name: 'Alice' }],
+        adjustments: [],
+        tipInput: 0,
+        tipType: 'flat'
+      }
+
+      // Store fake image
+      localStorage.setItem(`splat_image_${splitId}`, 'data:image/png;base64,restoredimage')
+
+      await store.loadSplit(historyEntry)
+
+      expect(store.splitId).toBe(splitId)
+      expect(store.receiptImage).toBe('data:image/png;base64,restoredimage')
+    })
+  })
 })
+

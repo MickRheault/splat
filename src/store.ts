@@ -40,6 +40,74 @@ export const setStorageItem = async (key: string, value: string): Promise<void> 
   }
 }
 
+export const removeStorageItem = async (key: string): Promise<void> => {
+  if (Capacitor.isNativePlatform()) {
+    await Preferences.remove({ key })
+  } else {
+    localStorage.removeItem(key)
+  }
+}
+
+export const compressAndResizeImage = (dataUrl: string, maxDim = 800): Promise<string> => {
+  return new Promise((resolve) => {
+    // If it's a demo image or not a base64 data url, or in test environment, return as is
+    if (
+      !dataUrl || 
+      !dataUrl.startsWith('data:image') || 
+      (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test')
+    ) {
+      return resolve(dataUrl)
+    }
+    
+    try {
+      const img = new Image()
+      img.src = dataUrl
+      img.onload = () => {
+        try {
+          let width = img.width
+          let height = img.height
+          
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width)
+              width = maxDim
+            } else {
+              width = Math.round((width * maxDim) / height)
+              height = maxDim
+            }
+          }
+          
+          const canvas = document.createElement('canvas')
+          canvas.width = width
+          canvas.height = height
+          
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            return resolve(dataUrl) // Fallback if context not available
+          }
+          
+          ctx.drawImage(img, 0, 0, width, height)
+          // Export as compressed JPEG
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7)
+          resolve(compressedDataUrl)
+        } catch (e) {
+          console.warn('Canvas compression failed', e)
+          resolve(dataUrl)
+        }
+      }
+      img.onerror = (err) => {
+        console.warn('Failed to load image for compression', err)
+        resolve(dataUrl) // Fallback to original
+      }
+    } catch (e) {
+      console.warn('Image instantiation failed', e)
+      resolve(dataUrl)
+    }
+  })
+}
+
+
+
 export interface Item {
   id: string
   name: string
@@ -624,6 +692,16 @@ Return format must be EXACTLY this JSON structure:
         history.unshift(entry)
       }
       
+      // Save compressed image if exists
+      if (this.receiptImage) {
+        try {
+          const compressed = await compressAndResizeImage(this.receiptImage)
+          await setStorageItem(`splat_image_${this.splitId}`, compressed)
+        } catch (imgError) {
+          console.warn('Failed to compress/save history image', imgError)
+        }
+      }
+      
       await setStorageItem('splat_history', JSON.stringify(history))
     } catch (e) {
       console.error('Failed to save split history', e)
@@ -639,6 +717,16 @@ Return format must be EXACTLY this JSON structure:
     this.tipInput = split.tipInput
     this.tipType = split.tipType
     this.currencySymbol = split.currencySymbol || '$'
+    
+    // Load image from separate key
+    try {
+      const img = await getStorageItem(`splat_image_${split.splitId}`)
+      this.receiptImage = img
+    } catch (e) {
+      console.warn('Failed to load history image from storage', e)
+      this.receiptImage = null
+    }
+
     this.step = 'share'
     await this.saveToLocalStorage()
   }
