@@ -987,19 +987,7 @@ const selectAllText = (event: Event) => {
         </div>
       </div>
 
-      <!-- Free scan usage indicator -->
-      <div v-if="store.usageInfo" class="text-center mt-3 text-xs font-bold text-slate-500 dark:text-slate-400">
-        <span v-if="store.usageInfo.passType" class="text-emerald-500/90 flex items-center justify-center gap-1">
-          <i class="pi pi-verified text-xs"></i>
-          Unlimited Scans Active ({{ store.usageInfo.passType }} pass)
-        </span>
-        <span v-else-if="store.usageInfo.freeScansRemaining <= 0" class="text-rose-500/80">
-          0 free scans remaining (Upgrade to unlock scanning)
-        </span>
-        <span v-else>
-          {{ store.usageInfo.freeScansRemaining }} of 5 free monthly scans remaining
-        </span>
-      </div>
+
 
       <div class="text-center mt-4">
         <p class="text-secondary text-xs mb-2 font-semibold uppercase tracking-wider">Or start splitting manually</p>
