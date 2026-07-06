@@ -1,4 +1,4 @@
-# PRD: Native Paywall Integration (Superwall + RevenueCat)
+# PRD: Native Paywall Integration (RevenueCat Only)
 
 ## Problem Statement
 
@@ -6,8 +6,9 @@ The current paywall and scan limitation mechanism is hardcoded and mocked in the
 
 ## Solution
 
-Integrate a native paywall and billing pipeline using **Superwall** (for paywall presentation, layout management, and remote A/B testing) and **RevenueCat** (for processing native App Store and Google Play transactions and receipt validation).
-- Use the Capacitor plugins for Superwall and RevenueCat.
+Integrate a native billing pipeline using **RevenueCat** (for processing native App Store and Google Play transactions and receipt validation).
+- Use the Capacitor plugin for RevenueCat (`@revenuecat/purchases-capacitor`).
+- Keep the current custom HTML/CSS paywall interface in `App.vue` instead of using external paywall rendering tools.
 - Maintain a simple anonymous layout using the device ID as the user identifier.
 - Securely update purchase and subscription status via a RevenueCat webhook targeting our Vercel serverless backend.
 
@@ -15,8 +16,7 @@ Integrate a native paywall and billing pipeline using **Superwall** (for paywall
 
 1. As a mobile app user on iOS/Android, I want to purchase a 7-Day Pass or Yearly subscription natively using Apple In-App Purchase or Google Play Billing, so that my checkout is fast, secure, and familiar.
 2. As a mobile app user, I want my active purchases to be loaded instantly when the app boots, so that I don't experience paywall lockouts when I have active scans.
-3. As a developer, I want to manage and test different paywall designs and copy remotely, so that I don't need to submit new app store reviews for layout tweaks.
-4. As a developer, I want purchase fulfillment to be verified securely on the server, so that users cannot bypass scan limits.
+3. As a developer, I want purchase fulfillment to be verified securely on the server, so that users cannot bypass scan limits.
 
 ## Implementation Decisions
 
@@ -24,12 +24,12 @@ Integrate a native paywall and billing pipeline using **Superwall** (for paywall
 
 #### 1. Client-Side (Capacitor Vue 3 App)
 - **SDK Initialization**:
-  - Register and initialize `@revenuecat/purchases-capacitor` and `superwall-capacitor` inside `App.vue` `onMounted`.
+  - Register and initialize `@revenuecat/purchases-capacitor` inside `App.vue` `onMounted`.
   - Pass the Capacitor anonymous device ID as the App User ID to RevenueCat.
 - **Paywall Interception**:
-  - Replace the current PrimeVue paywall Dialog in `App.vue` with native Superwall presentation logic.
-  - When a locked action is triggered (or free scans are exhausted), call `Superwall.present()`.
-  - Superwall will use RevenueCat to execute the native purchase sheet.
+  - Keep the current PrimeVue custom paywall Dialog in `App.vue`.
+  - When the user taps a purchase button inside the paywall Dialog, invoke `Purchases.purchasePackage` or `Purchases.purchaseDiscountedProduct` from the RevenueCat Capacitor SDK.
+  - On purchase success, refresh usage limits from the backend API.
 - **Subscription State Sync**:
   - Update `store.usageInfo` based on the purchase success callbacks.
 

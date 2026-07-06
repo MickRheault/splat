@@ -1,4 +1,4 @@
-# Issue: Integrate Superwall Paywall UI
+# Issue: Integrate RevenueCat Billing UI Actions
 
 Status: ready-for-agent
 
@@ -8,17 +8,20 @@ PRD: `docs/prd/paywall-native-integration.md`
 
 ## What to build
 
-Hook the UI triggers to present Superwall instead of the custom HTML dialog on native platforms:
-- In `src/App.vue`, update `triggerCamera` and `triggerGallery` when `isScanLimitReached` is true.
-- Replace calls to `store.showPaywall = true` with `Superwall.present()` on native platforms.
-- Wire purchase event handlers: when Superwall registers a successful checkout transaction, refresh usage limits from the backend API.
-- Keep the current PrimeVue custom paywall Dialog as a fallback for web platform development.
+Hook the current custom PrimeVue paywall dialog buttons to execute native purchases on mobile platforms:
+- In `src/App.vue`, update the click handlers for the purchase option items (e.g. 7-Day Pass, Yearly Pro).
+- When a user clicks a purchase button on native platforms:
+  - Invoke `Purchases.purchasePackage` or `Purchases.purchaseProduct` using the package/product configuration from RevenueCat.
+  - On transaction success, update local store usage information.
+- Provide a "Restore Purchases" button inside the paywall Dialog that calls `Purchases.restoreTransactions()` to sync past transactions.
+- Keep current client-side mock purchase validation logic intact as a fallback for local web-development.
 
 ## Acceptance criteria
 
-- [ ] Native platform camera/gallery locked clicks trigger Superwall paywall display.
+- [ ] Custom paywall Dialog option buttons trigger native purchase flows on iOS/Android platforms.
 - [ ] Successful purchases update local `store.usageInfo` state.
-- [ ] Web/browser platform falls back gracefully to the existing custom PrimeVue paywall dialog.
+- [ ] "Restore Purchases" button is present and executes native entitlement restoration.
+- [ ] Web/browser platform falls back gracefully to the existing mock purchase endpoint.
 
 ## Blocked by
 

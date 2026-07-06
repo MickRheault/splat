@@ -1,4 +1,4 @@
-# Issue: Configure SDK Dependencies for RevenueCat and Superwall
+# Issue: Configure SDK Dependencies for RevenueCat
 
 Status: ready-for-agent
 
@@ -8,15 +8,13 @@ PRD: `docs/prd/paywall-native-integration.md`
 
 ## What to build
 
-Install the required Capacitor plugins for processing native transactions and displaying paywalls:
-- Install `@revenuecat/purchases-capacitor`.
-- Install `superwall-capacitor`.
+Install the required Capacitor plugin for processing native store transactions:
+- Install `@revenuecat/purchases-capacitor` via npm.
 - Sync iOS and Android platforms via `npx cap sync` using the correct environment.
 
 ## Acceptance criteria
 
 - [ ] `@revenuecat/purchases-capacitor` added to `package.json`.
-- [ ] `superwall-capacitor` added to `package.json`.
 - [ ] `npx cap sync` executes successfully for both iOS and Android.
 - [ ] Native platform configurations (CocoaPods on iOS, Gradle plugins on Android) build without compilation errors.
 
