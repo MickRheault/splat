@@ -1,6 +1,6 @@
 # Issue: Integrate RevenueCat Billing UI Actions
 
-Status: ready-for-agent
+Status: closed
 
 ## Parent
 

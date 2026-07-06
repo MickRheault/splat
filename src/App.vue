@@ -13,6 +13,7 @@ import { Clipboard } from '@capacitor/clipboard'
 import { CapacitorUpdater } from '@capgo/capacitor-updater'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { App } from '@capacitor/app'
+import { Purchases } from '@revenuecat/purchases-capacitor'
 
 // Import reactive store and computed properties
 import { 
@@ -102,26 +103,88 @@ const handlePaywallPurchase = async () => {
   isPurchasing.value = true
   try {
     const isNative = Capacitor.isNativePlatform()
-    const apiBase = isNative ? 'https://splat-chi.vercel.app' : ''
-    const deviceId = await getDeviceId()
-
-    const response = await fetch(`${apiBase}/api/mock-purchase`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceId, type: selectedPaywallOption.value })
-    })
-
-    if (response.ok) {
+    
+    if (isNative) {
+      // Native RevenueCat purchase flow
+      const productId = selectedPaywallOption.value === 'trip' ? 'splat_7day_pass' : 'splat_yearly_pro'
+      let purchased = false
+      
+      try {
+        const offerings = await Purchases.getOfferings()
+        if (offerings.current !== null && offerings.current.availablePackages.length > 0) {
+          const pkgId = selectedPaywallOption.value === 'trip' ? 'trip' : 'yearly'
+          const pkg = offerings.current.availablePackages.find(p => p.identifier === pkgId)
+          if (pkg) {
+            await Purchases.purchasePackage({ aPackage: pkg })
+            purchased = true
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to purchase package via offerings, trying direct product purchase:', err)
+      }
+      
+      if (!purchased) {
+        await Purchases.purchaseProduct({ productIdentifier: productId })
+      }
+      
+      // Sync entitlement state
       store.ocrError = null
       store.showPaywall = false
       await store.fetchUsage()
       alert(`Purchase Activated! Your ${selectedPaywallOption.value === 'trip' ? '7-Day Pass' : 'Yearly Pro'} plan is now active. Try scanning your receipt again!`)
     } else {
-      throw new Error('Server activation failed')
+      // Web fallback checkout simulation
+      const apiBase = ''
+      const deviceId = await getDeviceId()
+
+      const response = await fetch(`${apiBase}/api/mock-purchase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId, type: selectedPaywallOption.value })
+      })
+
+      if (response.ok) {
+        store.ocrError = null
+        store.showPaywall = false
+        await store.fetchUsage()
+        alert(`Purchase Activated! Your ${selectedPaywallOption.value === 'trip' ? '7-Day Pass' : 'Yearly Pro'} plan is now active. Try scanning your receipt again!`)
+      } else {
+        throw new Error('Server activation failed')
+      }
     }
   } catch (e: any) {
-    console.error('Purchase simulation error:', e)
-    alert('Simulated purchase failed. Check your internet connection.')
+    console.error('Purchase failed:', e)
+    // Don't show alert if user cancelled native purchase sheet
+    if (e.userCancelled) {
+      console.log('User cancelled purchase')
+    } else {
+      alert('Purchase failed: ' + (e.message || 'Unknown error'))
+    }
+  } finally {
+    isPurchasing.value = false
+  }
+}
+
+const handleRestorePurchases = async () => {
+  if (isPurchasing.value) return
+  isPurchasing.value = true
+  try {
+    if (Capacitor.isNativePlatform()) {
+      const { customerInfo } = await Purchases.restorePurchases()
+      const hasActivePass = !!(customerInfo.entitlements.active && (customerInfo.entitlements.active['trip'] || customerInfo.entitlements.active['yearly']))
+      if (hasActivePass) {
+        await store.fetchUsage()
+        alert('Purchases restored successfully!')
+        store.showPaywall = false
+      } else {
+        alert('No active entitlements found to restore.')
+      }
+    } else {
+      alert('Restore purchases is only available on native platforms.')
+    }
+  } catch (e: any) {
+    console.error('Restore purchases failed:', e)
+    alert('Restore failed: ' + (e.message || 'Unknown error'))
   } finally {
     isPurchasing.value = false
   }
@@ -285,6 +348,23 @@ onMounted(async () => {
           App.exitApp()
         }
       })
+
+      // Configure and initialize RevenueCat Purchases SDK
+      (async () => {
+        const iosKey = import.meta.env.VITE_REVENUECAT_IOS_API_KEY || 'rc_ios_dummy_key'
+        const androidKey = import.meta.env.VITE_REVENUECAT_ANDROID_API_KEY || 'rc_android_dummy_key'
+        const apiKey = Capacitor.getPlatform() === 'ios' ? iosKey : androidKey
+        try {
+          const deviceId = await getDeviceId()
+          await Purchases.configure({
+            apiKey: apiKey,
+            appUserID: deviceId
+          })
+          console.log('RevenueCat initialized successfully for device ID:', deviceId)
+        } catch (err) {
+          console.warn('RevenueCat initialization failed:', err)
+        }
+      })()
     }
   }
 })
@@ -2036,6 +2116,16 @@ const selectAllText = (event: Event) => {
           class="w-full p-button-lg mt-2" 
           :loading="isPurchasing"
           @click="handlePaywallPurchase" 
+        />
+
+        <!-- Restore Purchases button for App Store compliance -->
+        <Button 
+          v-if="Capacitor.isNativePlatform()"
+          label="Restore Purchases" 
+          icon="pi pi-refresh" 
+          class="w-full p-button-outlined p-button-secondary p-button-sm mt-1" 
+          :loading="isPurchasing"
+          @click="handleRestorePurchases" 
         />
 
         <p class="text-[10px] text-slate-500 text-center leading-normal">

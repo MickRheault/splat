@@ -1,6 +1,6 @@
 # Issue: Implement Backend Webhook Endpoint for RevenueCat
 
-Status: ready-for-agent
+Status: closed
 
 ## Parent
 

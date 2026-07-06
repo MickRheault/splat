@@ -20,6 +20,7 @@
     "@capacitor/splash-screen": "^8.0.1",
     "@capgo/capacitor-updater": "^8.50.1",
     "@primevue/themes": "^4.0.5",
+    "@revenuecat/purchases-capacitor": "^13.2.1",
     "@upstash/redis": "^1.38.0",
     "@vercel/kv": "^3.0.0",
     "primeicons": "^7.0.0",

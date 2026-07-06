@@ -1,6 +1,6 @@
 # Issue: Initialize RevenueCat SDK Client on App Mount
 
-Status: ready-for-agent
+Status: closed
 
 ## Parent
 

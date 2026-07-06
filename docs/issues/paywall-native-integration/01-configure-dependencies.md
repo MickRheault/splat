@@ -1,6 +1,6 @@
 # Issue: Configure SDK Dependencies for RevenueCat
 
-Status: ready-for-agent
+Status: closed
 
 ## Parent
 
