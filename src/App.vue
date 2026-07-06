@@ -124,7 +124,12 @@ const handlePaywallPurchase = async () => {
       }
       
       if (!purchased) {
-        await Purchases.purchaseProduct({ productIdentifier: productId })
+        const { products } = await Purchases.getProducts({ productIdentifiers: [productId] })
+        if (products && products.length > 0) {
+          await Purchases.purchaseStoreProduct({ product: products[0] })
+        } else {
+          throw new Error(`Product not found: ${productId}`)
+        }
       }
       
       // Sync entitlement state
@@ -347,7 +352,7 @@ onMounted(async () => {
         } else {
           App.exitApp()
         }
-      })
+      });
 
       // Configure and initialize RevenueCat Purchases SDK
       (async () => {
