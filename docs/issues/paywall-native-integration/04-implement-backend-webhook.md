@@ -12,7 +12,7 @@ Create a secure Vercel API endpoint `/api/revenuecat-webhook.ts` to capture and 
 - Verify the Authorization header token sent by RevenueCat to guarantee the payload is authentic.
 - Extract `app_user_id` (the device ID) and event type from the payload.
 - Update the corresponding device record in the database:
-  - If a user has purchased a 7-Day Pass (`trip` entitlement active), set `passType` to `'trip'`.
+  - If a user has purchased a 14-Day Pass (`trip` entitlement active), set `passType` to `'trip'`.
   - If a user has purchased a Yearly subscription (`yearly` entitlement active), set `passType` to `'yearly'`.
   - If the entitlement expires or is cancelled, clear the `passType` to `null`.
 - Return a 200 response to acknowledge successful receipt of the webhook.

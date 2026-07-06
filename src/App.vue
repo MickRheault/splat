@@ -136,7 +136,7 @@ const handlePaywallPurchase = async () => {
       store.ocrError = null
       store.showPaywall = false
       await store.fetchUsage()
-      alert(`Purchase Activated! Your ${selectedPaywallOption.value === 'trip' ? '7-Day Pass' : 'Yearly Pro'} plan is now active. Try scanning your receipt again!`)
+      alert(`Purchase Activated! Your ${selectedPaywallOption.value === 'trip' ? '14-Day Pass' : 'Yearly Pro'} plan is now active. Try scanning your receipt again!`)
     } else {
       // Web fallback checkout simulation
       const apiBase = ''
@@ -152,7 +152,7 @@ const handlePaywallPurchase = async () => {
         store.ocrError = null
         store.showPaywall = false
         await store.fetchUsage()
-        alert(`Purchase Activated! Your ${selectedPaywallOption.value === 'trip' ? '7-Day Pass' : 'Yearly Pro'} plan is now active. Try scanning your receipt again!`)
+        alert(`Purchase Activated! Your ${selectedPaywallOption.value === 'trip' ? '14-Day Pass' : 'Yearly Pro'} plan is now active. Try scanning your receipt again!`)
       } else {
         throw new Error('Server activation failed')
       }
@@ -237,7 +237,7 @@ const handleDevAction = async (type: 'trip' | 'yearly' | 'reset') => {
     } else {
       const currentUsed = store.simulatedUsage?.freeScansUsed || 0
       store.setSimulatedUsage(type, currentUsed)
-      alert(`Simulated purchase success: Active ${type === 'trip' ? '7-Day' : 'Yearly'} pass registered client and server-side!`)
+      alert(`Simulated purchase success: Active ${type === 'trip' ? '14-Day' : 'Yearly'} pass registered client and server-side!`)
     }
     isDevMenuOpen.value = false
   } catch (err: any) {
@@ -250,7 +250,7 @@ const handleDevAction = async (type: 'trip' | 'yearly' | 'reset') => {
     } else {
       const currentUsed = store.simulatedUsage?.freeScansUsed || 0
       store.setSimulatedUsage(type, currentUsed)
-      alert(`Simulated purchase success: Active ${type === 'trip' ? '7-Day' : 'Yearly'} pass registered client-side (failed to sync with server).`)
+      alert(`Simulated purchase success: Active ${type === 'trip' ? '14-Day' : 'Yearly'} pass registered client-side (failed to sync with server).`)
     }
     isDevMenuOpen.value = false
   } finally {
@@ -1108,7 +1108,7 @@ const selectAllText = (event: Event) => {
       <!-- Usage Limit / Plan Info Indicator -->
       <div v-if="store.usageInfo" class="text-center mt-5 p-3 rounded-xl border border-dashed border-slate-800 bg-slate-950/20">
         <p v-if="store.usageInfo.passType === 'trip'" class="text-xs text-primary font-extrabold flex justify-center items-center gap-1.5">
-          <i class="pi pi-bolt"></i> 7-Day Pass Active (Unlimited Scans)
+          <i class="pi pi-bolt"></i> 14-Day Pass Active (Unlimited Scans)
         </p>
         <p v-else-if="store.usageInfo.passType === 'yearly'" class="text-xs text-emerald-400 font-extrabold flex justify-center items-center gap-1.5">
           <i class="pi pi-star-fill"></i> Yearly Pro Active (100 scans/mo)
@@ -2080,18 +2080,18 @@ const selectAllText = (event: Event) => {
 
         <!-- Pricing Cards -->
         <div class="flex flex-col gap-3">
-          <!-- Option 1: 7-Day Pass -->
+          <!-- Option 1: 14-Day Pass -->
           <div 
             class="p-4 rounded-xl border-2 cursor-pointer transition-all duration-200"
             :class="selectedPaywallOption === 'trip' ? 'border-primary bg-primary/5' : 'border-slate-800 bg-slate-900/50'"
             @click="selectedPaywallOption = 'trip'"
           >
             <div class="flex justify-between items-center mb-1">
-              <span class="font-bold text-sm text-slate-100">7-Day Trip Pass</span>
+              <span class="font-bold text-sm text-slate-100">14-Day Trip Pass</span>
               <span class="font-black text-primary text-base">$1.99</span>
             </div>
             <p class="text-[11px] text-secondary">
-              Unlimited scans for 7 days. One-time payment, no subscription. Best for holidays!
+              Unlimited scans for 14 days. One-time payment, no subscription. Best for holidays!
             </p>
           </div>
 
@@ -2194,7 +2194,7 @@ const selectAllText = (event: Event) => {
           <div class="flex flex-col gap-2 border-t border-slate-800 pt-3">
             <label class="text-[10px] font-semibold text-secondary uppercase tracking-wider">Simulate Purchases</label>
             <Button 
-              label="Simulate 7-Day Pass" 
+              label="Simulate 14-Day Pass" 
               icon="pi pi-bolt" 
               class="p-button-outlined p-button-success p-button-sm w-full" 
               :class="{ 'p-button-primary': store.simulatedUsage && store.simulatedUsage.passType === 'trip' }"

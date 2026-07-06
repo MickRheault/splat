@@ -9,7 +9,7 @@ PRD: `docs/prd/paywall-native-integration.md`
 ## What to build
 
 Hook the current custom PrimeVue paywall dialog buttons to execute native purchases on mobile platforms:
-- In `src/App.vue`, update the click handlers for the purchase option items (e.g. 7-Day Pass, Yearly Pro).
+- In `src/App.vue`, update the click handlers for the purchase option items (e.g. 14-Day Pass, Yearly Pro).
 - When a user clicks a purchase button on native platforms:
   - Invoke `Purchases.purchasePackage` or `Purchases.purchaseProduct` using the package/product configuration from RevenueCat.
   - On transaction success, update local store usage information.

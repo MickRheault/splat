@@ -44,7 +44,7 @@ export default async function handler(req: any, res: any) {
         
         res.status(200).json({ success: true, message: `Reset usage and passes for ${deviceId}` });
       } else {
-        const seconds = type === 'trip' ? 7 * 24 * 60 * 60 : 365 * 24 * 60 * 60;
+        const seconds = type === 'trip' ? 14 * 24 * 60 * 60 : 365 * 24 * 60 * 60;
         await kv.set(passKey, type, { ex: seconds });
         await kv.del(rateLimitKey);
         

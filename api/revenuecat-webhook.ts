@@ -63,7 +63,7 @@ export default async function handler(req: any, res: any) {
               seconds = Math.max(0, Math.ceil((expirationMs - Date.now()) / 1000));
             } else {
               // Default fallback if expiration_at_ms is not provided
-              seconds = entitlementId === 'trip' ? 7 * 24 * 60 * 60 : 365 * 24 * 60 * 60;
+              seconds = entitlementId === 'trip' ? 14 * 24 * 60 * 60 : 365 * 24 * 60 * 60;
             }
 
             if (seconds > 0) {

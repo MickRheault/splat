@@ -14,7 +14,7 @@ Integrate a native billing pipeline using **RevenueCat** (for processing native 
 
 ## User Stories
 
-1. As a mobile app user on iOS/Android, I want to purchase a 7-Day Pass or Yearly subscription natively using Apple In-App Purchase or Google Play Billing, so that my checkout is fast, secure, and familiar.
+1. As a mobile app user on iOS/Android, I want to purchase a 14-Day Pass or Yearly subscription natively using Apple In-App Purchase or Google Play Billing, so that my checkout is fast, secure, and familiar.
 2. As a mobile app user, I want my active purchases to be loaded instantly when the app boots, so that I don't experience paywall lockouts when I have active scans.
 3. As a developer, I want purchase fulfillment to be verified securely on the server, so that users cannot bypass scan limits.
 
