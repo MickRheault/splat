@@ -16,7 +16,7 @@ vi.mock('@upstash/redis', () => {
 });
 
 // Import handler after mocking
-import handler from './revenuecat-webhook';
+import handler from './revenuecat-webhook.js';
 
 describe('RevenueCat Webhook Handler', () => {
   beforeEach(() => {
