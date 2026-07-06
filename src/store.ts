@@ -179,7 +179,12 @@ export const store = reactive({
   apiKey: import.meta.env.VITE_GEMINI_API_KEY || '',
   ocrError: null as string | null,
   showPaywall: false,
-  usageInfo: null as any,
+  usageInfo: {
+    passType: null,
+    freeScansUsed: 0,
+    freeScansLimit: 5,
+    freeScansRemaining: 5
+  } as any,
   simulatedUsage: null as any,
 
   reset() {
@@ -440,6 +445,7 @@ Return format must be EXACTLY this JSON structure:
       const res = await fetch(`${apiBase}/api/usage?deviceId=${deviceId}`)
       if (res.ok) {
         this.usageInfo = await res.json()
+        await setStorageItem('splat_usage_info', JSON.stringify(this.usageInfo))
       }
     } catch (err) {
       console.warn('Failed to fetch usage limits', err)
@@ -636,6 +642,11 @@ Return format must be EXACTLY this JSON structure:
       if (simUsageStr) {
         this.simulatedUsage = JSON.parse(simUsageStr)
         this.usageInfo = { ...this.simulatedUsage }
+      } else {
+        const usageStr = await getStorageItem('splat_usage_info')
+        if (usageStr) {
+          this.usageInfo = JSON.parse(usageStr)
+        }
       }
       
       const dataStr = await getStorageItem('splat_store')
