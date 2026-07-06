@@ -2104,8 +2104,8 @@ const selectAllText = (event: Event) => {
             <div class="flex justify-between items-center mb-1">
               <span class="font-bold text-sm text-slate-100">Yearly Pro Plan</span>
               <div class="flex flex-col items-end">
-                <span class="font-black text-primary text-base">$4.99/year</span>
-                <span class="text-[9px] text-emerald-400 font-bold uppercase">Save 60%</span>
+                <span class="font-black text-primary text-base">$9.99/year</span>
+                <span class="text-[9px] text-emerald-400 font-bold uppercase">Save 80%</span>
               </div>
             </div>
             <p class="text-[11px] text-secondary">
