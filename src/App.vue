@@ -1767,8 +1767,7 @@ const selectAllText = (event: Event) => {
         </template>
         <template v-else>
           <div 
-            class="relative overflow-hidden border-2 border-slate-800 rounded-xl bg-slate-950 w-full select-none cursor-grab active:cursor-grabbing touch-none flex justify-center items-center"
-            :style="{ height: '60vh' }"
+            class="bill-viewer-container"
             @pointerdown="onPointerDown"
             @pointermove="onPointerMove"
             @pointerup="onPointerUp"
@@ -1776,40 +1775,36 @@ const selectAllText = (event: Event) => {
           >
             <!-- Image Wrapper for Transforms -->
             <div 
-              class="w-full h-full flex justify-center items-center transition-transform duration-75 ease-out"
+              class="bill-viewer-img-wrapper"
               :style="{ 
-                transform: `translate(${panX}px, ${panY}px) scale(${zoomScale})`,
-                transformOrigin: 'center center'
+                transform: `translate(${panX}px, ${panY}px) scale(${zoomScale})`
               }"
             >
               <img 
                 :src="store.receiptImage" 
                 alt="Original Scanned Bill" 
-                class="max-w-full max-h-full object-contain pointer-events-none" 
               />
             </div>
 
             <!-- Floating Zoom Controls at Bottom-Center -->
-            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-slate-900/90 border-2 border-slate-800 p-1.5 rounded-full shadow-lg backdrop-blur">
+            <div class="bill-viewer-controls">
               <Button 
                 icon="pi pi-minus" 
-                class="p-button-rounded p-button-text p-button-sm text-slate-100 hover:bg-slate-800" 
-                :style="{ width: '32px', height: '32px' }"
+                class="p-button-rounded p-button-text p-button-sm text-slate-100" 
+                :style="{ width: '32px', height: '32px', padding: '0 !important' }"
                 @click.stop="zoomOut" 
               />
-              <span class="text-[10px] font-bold text-slate-400 px-1 min-w-[36px] text-center">
-                {{ Math.round(zoomScale * 100) }}%
-              </span>
+              <span>{{ Math.round(zoomScale * 100) }}%</span>
               <Button 
                 icon="pi pi-plus" 
-                class="p-button-rounded p-button-text p-button-sm text-slate-100 hover:bg-slate-800" 
-                :style="{ width: '32px', height: '32px' }"
+                class="p-button-rounded p-button-text p-button-sm text-slate-100" 
+                :style="{ width: '32px', height: '32px', padding: '0 !important' }"
                 @click.stop="zoomIn" 
               />
               <Button 
                 icon="pi pi-refresh" 
-                class="p-button-rounded p-button-text p-button-sm text-secondary hover:bg-slate-800" 
-                :style="{ width: '32px', height: '32px' }"
+                class="p-button-rounded p-button-text p-button-sm text-secondary" 
+                :style="{ width: '32px', height: '32px', padding: '0 !important' }"
                 @click.stop="resetZoom" 
               />
             </div>

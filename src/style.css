@@ -1138,3 +1138,66 @@ input[type="text"]:focus, input[type="password"]:focus {
   transition: transform 0.3s ease;
 }
 
+/* Scanned Bill Viewer Styles */
+.bill-viewer-container {
+  position: relative;
+  overflow: hidden;
+  border: 3px solid var(--stroke-color);
+  border-radius: var(--radius-md);
+  background-color: #050505;
+  width: 100%;
+  height: 60vh;
+  user-select: none;
+  cursor: grab;
+  touch-action: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.bill-viewer-container:active {
+  cursor: grabbing;
+}
+
+.bill-viewer-img-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.08s ease-out;
+  transform-origin: center center;
+}
+
+.bill-viewer-img-wrapper img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.bill-viewer-controls {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: rgba(28, 25, 23, 0.95);
+  border: 3px solid var(--stroke-color);
+  padding: 6px 12px;
+  border-radius: 50px;
+  box-shadow: 4px 4px 0px var(--stroke-color);
+  z-index: 10;
+}
+
+.bill-viewer-controls span {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-color);
+  min-width: 40px;
+  text-align: center;
+}
+
