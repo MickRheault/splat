@@ -41,6 +41,69 @@ const copySuccess = ref(false)
 const showOriginalBill = ref(false)
 const showFullNames = true
 
+// Original Bill Zoom & Pan State
+const zoomScale = ref(1.0)
+const panX = ref(0)
+const panY = ref(0)
+
+let isDraggingBill = false
+let startDragX = 0
+let startDragY = 0
+
+const zoomIn = () => {
+  zoomScale.value = Math.min(3.0, zoomScale.value + 0.25)
+}
+
+const zoomOut = () => {
+  zoomScale.value = Math.max(0.5, zoomScale.value - 0.25)
+  if (zoomScale.value <= 1.0) {
+    panX.value = 0
+    panY.value = 0
+  }
+}
+
+const resetZoom = () => {
+  zoomScale.value = 1.0
+  panX.value = 0
+  panY.value = 0
+}
+
+const onPointerDown = (e: PointerEvent) => {
+  if (zoomScale.value <= 1.0) return
+  isDraggingBill = true
+  const target = e.currentTarget as HTMLElement
+  target.setPointerCapture(e.pointerId)
+  startDragX = e.clientX - panX.value
+  startDragY = e.clientY - panY.value
+}
+
+const onPointerMove = (e: PointerEvent) => {
+  if (!isDraggingBill) return
+  const rawX = e.clientX - startDragX
+  const rawY = e.clientY - startDragY
+  
+  const maxPanX = 150 * (zoomScale.value - 1)
+  const maxPanY = 300 * (zoomScale.value - 1)
+  
+  panX.value = Math.max(-maxPanX, Math.min(maxPanX, rawX))
+  panY.value = Math.max(-maxPanY, Math.min(maxPanY, rawY))
+}
+
+const onPointerUp = (e: PointerEvent) => {
+  if (!isDraggingBill) return
+  isDraggingBill = false
+  const target = e.currentTarget as HTMLElement
+  try {
+    target.releasePointerCapture(e.pointerId)
+  } catch (err) {}
+}
+
+watch(showOriginalBill, (newVal) => {
+  if (!newVal) {
+    resetZoom()
+  }
+})
+
 // Person detail popup state (Step 4)
 const isPersonDetailOpen = ref(false)
 const selectedBreakdownPerson = ref<any>(null)
@@ -1703,8 +1766,53 @@ const selectAllText = (event: Event) => {
           </div>
         </template>
         <template v-else>
-          <div class="overflow-auto max-h-[70vh] border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-850 w-full flex justify-center items-center">
-            <img :src="store.receiptImage" alt="Original Scanned Bill" class="max-w-full h-auto object-contain" />
+          <div 
+            class="relative overflow-hidden border-2 border-slate-800 rounded-xl bg-slate-950 w-full select-none cursor-grab active:cursor-grabbing touch-none flex justify-center items-center"
+            :style="{ height: '60vh' }"
+            @pointerdown="onPointerDown"
+            @pointermove="onPointerMove"
+            @pointerup="onPointerUp"
+            @pointercancel="onPointerUp"
+          >
+            <!-- Image Wrapper for Transforms -->
+            <div 
+              class="w-full h-full flex justify-center items-center transition-transform duration-75 ease-out"
+              :style="{ 
+                transform: `translate(${panX}px, ${panY}px) scale(${zoomScale})`,
+                transformOrigin: 'center center'
+              }"
+            >
+              <img 
+                :src="store.receiptImage" 
+                alt="Original Scanned Bill" 
+                class="max-w-full max-h-full object-contain pointer-events-none" 
+              />
+            </div>
+
+            <!-- Floating Zoom Controls at Bottom-Center -->
+            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-slate-900/90 border-2 border-slate-800 p-1.5 rounded-full shadow-lg backdrop-blur">
+              <Button 
+                icon="pi pi-minus" 
+                class="p-button-rounded p-button-text p-button-sm text-slate-100 hover:bg-slate-800" 
+                :style="{ width: '32px', height: '32px' }"
+                @click.stop="zoomOut" 
+              />
+              <span class="text-[10px] font-bold text-slate-400 px-1 min-w-[36px] text-center">
+                {{ Math.round(zoomScale * 100) }}%
+              </span>
+              <Button 
+                icon="pi pi-plus" 
+                class="p-button-rounded p-button-text p-button-sm text-slate-100 hover:bg-slate-800" 
+                :style="{ width: '32px', height: '32px' }"
+                @click.stop="zoomIn" 
+              />
+              <Button 
+                icon="pi pi-refresh" 
+                class="p-button-rounded p-button-text p-button-sm text-secondary hover:bg-slate-800" 
+                :style="{ width: '32px', height: '32px' }"
+                @click.stop="resetZoom" 
+              />
+            </div>
           </div>
         </template>
         <Button 
