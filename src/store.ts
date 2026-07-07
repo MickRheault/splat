@@ -241,14 +241,18 @@ export const store = reactive({
         
         this.billName = `${getTodayFormatted()} - ${restName}`
 
-        this.items = template.items.map((item, idx) => ({
-          id: `item_${Date.now()}_${idx}`,
-          name: item.name,
-          price: item.price,
-          assignedTo: [],
-          quantity: (item as any).quantity || 1,
-          assignedQuantities: {}
-        }))
+        this.items = template.items.map((item, idx) => {
+          const qty = (item as any).quantity || 1
+          return {
+            id: `item_${Date.now()}_${idx}`,
+            name: item.name,
+            price: item.price,
+            assignedTo: [],
+            quantity: qty,
+            assignedQuantities: {},
+            isSplitEvenly: qty > 1 ? true : undefined
+          }
+        })
         
         this.adjustments = [
           { id: `adj_${Date.now()}_0`, name: 'Tax / VAT', value: template.tax }
@@ -390,14 +394,18 @@ Return format must be EXACTLY this JSON structure:
         throw new Error(result.error)
       }
       
-      this.items = (result.items || []).map((item: any, idx: number) => ({
-        id: `item_${Date.now()}_${idx}`,
-        name: item.name || 'Unknown Item',
-        price: Number(item.price) || 0,
-        assignedTo: [],
-        quantity: Number(item.quantity) || 1,
-        assignedQuantities: {}
-      }))
+      this.items = (result.items || []).map((item: any, idx: number) => {
+        const qty = Number(item.quantity) || 1
+        return {
+          id: `item_${Date.now()}_${idx}`,
+          name: item.name || 'Unknown Item',
+          price: Number(item.price) || 0,
+          assignedTo: [],
+          quantity: qty,
+          assignedQuantities: {},
+          isSplitEvenly: qty > 1 ? true : undefined
+        }
+      })
       this.adjustments = (result.adjustments || []).map((adj: any, idx: number) => ({
         id: `adj_${Date.now()}_${idx}`,
         name: adj.name || 'Tax',
@@ -553,16 +561,21 @@ Return format must be EXACTLY this JSON structure:
   addItem(name = 'New Item', price = 0, quantity = 1) {
     const id = `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     const assignedQuantities: Record<string, number> = {}
-    let assignedTo: string[]
+    const assignedTo = this.participants.map(p => p.id)
     if (quantity === 1) {
-      assignedTo = this.participants.map(p => p.id)
       assignedTo.forEach(pId => {
         assignedQuantities[pId] = 1
       })
-    } else {
-      assignedTo = []
     }
-    this.items.push({ id, name, price, assignedTo, quantity, assignedQuantities })
+    this.items.push({ 
+      id, 
+      name, 
+      price, 
+      assignedTo, 
+      quantity, 
+      assignedQuantities,
+      isSplitEvenly: quantity > 1 ? true : undefined
+    })
     this.saveToLocalStorage()
   },
 
@@ -609,8 +622,11 @@ Return format must be EXACTLY this JSON structure:
 
   autoAssignUnallocatedItems() {
     this.items.forEach(item => {
-      if (item.assignedTo.length === 0 && item.quantity === 1) {
+      if (item.assignedTo.length === 0) {
         this.assignAllToItem(item.id)
+        if (item.quantity > 1) {
+          item.isSplitEvenly = true
+        }
       }
     })
   },

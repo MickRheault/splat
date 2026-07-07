@@ -404,7 +404,7 @@ describe('Splat Core Store & Math Logic', () => {
       expect(item.assignedQuantities?.[bobId]).toBe(1)
     })
 
-    test('should auto-assign unallocated items of quantity 1, but leave multi-quantity items unassigned', () => {
+    test('should auto-assign unallocated items of quantity 1 and multi-quantity items to everyone by default', () => {
       store.addParticipant('Alice')
       store.addParticipant('Bob')
       const aliceId = store.participants[0].id
@@ -419,6 +419,8 @@ describe('Splat Core Store & Math Logic', () => {
       // Item 2: Quantity 2
       store.addItem('Beer', 10, 2)
       const item2 = store.items[1]
+      // Clear auto-assignment done by addItem for quantity 2
+      store.clearAllFromItem(item2.id)
 
       expect(item1.assignedTo).toEqual([])
       expect(item2.assignedTo).toEqual([])
@@ -429,9 +431,10 @@ describe('Splat Core Store & Math Logic', () => {
       expect(item1.assignedTo).toContain(aliceId)
       expect(item1.assignedTo).toContain(bobId)
       
-      // Item 2 (qty > 1) should remain unassigned (nobody by default)
-      expect(item2.assignedTo).toEqual([])
-      expect(item2.assignedQuantities).toEqual({})
+      // Item 2 (qty > 1) should be assigned to everyone and set to split evenly
+      expect(item2.assignedTo).toContain(aliceId)
+      expect(item2.assignedTo).toContain(bobId)
+      expect(item2.isSplitEvenly).toBe(true)
     })
 
 

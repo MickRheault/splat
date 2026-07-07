@@ -512,12 +512,14 @@ const saveEditItem = () => {
       item.assignedTo.forEach(pId => {
         item.assignedQuantities![pId] = 1
       })
+      item.isSplitEvenly = undefined
     } else if (newQty !== prevQty) {
-      Object.keys(item.assignedQuantities).forEach(pId => {
-        if (item.assignedQuantities![pId] > newQty) {
-          item.assignedQuantities![pId] = 1
-        }
-      })
+      if (item.isSplitEvenly === undefined) {
+        item.isSplitEvenly = true
+      }
+      if (item.assignedTo.length === 0) {
+        item.assignedTo = store.participants.map(p => p.id)
+      }
     }
     store.saveToLocalStorage()
   }
