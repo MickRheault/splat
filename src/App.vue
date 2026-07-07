@@ -70,7 +70,6 @@ const personShareText = computed(() => {
 // History List State
 const savedSplits = ref<any[]>([])
 const showAllHistory = ref(false)
-const historyThumbnails = ref<Record<string, string>>({})
 
 const visibleSplits = computed(() => {
   if (showAllHistory.value) {
@@ -79,27 +78,10 @@ const visibleSplits = computed(() => {
   return savedSplits.value.slice(0, 3)
 })
 
-const loadHistoryThumbnails = async () => {
-  for (const split of savedSplits.value) {
-    if (!historyThumbnails.value[split.splitId]) {
-      try {
-        const img = await getStorageItem(`splat_image_${split.splitId}`)
-        if (img) {
-          historyThumbnails.value[split.splitId] = img
-        }
-      } catch (e) {
-        console.warn('Failed to load history thumbnail', e)
-      }
-    }
-  }
-}
-
 const loadHistoryFromStorage = async () => {
   try {
     const historyStr = await getStorageItem('splat_history') || '[]'
     savedSplits.value = JSON.parse(historyStr)
-    // Lazy load thumbnails in the background
-    loadHistoryThumbnails()
   } catch (e) {
     console.error('Failed to load history list', e)
   }
@@ -472,7 +454,6 @@ const clearHistory = async () => {
     }
     await removeStorageItem('splat_history')
     savedSplits.value = []
-    historyThumbnails.value = {}
   }
 }
 
@@ -1203,18 +1184,9 @@ const selectAllText = (event: Event) => {
             <div 
               v-for="split in visibleSplits" 
               :key="split.splitId" 
-              class="history-card flex items-center p-3 rounded-xl border-2 border-slate-800 bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer transition-all duration-200 gap-3"
+              class="history-card"
               @click="loadSavedSplit(split)"
             >
-              <!-- Thumbnail (if exists) -->
-              <div v-if="historyThumbnails[split.splitId]" class="w-10 h-10 rounded-lg overflow-hidden border border-slate-700 bg-slate-950 shrink-0">
-                <img :src="historyThumbnails[split.splitId]" class="w-full h-full object-cover" alt="Receipt thumbnail" />
-              </div>
-              <!-- Default Icon Placeholder if no thumbnail -->
-              <div v-else class="w-10 h-10 rounded-lg border border-slate-800 bg-slate-950/50 flex items-center justify-center shrink-0">
-                <i class="pi pi-receipt text-slate-600 text-sm"></i>
-              </div>
-
               <div class="flex-1 min-w-0 pr-2">
                 <h5 class="font-bold text-sm text-slate-800 dark:text-slate-100 truncate text-left m-0">{{ split.billName || 'Untitled Bill' }}</h5>
                 <!-- Participant list -->
@@ -2305,20 +2277,16 @@ const selectAllText = (event: Event) => {
       class="neobrutalist-dialog"
     >
       <div v-if="selectedHistorySplit" class="flex flex-col gap-4 text-left">
-        <!-- Thumbnail & Overview -->
-        <div class="flex gap-3 items-center border-b border-slate-800 pb-3">
-          <div v-if="historyThumbnails[selectedHistorySplit.splitId]" class="w-14 h-14 rounded-lg overflow-hidden border-2 border-slate-800 bg-slate-950 shrink-0">
-            <img :src="historyThumbnails[selectedHistorySplit.splitId]" class="w-full h-full object-cover" alt="Receipt preview" />
-          </div>
-          <div v-else class="w-14 h-14 rounded-lg border-2 border-slate-800 bg-slate-950/50 flex items-center justify-center shrink-0">
-            <i class="pi pi-receipt text-slate-600 text-lg"></i>
-          </div>
-          <div class="flex-1 min-w-0">
+        <!-- Overview -->
+        <div class="border-b border-slate-800 pb-3 flex justify-between items-end">
+          <div>
             <div class="text-[9px] text-secondary font-extrabold uppercase tracking-wider">Total Bill</div>
-            <div class="text-lg font-black text-primary leading-tight">
+            <div class="text-xl font-black text-primary leading-tight mt-0.5">
               {{ selectedHistorySplit.currencySymbol || '$' }}{{ selectedHistorySplit.totalBill.toFixed(2) }}
             </div>
-            <div class="text-[9px] text-slate-500 font-semibold mt-0.5">
+          </div>
+          <div class="text-right">
+            <div class="text-[9px] text-slate-500 font-semibold">
               📅 {{ formatDate(selectedHistorySplit.timestamp) }}
             </div>
           </div>
