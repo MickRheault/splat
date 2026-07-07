@@ -910,3 +910,127 @@ export const shareTextSummary = computed(() => {
   
   return text
 })
+
+export function calculateSplitBreakdown(split: any) {
+  const activeParticipants = split.participants || []
+  const activeItems = split.items || []
+  
+  // 1. Calculate items subtotal
+  const itemsSubtotalVal = activeItems.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0)
+  
+  // 2. Calculate adjustments
+  const adjustments = split.adjustments || []
+  const totalAdjustmentsVal = adjustments.reduce((sum: number, adj: any) => {
+    const val = Number(adj.value) || 0
+    if (adj.type === 'percent') {
+      return sum + (itemsSubtotalVal * (val / 100))
+    }
+    return sum + val
+  }, 0)
+
+  // 3. Calculate tip
+  const tipInput = split.tipInput || 0
+  const tipType = split.tipType || 'percent'
+  const tipAmountVal = tipType === 'percent' 
+    ? itemsSubtotalVal * (Number(tipInput) / 100) 
+    : Number(tipInput)
+
+  // 4. Calculate total bill
+  const totalBillVal = itemsSubtotalVal + totalAdjustmentsVal + tipAmountVal
+
+  if (activeParticipants.length === 0) return []
+
+  const subtotals: Record<string, number> = {}
+  activeParticipants.forEach((p: any) => { subtotals[p.id] = 0 })
+
+  activeItems.forEach((item: any) => {
+    const price = Number(item.price) || 0
+    const qty = Number(item.quantity) || 1
+    
+    if (qty > 1 && !item.isSplitEvenly) {
+      const assignedQ = item.assignedQuantities || {}
+      Object.entries(assignedQ).forEach(([pId, assignedCount]) => {
+        if (subtotals[pId] !== undefined && (assignedCount as number) > 0) {
+          subtotals[pId] += ((assignedCount as number) / qty) * price
+        }
+      })
+    } else {
+      const assignees = item.assignedTo.length > 0 ? item.assignedTo : activeParticipants.map((p: any) => p.id)
+      const share = price / assignees.length
+      assignees.forEach((pId: string) => {
+        if (subtotals[pId] !== undefined) {
+          subtotals[pId] += share
+        }
+      })
+    }
+  })
+
+  let calculatedGrandTotal = 0
+  const list = activeParticipants.map((p: any) => {
+    const individualSubtotal = subtotals[p.id]
+    const ratio = itemsSubtotalVal > 0 ? individualSubtotal / itemsSubtotalVal : 1 / activeParticipants.length
+    
+    const taxShare = totalAdjustmentsVal * ratio
+    const tipShare = tipAmountVal * ratio
+    
+    const subtotalRounded = Math.round(individualSubtotal * 100) / 100
+    const taxRounded = Math.round(taxShare * 100) / 100
+    const tipRounded = Math.round(tipShare * 100) / 100
+    const totalRounded = Math.round((individualSubtotal + taxShare + tipShare) * 100) / 100
+    
+    calculatedGrandTotal += totalRounded
+
+    // Build participant item shares
+    const participantItems: { name: string; sharePrice: number }[] = []
+    activeItems.forEach((item: any) => {
+      const price = Number(item.price) || 0
+      const qty = Number(item.quantity) || 1
+      
+      if (qty > 1 && !item.isSplitEvenly) {
+        const assignedQ = item.assignedQuantities || {}
+        const count = assignedQ[p.id] || 0
+        if (count > 0) {
+          participantItems.push({
+            name: `${count}x ${item.name}`,
+            sharePrice: Math.round(((count / qty) * price) * 100) / 100
+          })
+        }
+      } else {
+        const assignees = item.assignedTo.length > 0 ? item.assignedTo : activeParticipants.map((pr: any) => pr.id)
+        if (assignees.includes(p.id)) {
+          const suffix = (qty > 1 && item.isSplitEvenly) ? ' (Shared)' : ''
+          participantItems.push({
+            name: `${item.name}${suffix}`,
+            sharePrice: Math.round((price / assignees.length) * 100) / 100
+          })
+        }
+      }
+    })
+
+    return {
+      id: p.id,
+      name: p.name,
+      subtotal: subtotalRounded,
+      tax: taxRounded,
+      tip: tipRounded,
+      total: totalRounded,
+      items: participantItems
+    }
+  })
+
+  // Penny rounding error correction
+  const roundingError = Math.round((totalBillVal - calculatedGrandTotal) * 100) / 100
+  if (roundingError !== 0 && list.length > 0) {
+    let maxIdx = 0
+    let maxTotal = list[0].total
+    for (let i = 1; i < list.length; i++) {
+      if (list[i].total > maxTotal) {
+        maxTotal = list[i].total
+        maxIdx = i
+      }
+    }
+    list[maxIdx].total = Math.round((list[maxIdx].total + roundingError) * 100) / 100
+  }
+
+  return list
+}

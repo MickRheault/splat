@@ -26,7 +26,8 @@ import {
   getStorageItem,
   setStorageItem,
   removeStorageItem,
-  getDeviceId
+  getDeviceId,
+  calculateSplitBreakdown
 } from './store'
 import pkg from '../package.json'
 
@@ -69,6 +70,8 @@ const personShareText = computed(() => {
 // History List State
 const savedSplits = ref<any[]>([])
 const showAllHistory = ref(false)
+const historyThumbnails = ref<Record<string, string>>({})
+
 const visibleSplits = computed(() => {
   if (showAllHistory.value) {
     return savedSplits.value
@@ -76,10 +79,27 @@ const visibleSplits = computed(() => {
   return savedSplits.value.slice(0, 3)
 })
 
+const loadHistoryThumbnails = async () => {
+  for (const split of savedSplits.value) {
+    if (!historyThumbnails.value[split.splitId]) {
+      try {
+        const img = await getStorageItem(`splat_image_${split.splitId}`)
+        if (img) {
+          historyThumbnails.value[split.splitId] = img
+        }
+      } catch (e) {
+        console.warn('Failed to load history thumbnail', e)
+      }
+    }
+  }
+}
+
 const loadHistoryFromStorage = async () => {
   try {
     const historyStr = await getStorageItem('splat_history') || '[]'
     savedSplits.value = JSON.parse(historyStr)
+    // Lazy load thumbnails in the background
+    loadHistoryThumbnails()
   } catch (e) {
     console.error('Failed to load history list', e)
   }
@@ -411,8 +431,38 @@ watch(() => store.step, async (newStep) => {
   }
 })
 
+const isHistoryDetailOpen = ref(false)
+const selectedHistorySplit = ref<any | null>(null)
+
+const historyDetailBreakdown = computed(() => {
+  if (!selectedHistorySplit.value) return []
+  return calculateSplitBreakdown(selectedHistorySplit.value)
+})
+
 const loadSavedSplit = (split: any) => {
-  store.loadSplit(split)
+  selectedHistorySplit.value = split
+  isHistoryDetailOpen.value = true
+}
+
+const confirmRestoreSplit = async (targetStep: 'edit' | 'share') => {
+  if (!selectedHistorySplit.value) return
+  
+  const hasActiveItems = store.items.length > 0
+  const isDifferentSplit = store.splitId !== selectedHistorySplit.value.splitId
+  
+  if (hasActiveItems && isDifferentSplit) {
+    if (!window.confirm("You have an active split in progress. Loading this split will overwrite it. Proceed?")) {
+      return
+    }
+  }
+  
+  await store.loadSplit(selectedHistorySplit.value)
+  if (targetStep === 'edit') {
+    store.step = 'edit'
+  } else {
+    store.step = 'share'
+  }
+  isHistoryDetailOpen.value = false
 }
 
 const clearHistory = async () => {
@@ -422,6 +472,7 @@ const clearHistory = async () => {
     }
     await removeStorageItem('splat_history')
     savedSplits.value = []
+    historyThumbnails.value = {}
   }
 }
 
@@ -1152,20 +1203,32 @@ const selectAllText = (event: Event) => {
             <div 
               v-for="split in visibleSplits" 
               :key="split.splitId" 
-              class="history-card"
+              class="history-card flex items-center p-3 rounded-xl border-2 border-slate-800 bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer transition-all duration-200 gap-3"
               @click="loadSavedSplit(split)"
             >
+              <!-- Thumbnail (if exists) -->
+              <div v-if="historyThumbnails[split.splitId]" class="w-10 h-10 rounded-lg overflow-hidden border border-slate-700 bg-slate-950 shrink-0">
+                <img :src="historyThumbnails[split.splitId]" class="w-full h-full object-cover" alt="Receipt thumbnail" />
+              </div>
+              <!-- Default Icon Placeholder if no thumbnail -->
+              <div v-else class="w-10 h-10 rounded-lg border border-slate-800 bg-slate-950/50 flex items-center justify-center shrink-0">
+                <i class="pi pi-receipt text-slate-600 text-sm"></i>
+              </div>
+
               <div class="flex-1 min-w-0 pr-2">
-                <h5 class="font-bold text-sm text-slate-800 dark:text-slate-100 truncate text-left m-0">{{ split.billName }}</h5>
-                <div class="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5 font-medium">
+                <h5 class="font-bold text-sm text-slate-800 dark:text-slate-100 truncate text-left m-0">{{ split.billName || 'Untitled Bill' }}</h5>
+                <!-- Participant list -->
+                <p class="text-[10px] text-slate-400 dark:text-slate-400 truncate text-left mt-0.5 m-0 font-medium">
+                  {{ split.participants ? split.participants.map((p: any) => p.name).join(', ') : `${split.participantsCount} people` }}
+                </p>
+                <div class="flex items-center gap-1.5 text-[9px] text-slate-500 mt-1 font-semibold">
                   <span>{{ formatDate(split.timestamp) }}</span>
-                  <span>•</span>
-                  <span>{{ split.participantsCount }} people</span>
                 </div>
               </div>
+              
               <div class="flex items-center gap-1.5 shrink-0">
-                <span class="font-bold text-primary text-sm">{{ split.currencySymbol }}{{ split.totalBill.toFixed(2) }}</span>
-                <i class="pi pi-chevron-right text-xs text-slate-400"></i>
+                <span class="font-bold text-primary text-sm font-black">{{ split.currencySymbol || '$' }}{{ split.totalBill.toFixed(2) }}</span>
+                <i class="pi pi-chevron-right text-xs text-slate-500"></i>
               </div>
             </div>
           </TransitionGroup>
@@ -2226,6 +2289,102 @@ const selectAllText = (event: Event) => {
               icon="pi pi-refresh" 
               class="p-button-text p-button-sm w-full text-slate-400 hover:text-slate-100" 
               @click="store.clearSimulatedUsage(); isDevMenuOpen = false" 
+            />
+          </div>
+        </div>
+      </div>
+    </Dialog>
+
+    <!-- Saved Split History Detail Dialog -->
+    <Dialog 
+      v-model:visible="isHistoryDetailOpen" 
+      modal 
+      :header="selectedHistorySplit?.billName || 'Saved Split Details'" 
+      :style="{ width: '95%', maxWidth: '420px' }"
+      :closable="true"
+      class="neobrutalist-dialog"
+    >
+      <div v-if="selectedHistorySplit" class="flex flex-col gap-4 text-left">
+        <!-- Thumbnail & Overview -->
+        <div class="flex gap-3 items-center border-b border-slate-800 pb-3">
+          <div v-if="historyThumbnails[selectedHistorySplit.splitId]" class="w-14 h-14 rounded-lg overflow-hidden border-2 border-slate-800 bg-slate-950 shrink-0">
+            <img :src="historyThumbnails[selectedHistorySplit.splitId]" class="w-full h-full object-cover" alt="Receipt preview" />
+          </div>
+          <div v-else class="w-14 h-14 rounded-lg border-2 border-slate-800 bg-slate-950/50 flex items-center justify-center shrink-0">
+            <i class="pi pi-receipt text-slate-600 text-lg"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[9px] text-secondary font-extrabold uppercase tracking-wider">Total Bill</div>
+            <div class="text-lg font-black text-primary leading-tight">
+              {{ selectedHistorySplit.currencySymbol || '$' }}{{ selectedHistorySplit.totalBill.toFixed(2) }}
+            </div>
+            <div class="text-[9px] text-slate-500 font-semibold mt-0.5">
+              📅 {{ formatDate(selectedHistorySplit.timestamp) }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Items Breakdown -->
+        <div class="flex flex-col gap-1">
+          <label class="text-[9px] font-bold text-secondary uppercase tracking-wider">Receipt Items</label>
+          <div class="max-h-[110px] overflow-y-auto pr-1 flex flex-col gap-1 border-2 border-slate-800 rounded-xl p-2 bg-slate-950/30">
+            <div 
+              v-for="item in selectedHistorySplit.items" 
+              :key="item.id"
+              class="flex justify-between items-center text-xs py-0.5"
+            >
+              <span class="text-slate-300 truncate max-w-[75%] font-medium">
+                <span v-if="item.quantity > 1" class="font-black text-primary mr-1">{{ item.quantity }}x</span>
+                {{ item.name }}
+              </span>
+              <span class="font-bold text-slate-200">
+                {{ selectedHistorySplit.currencySymbol || '$' }}{{ item.price.toFixed(2) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Participant Totals -->
+        <div class="flex flex-col gap-1">
+          <label class="text-[9px] font-bold text-secondary uppercase tracking-wider">Participant Shares</label>
+          <div class="max-h-[150px] overflow-y-auto pr-1 flex flex-col gap-2">
+            <div 
+              v-for="p in historyDetailBreakdown" 
+              :key="p.id"
+              class="flex flex-col gap-1 border-2 border-slate-800 rounded-xl p-2.5 bg-slate-900/30"
+            >
+              <div class="flex justify-between items-center text-xs font-bold">
+                <span class="text-slate-100">{{ p.name }}</span>
+                <span class="text-primary font-black">{{ selectedHistorySplit.currencySymbol || '$' }}{{ p.total.toFixed(2) }}</span>
+              </div>
+              <!-- Mini items list for each participant -->
+              <div class="flex flex-wrap gap-1 mt-1">
+                <span 
+                  v-for="itm in p.items" 
+                  :key="itm.name"
+                  class="text-[9px] text-slate-400 bg-slate-950/60 border border-slate-800 px-1.5 py-0.5 rounded-lg font-medium"
+                >
+                  {{ itm.name }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col gap-2 border-t border-slate-800 pt-3">
+          <div class="flex gap-2">
+            <Button 
+              label="Edit Split" 
+              icon="pi pi-pencil" 
+              class="p-button-outlined p-button-secondary p-button-sm flex-1 font-bold" 
+              @click="confirmRestoreSplit('edit')"
+            />
+            <Button 
+              label="Share Summary" 
+              icon="pi pi-share-alt" 
+              class="p-button-primary p-button-sm flex-1 font-bold" 
+              @click="confirmRestoreSplit('share')"
             />
           </div>
         </div>

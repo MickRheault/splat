@@ -1,5 +1,5 @@
 import { describe, expect, test, beforeEach, vi } from 'vitest'
-import { store, itemsSubtotal, tipAmount, totalAdjustments, totalBill, billBreakdown, shareTextSummary } from './store'
+import { store, itemsSubtotal, tipAmount, totalAdjustments, totalBill, billBreakdown, shareTextSummary, calculateSplitBreakdown } from './store'
 
 describe('Splat Core Store & Math Logic', () => {
   beforeEach(() => {
@@ -508,6 +508,51 @@ describe('Splat Core Store & Math Logic', () => {
 
       expect(store.splitId).toBe(splitId)
       expect(store.receiptImage).toBe('data:image/png;base64,restoredimage')
+    })
+  })
+
+  describe('Stateless Split Breakdown Calculation Helper', () => {
+    test('should compute correct participant totals proportionally', () => {
+      const splitData = {
+        splitId: 'test-split-123',
+        billName: 'Stateless Split Test',
+        timestamp: Date.now(),
+        participantsCount: 2,
+        totalBill: 33, // 30 items + 3 adjustments
+        currencySymbol: '$',
+        items: [
+          { id: '1', name: 'Pizza', price: 20, assignedTo: ['alice'], quantity: 1, assignedQuantities: {} },
+          { id: '2', name: 'Drink', price: 10, assignedTo: ['bob'], quantity: 1, assignedQuantities: {} }
+        ],
+        participants: [
+          { id: 'alice', name: 'Alice' },
+          { id: 'bob', name: 'Bob' }
+        ],
+        adjustments: [
+          { id: 'tax', name: 'Tax', value: 3, type: 'flat' }
+        ],
+        tipInput: 0,
+        tipType: 'flat'
+      }
+
+      const breakdown = calculateSplitBreakdown(splitData)
+      expect(breakdown).toHaveLength(2)
+
+      const aliceBreakdown = breakdown.find((p: any) => p.id === 'alice')
+      const bobBreakdown = breakdown.find((p: any) => p.id === 'bob')
+
+      expect(aliceBreakdown).toBeDefined()
+      expect(bobBreakdown).toBeDefined()
+
+      // Alice: Subtotal $20, Share of Adjustments: 20/30 * $3 = $2. Total: $22
+      expect(aliceBreakdown!.subtotal).toBe(20)
+      expect(aliceBreakdown!.tax).toBe(2)
+      expect(aliceBreakdown!.total).toBe(22)
+
+      // Bob: Subtotal $10, Share of Adjustments: 10/30 * $3 = $1. Total: $11
+      expect(bobBreakdown!.subtotal).toBe(10)
+      expect(bobBreakdown!.tax).toBe(1)
+      expect(bobBreakdown!.total).toBe(11)
     })
   })
 })
