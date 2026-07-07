@@ -1788,25 +1788,25 @@ const selectAllText = (event: Event) => {
 
             <!-- Floating Zoom Controls at Bottom-Center -->
             <div class="bill-viewer-controls">
-              <Button 
-                icon="pi pi-minus" 
-                class="p-button-rounded p-button-text p-button-sm text-slate-100" 
-                :style="{ width: '32px', height: '32px', padding: '0 !important' }"
+              <button 
+                class="bill-zoom-btn"
                 @click.stop="zoomOut" 
-              />
+              >
+                <i class="pi pi-minus"></i>
+              </button>
               <span>{{ Math.round(zoomScale * 100) }}%</span>
-              <Button 
-                icon="pi pi-plus" 
-                class="p-button-rounded p-button-text p-button-sm text-slate-100" 
-                :style="{ width: '32px', height: '32px', padding: '0 !important' }"
+              <button 
+                class="bill-zoom-btn"
                 @click.stop="zoomIn" 
-              />
-              <Button 
-                icon="pi pi-refresh" 
-                class="p-button-rounded p-button-text p-button-sm text-secondary" 
-                :style="{ width: '32px', height: '32px', padding: '0 !important' }"
+              >
+                <i class="pi pi-plus"></i>
+              </button>
+              <button 
+                class="bill-zoom-btn"
                 @click.stop="resetZoom" 
-              />
+              >
+                <i class="pi pi-refresh"></i>
+              </button>
             </div>
           </div>
         </template>
