@@ -171,7 +171,7 @@ const handlePaywallPurchase = async () => {
     
     if (isNative) {
       // Native RevenueCat purchase flow
-      const productId = selectedPaywallOption.value === 'trip' ? 'splat_7day_pass' : 'splat_yearly_pro'
+      const productId = selectedPaywallOption.value === 'trip' ? 'splat_14day_trip' : 'splat_yearly_pro'
       let purchased = false
       
       try {
