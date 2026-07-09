@@ -1449,7 +1449,7 @@ const selectAllText = (event: Event) => {
               class="history-card flex items-center"
               @click="loadSavedSplit(split)"
             >
-              <div class="avatar-badge shrink-0 mr-3 flex items-center justify-center" style="width: 32px; height: 32px; font-size: 14px;">
+              <div class="shrink-0 mr-3 flex items-center justify-center text-slate-500 dark:text-slate-400" style="width: 32px; height: 32px; font-size: 16px;">
                 <i :class="getCategoryIcon(split.category || 'food_drink')"></i>
               </div>
               <div class="flex-1 min-w-0 pr-2">
