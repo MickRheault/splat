@@ -2780,7 +2780,7 @@ const selectAllText = (event: Event) => {
         v-for="opt in selectorOptions" 
         :key="String(opt.value)"
         @click="selectOption(opt.value)"
-        class="selection-row w-full font-bold active:translate-x-[2px] active:translate-y-[2px]"
+        class="selection-row w-full font-bold text-white active:translate-x-[2px] active:translate-y-[2px]"
       >
         <div class="flex items-center gap-3">
           <span v-if="opt.icon" class="text-lg leading-none">{{ opt.icon }}</span>
