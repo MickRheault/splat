@@ -798,6 +798,100 @@ const onCategoryChanged = () => {
   store.saveToLocalStorage()
 }
 
+// Custom select dropdown overlay sheet states and triggers
+const isSelectorOpen = ref(false)
+const selectorType = ref<'category' | 'currency' | 'payer' | null>(null)
+const selectorTitle = ref('')
+const selectorOptions = ref<{ value: any; label: string; icon?: string }[]>([])
+
+const openCategorySelector = () => {
+  selectorType.value = 'category'
+  selectorTitle.value = 'Select Category'
+  selectorOptions.value = [
+    { value: 'food_drink', label: 'Food & Drink', icon: '🍔' },
+    { value: 'groceries', label: 'Groceries', icon: '🛒' },
+    { value: 'transport_fuel', label: 'Transport / Fuel', icon: '⛽' },
+    { value: 'lodging', label: 'Lodging', icon: '🏨' },
+    { value: 'tickets_entertainment', label: 'Tickets / Event', icon: '🎫' },
+    { value: 'shopping', label: 'Shopping', icon: '🛍' },
+    { value: 'activities', label: 'Activities', icon: '🏂' },
+    { value: 'general', label: 'General / Other', icon: '⚙' }
+  ]
+  isSelectorOpen.value = true
+}
+
+const openCurrencySelector = () => {
+  selectorType.value = 'currency'
+  selectorTitle.value = 'Select Currency'
+  selectorOptions.value = [
+    { value: '$', label: 'US Dollar ($)' },
+    { value: '€', label: 'Euro (€)' },
+    { value: '£', label: 'Pound (£)' },
+    { value: '฿', label: 'Thai Baht (฿)' },
+    { value: '¥', label: 'Yen/Yuan (¥)' },
+    { value: '₩', label: 'Won (₩)' }
+  ]
+  isSelectorOpen.value = true
+}
+
+const openPayerSelector = () => {
+  selectorType.value = 'payer'
+  selectorTitle.value = 'Who Paid?'
+  const opts: { value: string | null; label: string }[] = [
+    { value: null, label: 'Me (Default)' }
+  ]
+  store.participants.forEach(p => {
+    opts.push({ value: p.id, label: p.name })
+  })
+  selectorOptions.value = opts
+  isSelectorOpen.value = true
+}
+
+const selectOption = (val: any) => {
+  if (selectorType.value === 'category') {
+    store.category = val
+    onCategoryChanged()
+  } else if (selectorType.value === 'currency') {
+    store.currencySymbol = val
+    store.saveToLocalStorage()
+  } else if (selectorType.value === 'payer') {
+    store.payerId = val
+    store.saveToLocalStorage()
+  }
+  isSelectorOpen.value = false
+}
+
+const getCategoryLabel = (category: string) => {
+  switch (category) {
+    case 'food_drink': return '🍔 Food & Drink'
+    case 'groceries': return '🛒 Groceries'
+    case 'transport_fuel': return '⛽ Transport / Fuel'
+    case 'lodging': return '🏨 Lodging'
+    case 'tickets_entertainment': return '🎫 Tickets / Event'
+    case 'shopping': return '🛍 Shopping'
+    case 'activities': return '🏂 Activities'
+    default: return '⚙ General / Other'
+  }
+}
+
+const getCurrencyLabel = (symbol: string) => {
+  switch (symbol) {
+    case '$': return 'US Dollar ($)'
+    case '€': return 'Euro (€)'
+    case '£': return 'Pound (£)'
+    case '฿': return 'Thai Baht (฿)'
+    case '¥': return 'Yen/Yuan (¥)'
+    case '₩': return 'Won (₩)'
+    default: return symbol
+  }
+}
+
+const getPayerLabel = () => {
+  if (!store.payerId) return 'Me (Default)'
+  const p = store.participants.find(part => part.id === store.payerId)
+  return p ? p.name : 'Me (Default)'
+}
+
 
 // Handle navigation validation
 const isEditValid = computed(() => store.items.length > 0 && itemsSubtotal.value > 0)
@@ -1413,37 +1507,25 @@ const selectAllText = (event: Event) => {
         <!-- Category Selector -->
         <div class="flex flex-col gap-1 text-left">
           <label class="text-[10px] font-extrabold text-secondary uppercase tracking-wider">Category</label>
-          <select 
-            v-model="store.category" 
-            class="p-2 border-3 border-black rounded-lg font-bold bg-white text-black shadow-[3px_3px_0px_rgba(0,0,0,1)] text-xs focus:outline-none focus:border-primary"
-            @change="onCategoryChanged"
+          <div 
+            @click="openCategorySelector"
+            class="flex justify-between items-center p-2.5 border-3 border-black rounded-lg font-bold bg-white text-black shadow-[3px_3px_0px_rgba(0,0,0,1)] cursor-pointer text-xs select-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all"
           >
-            <option value="food_drink">🍔 Food & Drink</option>
-            <option value="groceries">🛒 Groceries</option>
-            <option value="transport_fuel">⛽ Transport / Fuel</option>
-            <option value="lodging">🏨 Lodging</option>
-            <option value="tickets_entertainment">🎫 Tickets / Event</option>
-            <option value="shopping">🛍 Shopping</option>
-            <option value="activities">🏂 Activities</option>
-            <option value="general">⚙ General / Other</option>
-          </select>
+            <span>{{ getCategoryLabel(store.category) }}</span>
+            <i class="pi pi-chevron-down text-[10px] ml-1"></i>
+          </div>
         </div>
 
         <!-- Currency Selector -->
         <div class="flex flex-col gap-1 text-left">
           <label class="text-[10px] font-extrabold text-secondary uppercase tracking-wider">Currency</label>
-          <select 
-            v-model="store.currencySymbol" 
-            class="p-2 border-3 border-black rounded-lg font-bold bg-white text-black shadow-[3px_3px_0px_rgba(0,0,0,1)] text-xs focus:outline-none focus:border-primary"
-            @change="store.saveToLocalStorage()"
+          <div 
+            @click="openCurrencySelector"
+            class="flex justify-between items-center p-2.5 border-3 border-black rounded-lg font-bold bg-white text-black shadow-[3px_3px_0px_rgba(0,0,0,1)] cursor-pointer text-xs select-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all"
           >
-            <option value="$">US Dollar ($)</option>
-            <option value="€">Euro (€)</option>
-            <option value="£">Pound (£)</option>
-            <option value="฿">Thai Baht (฿)</option>
-            <option value="¥">Yen/Yuan (¥)</option>
-            <option value="₩">Won (₩)</option>
-          </select>
+            <span>{{ getCurrencyLabel(store.currencySymbol) }}</span>
+            <i class="pi pi-chevron-down text-[10px] ml-1"></i>
+          </div>
         </div>
       </div>
 
@@ -1676,14 +1758,13 @@ const selectAllText = (event: Event) => {
         <!-- Paid By Selector -->
         <div class="mt-4 pt-3 border-t-2 border-dashed border-slate-700/50 flex flex-col gap-1.5 text-left" v-if="store.participants.length > 0">
           <label class="text-[10px] font-extrabold text-secondary uppercase tracking-wider">Paid By</label>
-          <select 
-            v-model="store.payerId" 
-            class="p-2 border-3 border-black rounded-lg font-bold bg-white text-black shadow-[3px_3px_0px_rgba(0,0,0,1)] text-xs focus:outline-none focus:border-primary"
-            @change="store.saveToLocalStorage()"
+          <div 
+            @click="openPayerSelector"
+            class="flex justify-between items-center p-2.5 border-3 border-black rounded-lg font-bold bg-white text-black shadow-[3px_3px_0px_rgba(0,0,0,1)] cursor-pointer text-xs select-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all"
           >
-            <option :value="null">Me (Default)</option>
-            <option v-for="p in store.participants" :key="p.id" :value="p.id">{{ p.name }}</option>
-          </select>
+            <span>{{ getPayerLabel() }}</span>
+            <i class="pi pi-chevron-down text-[10px] ml-1"></i>
+          </div>
         </div>
 
       </div>
@@ -2684,4 +2765,26 @@ const selectAllText = (event: Event) => {
       @click="store.reset()" 
     />
   </nav>
+
+  <!-- Custom Touch Selector Sheet Dialog -->
+  <Dialog 
+    v-model:visible="isSelectorOpen" 
+    modal 
+    :header="selectorTitle" 
+    :style="{ width: '90%', maxWidth: '380px' }"
+    :closable="true"
+    class="neobrutalist-dialog"
+  >
+    <div class="flex flex-col gap-2.5 py-1 max-h-[300px] overflow-y-auto pr-1">
+      <button 
+        v-for="opt in selectorOptions" 
+        :key="String(opt.value)"
+        @click="selectOption(opt.value)"
+        class="flex items-center gap-3 w-full p-3 border-3 border-black rounded-lg font-bold bg-white text-black shadow-[3px_3px_0px_rgba(0,0,0,1)] text-left hover:bg-slate-50 transition-colors select-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0px_rgba(0,0,0,1)]"
+      >
+        <span v-if="opt.icon" class="text-lg leading-none">{{ opt.icon }}</span>
+        <span class="text-sm font-extrabold">{{ opt.label }}</span>
+      </button>
+    </div>
+  </Dialog>
 </template>
