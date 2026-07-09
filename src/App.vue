@@ -870,9 +870,19 @@ const goBack = () => {
 
 // Reset app back to landing page
 const handleReset = () => {
-  if (store.items.length > 0 || store.participants.length > 0) {
-    if (!confirm('Are you sure you want to reset the current split? All items and participants will be deleted.')) {
-      return
+  const isHistoryBill = savedSplits.value.some(split => split.splitId === store.splitId)
+  
+  if (isHistoryBill) {
+    if (store.isModified) {
+      if (!confirm('Are you sure you want to discard your edits? The original saved bill in history will not be affected.')) {
+        return
+      }
+    }
+  } else {
+    if (store.items.length > 0 || store.participants.length > 0) {
+      if (!confirm('Are you sure you want to reset the current split? All items and participants will be deleted.')) {
+        return
+      }
     }
   }
   store.reset()

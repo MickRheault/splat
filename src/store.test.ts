@@ -593,5 +593,44 @@ describe('Splat Core Store & Math Logic', () => {
       expect(bobBreakdown!.total).toBe(80)
     })
   })
+
+  describe('isModified Modification Tracking', () => {
+    beforeEach(() => {
+      store.reset()
+    })
+
+    test('should initialize isModified to false', () => {
+      expect(store.isModified).toBe(false)
+    })
+
+    test('should set isModified to true when mutations occur', () => {
+      store.addItem('Pizzas', 12)
+      expect(store.isModified).toBe(true)
+    })
+
+    test('should reset isModified to false on reset()', () => {
+      store.addItem('Gas', 40)
+      expect(store.isModified).toBe(true)
+      store.reset()
+      expect(store.isModified).toBe(false)
+    })
+
+    test('should reset isModified to false on loadSplit()', async () => {
+      const mockSplit = {
+        splitId: 'split_123',
+        billName: 'Trip Dinner',
+        items: [{ id: 'item_1', name: 'Dinner', price: 50, quantity: 1, assignedTo: [] }],
+        participants: [],
+        adjustments: [],
+        tipInput: 0,
+        tipType: 'percent',
+        currencySymbol: '$'
+      }
+      store.addItem('Snacks', 15)
+      expect(store.isModified).toBe(true)
+      await store.loadSplit(mockSplit)
+      expect(store.isModified).toBe(false)
+    })
+  })
 })
 

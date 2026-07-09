@@ -178,6 +178,7 @@ export const store = reactive({
   category: 'food_drink' as 'food_drink' | 'groceries' | 'transport_fuel' | 'lodging' | 'tickets_entertainment' | 'shopping' | 'activities' | 'general',
   payerId: null as string | null,
   isParsing: false,
+  isModified: false,
   apiKey: import.meta.env.VITE_GEMINI_API_KEY || '',
   ocrError: null as string | null,
   showPaywall: false,
@@ -204,7 +205,8 @@ export const store = reactive({
     this.category = 'food_drink'
     this.payerId = null
     this.currencySymbol = '$'
-    this.saveToLocalStorage()
+    this.isModified = false
+    this.saveToLocalStorage(false)
   },
 
   simulateOCR(imageSrc: string) {
@@ -648,7 +650,10 @@ Return format must be EXACTLY this JSON structure:
   },
 
 
-  async saveToLocalStorage() {
+  async saveToLocalStorage(isChange = true) {
+    if (isChange) {
+      this.isModified = true
+    }
     try {
       const data = {
         step: this.step,
@@ -662,7 +667,8 @@ Return format must be EXACTLY this JSON structure:
         tipType: this.tipType,
         currencySymbol: this.currencySymbol,
         category: this.category,
-        payerId: this.payerId
+        payerId: this.payerId,
+        isModified: this.isModified
       }
       await setStorageItem('splat_store', JSON.stringify(data))
     } catch (e) {
@@ -715,6 +721,7 @@ Return format must be EXACTLY this JSON structure:
       if (data.currencySymbol) this.currencySymbol = data.currencySymbol
       if (data.category) this.category = data.category
       if (data.payerId !== undefined) this.payerId = data.payerId
+      if (data.isModified !== undefined) this.isModified = data.isModified
     } catch (e) {
       console.error('Failed to load from localStorage', e)
     }
@@ -782,7 +789,8 @@ Return format must be EXACTLY this JSON structure:
     }
 
     this.step = 'share'
-    await this.saveToLocalStorage()
+    this.isModified = false
+    await this.saveToLocalStorage(false)
   }
 })
 
