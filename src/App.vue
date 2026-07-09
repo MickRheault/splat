@@ -800,7 +800,7 @@ const onCategoryChanged = () => {
 
 // Custom select dropdown overlay sheet states and triggers
 const isSelectorOpen = ref(false)
-const selectorType = ref<'category' | 'currency' | 'payer' | null>(null)
+const selectorType = ref<'category' | 'currency' | null>(null)
 const selectorTitle = ref('')
 const selectorOptions = ref<{ value: any; label: string; icon?: string }[]>([])
 
@@ -834,28 +834,12 @@ const openCurrencySelector = () => {
   isSelectorOpen.value = true
 }
 
-const openPayerSelector = () => {
-  selectorType.value = 'payer'
-  selectorTitle.value = 'Who Paid?'
-  const opts: { value: string | null; label: string }[] = [
-    { value: null, label: 'Me (Default)' }
-  ]
-  store.participants.forEach(p => {
-    opts.push({ value: p.id, label: p.name })
-  })
-  selectorOptions.value = opts
-  isSelectorOpen.value = true
-}
-
 const selectOption = (val: any) => {
   if (selectorType.value === 'category') {
     store.category = val
     onCategoryChanged()
   } else if (selectorType.value === 'currency') {
     store.currencySymbol = val
-    store.saveToLocalStorage()
-  } else if (selectorType.value === 'payer') {
-    store.payerId = val
     store.saveToLocalStorage()
   }
   isSelectorOpen.value = false
@@ -884,12 +868,6 @@ const getCurrencyLabel = (symbol: string) => {
     case '₩': return 'Won (₩)'
     default: return symbol
   }
-}
-
-const getPayerLabel = () => {
-  if (!store.payerId) return 'Me (Default)'
-  const p = store.participants.find(part => part.id === store.payerId)
-  return p ? p.name : 'Me (Default)'
 }
 
 
@@ -1140,11 +1118,6 @@ const getCategoryIcon = (category: string) => {
     case 'activities': return 'pi pi-compass'
     default: return 'pi pi-cog'
   }
-}
-
-const getPayerName = () => {
-  const p = store.participants.find(part => part.id === store.payerId)
-  return p ? p.name : (store.participants[0] ? store.participants[0].name : 'Me')
 }
 
 // Copy full summary to clipboard
@@ -1755,18 +1728,6 @@ const selectAllText = (event: Event) => {
           </p>
         </div>
 
-        <!-- Paid By Selector -->
-        <div class="mt-4 pt-3 border-t-2 border-dashed border-slate-700/50 flex flex-col gap-1.5 text-left" v-if="store.participants.length > 0">
-          <label class="text-[10px] font-extrabold text-secondary uppercase tracking-wider">Paid By</label>
-          <div 
-            @click="openPayerSelector"
-            class="custom-select-trigger text-xs"
-          >
-            <span>{{ getPayerLabel() }}</span>
-            <i class="pi pi-chevron-down text-[10px] text-slate-400"></i>
-          </div>
-        </div>
-
       </div>
     </div>
 
@@ -1949,12 +1910,6 @@ const selectAllText = (event: Event) => {
             <span class="capitalize text-slate-700 dark:text-slate-300">
               {{ store.category.replace('_', ' & ') }}
             </span>
-          </div>
-
-          <!-- Payer Indicator -->
-          <div class="flex items-center gap-1 font-bold text-secondary">
-            <span>Paid By:</span>
-            <span class="text-indigo-500 font-extrabold">{{ getPayerName() }}</span>
           </div>
         </div>
         

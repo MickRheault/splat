@@ -176,7 +176,6 @@ export const store = reactive({
   tipType: 'percentage' as 'percentage' | 'flat',
   currencySymbol: '$',
   category: 'food_drink' as 'food_drink' | 'groceries' | 'transport_fuel' | 'lodging' | 'tickets_entertainment' | 'shopping' | 'activities' | 'general',
-  payerId: null as string | null,
   isParsing: false,
   isModified: false,
   apiKey: import.meta.env.VITE_GEMINI_API_KEY || '',
@@ -203,7 +202,6 @@ export const store = reactive({
     this.ocrError = null
     this.showPaywall = false
     this.category = 'food_drink'
-    this.payerId = null
     this.currencySymbol = '$'
     this.isModified = false
     this.saveToLocalStorage(false)
@@ -667,7 +665,6 @@ Return format must be EXACTLY this JSON structure:
         tipType: this.tipType,
         currencySymbol: this.currencySymbol,
         category: this.category,
-        payerId: this.payerId,
         isModified: this.isModified
       }
       await setStorageItem('splat_store', JSON.stringify(data))
@@ -720,7 +717,6 @@ Return format must be EXACTLY this JSON structure:
       if (data.tipType) this.tipType = data.tipType
       if (data.currencySymbol) this.currencySymbol = data.currencySymbol
       if (data.category) this.category = data.category
-      if (data.payerId !== undefined) this.payerId = data.payerId
       if (data.isModified !== undefined) this.isModified = data.isModified
     } catch (e) {
       console.error('Failed to load from localStorage', e)
@@ -924,18 +920,10 @@ export const shareTextSummary = computed(() => {
   const breakdown = billBreakdown.value
   const currency = store.currencySymbol
   
-  const activePayerId = store.payerId || (store.participants[0] && store.participants[0].id) || null
-  const payerParticipant = store.participants.find(p => p.id === activePayerId)
-  const payerName = payerParticipant ? payerParticipant.name : 'Payer'
-
   let text = `💸 Splat split: ${store.billName} 💸\n\n`
   
   breakdown.forEach(p => {
-    if (p.id === activePayerId) {
-      text += `👤 ${p.name} (Payer) paid total\n`
-    } else {
-      text += `👤 ${p.name} owes ${payerName}: ${currency}${p.total.toFixed(2)}\n`
-    }
+    text += `👤 ${p.name} owes: ${currency}${p.total.toFixed(2)}\n`
     text += `   ↳ Subtotal: ${currency}${p.subtotal.toFixed(2)}\n`
     if (p.items && p.items.length > 0) {
       p.items.forEach((item: any) => {
