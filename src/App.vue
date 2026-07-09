@@ -1509,10 +1509,10 @@ const selectAllText = (event: Event) => {
           <label class="text-[10px] font-extrabold text-secondary uppercase tracking-wider">Category</label>
           <div 
             @click="openCategorySelector"
-            class="flex justify-between items-center p-2.5 border-3 border-black rounded-lg font-bold bg-white text-black shadow-[3px_3px_0px_rgba(0,0,0,1)] cursor-pointer text-xs select-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all"
+            class="custom-select-trigger text-xs"
           >
             <span>{{ getCategoryLabel(store.category) }}</span>
-            <i class="pi pi-chevron-down text-[10px] ml-1"></i>
+            <i class="pi pi-chevron-down text-[10px] text-slate-400"></i>
           </div>
         </div>
 
@@ -1521,10 +1521,10 @@ const selectAllText = (event: Event) => {
           <label class="text-[10px] font-extrabold text-secondary uppercase tracking-wider">Currency</label>
           <div 
             @click="openCurrencySelector"
-            class="flex justify-between items-center p-2.5 border-3 border-black rounded-lg font-bold bg-white text-black shadow-[3px_3px_0px_rgba(0,0,0,1)] cursor-pointer text-xs select-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all"
+            class="custom-select-trigger text-xs"
           >
             <span>{{ getCurrencyLabel(store.currencySymbol) }}</span>
-            <i class="pi pi-chevron-down text-[10px] ml-1"></i>
+            <i class="pi pi-chevron-down text-[10px] text-slate-400"></i>
           </div>
         </div>
       </div>
@@ -1760,10 +1760,10 @@ const selectAllText = (event: Event) => {
           <label class="text-[10px] font-extrabold text-secondary uppercase tracking-wider">Paid By</label>
           <div 
             @click="openPayerSelector"
-            class="flex justify-between items-center p-2.5 border-3 border-black rounded-lg font-bold bg-white text-black shadow-[3px_3px_0px_rgba(0,0,0,1)] cursor-pointer text-xs select-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all"
+            class="custom-select-trigger text-xs"
           >
             <span>{{ getPayerLabel() }}</span>
-            <i class="pi pi-chevron-down text-[10px] ml-1"></i>
+            <i class="pi pi-chevron-down text-[10px] text-slate-400"></i>
           </div>
         </div>
 
@@ -2780,10 +2780,12 @@ const selectAllText = (event: Event) => {
         v-for="opt in selectorOptions" 
         :key="String(opt.value)"
         @click="selectOption(opt.value)"
-        class="flex items-center gap-3 w-full p-3 border-3 border-black rounded-lg font-bold bg-white text-black shadow-[3px_3px_0px_rgba(0,0,0,1)] text-left hover:bg-slate-50 transition-colors select-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0px_rgba(0,0,0,1)]"
+        class="selection-row w-full font-bold active:translate-x-[2px] active:translate-y-[2px]"
       >
-        <span v-if="opt.icon" class="text-lg leading-none">{{ opt.icon }}</span>
-        <span class="text-sm font-extrabold">{{ opt.label }}</span>
+        <div class="flex items-center gap-3">
+          <span v-if="opt.icon" class="text-lg leading-none">{{ opt.icon }}</span>
+          <span class="text-sm font-extrabold text-white">{{ opt.label }}</span>
+        </div>
       </button>
     </div>
   </Dialog>
