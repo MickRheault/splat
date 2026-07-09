@@ -1,5 +1,7 @@
 import { Redis } from '@upstash/redis';
 
+declare const process: any;
+
 export default async function handler(req: any, res: any) {
   // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');

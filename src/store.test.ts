@@ -557,6 +557,41 @@ describe('Splat Core Store & Math Logic', () => {
       expect(bobBreakdown!.tax).toBe(1)
       expect(bobBreakdown!.total).toBe(11)
     })
+
+    test('should clamp final participant total to 0.00 if negative subtotal exceeds adjustments', () => {
+      const splitData = {
+        items: [
+          { id: 'item1', name: 'Meal', price: 20, quantity: 1, assignedTo: ['alice'] },
+          { id: 'item2', name: 'Discount coupon', price: -50, quantity: 1, assignedTo: ['alice'] },
+          { id: 'item3', name: 'Meal 2', price: 100, quantity: 1, assignedTo: ['bob'] }
+        ],
+        participants: [
+          { id: 'alice', name: 'Alice' },
+          { id: 'bob', name: 'Bob' }
+        ],
+        adjustments: [
+          { id: 'tax', name: 'Tax', value: 10, type: 'flat' }
+        ],
+        tipInput: 0,
+        tipType: 'flat'
+      }
+
+      const breakdown = calculateSplitBreakdown(splitData)
+      const aliceBreakdown = breakdown.find((p: any) => p.id === 'alice')
+      const bobBreakdown = breakdown.find((p: any) => p.id === 'bob')
+
+      expect(aliceBreakdown).toBeDefined()
+      expect(bobBreakdown).toBeDefined()
+
+      // Alice raw: subtotal = -30, ratio = -30/70. Clamped to 0.00
+      expect(aliceBreakdown!.subtotal).toBe(-30)
+      expect(aliceBreakdown!.total).toBe(0)
+
+      // Bob raw: subtotal = 100, ratio = 100/70.
+      // Rounding error correction distributes remaining bill amount to Bob.
+      // Total Bill = 70 + 10 = 80. Alice pays 0, so Bob must pay exactly 80.
+      expect(bobBreakdown!.total).toBe(80)
+    })
   })
 })
 

@@ -175,6 +175,8 @@ export const store = reactive({
   tipInput: 0,
   tipType: 'percentage' as 'percentage' | 'flat',
   currencySymbol: '$',
+  category: 'food_drink' as 'food_drink' | 'groceries' | 'transport_fuel' | 'lodging' | 'tickets_entertainment' | 'shopping' | 'activities' | 'general',
+  payerId: null as string | null,
   isParsing: false,
   apiKey: import.meta.env.VITE_GEMINI_API_KEY || '',
   ocrError: null as string | null,
@@ -199,6 +201,9 @@ export const store = reactive({
     this.tipType = 'percentage'
     this.ocrError = null
     this.showPaywall = false
+    this.category = 'food_drink'
+    this.payerId = null
+    this.currencySymbol = '$'
     this.saveToLocalStorage()
   },
 
@@ -394,8 +399,19 @@ Return format must be EXACTLY this JSON structure:
         throw new Error(result.error)
       }
       
+      this.category = result.category || 'food_drink'
+
       this.items = (result.items || []).map((item: any, idx: number) => {
         const qty = Number(item.quantity) || 1
+        let isSplitEvenly = undefined
+        if (this.category === 'transport_fuel' || this.category === 'lodging') {
+          isSplitEvenly = true
+        } else if (this.category === 'tickets_entertainment') {
+          isSplitEvenly = false
+        } else if (qty > 1) {
+          isSplitEvenly = true
+        }
+
         return {
           id: `item_${Date.now()}_${idx}`,
           name: item.name || 'Unknown Item',
@@ -403,7 +419,7 @@ Return format must be EXACTLY this JSON structure:
           assignedTo: [],
           quantity: qty,
           assignedQuantities: {},
-          isSplitEvenly: qty > 1 ? true : undefined
+          isSplitEvenly: isSplitEvenly
         }
       })
       this.adjustments = (result.adjustments || []).map((adj: any, idx: number) => ({
@@ -644,7 +660,9 @@ Return format must be EXACTLY this JSON structure:
         adjustments: this.adjustments,
         tipInput: this.tipInput,
         tipType: this.tipType,
-        currencySymbol: this.currencySymbol
+        currencySymbol: this.currencySymbol,
+        category: this.category,
+        payerId: this.payerId
       }
       await setStorageItem('splat_store', JSON.stringify(data))
     } catch (e) {
@@ -695,6 +713,8 @@ Return format must be EXACTLY this JSON structure:
       if (data.tipInput !== undefined) this.tipInput = Number(data.tipInput) || 0
       if (data.tipType) this.tipType = data.tipType
       if (data.currencySymbol) this.currencySymbol = data.currencySymbol
+      if (data.category) this.category = data.category
+      if (data.payerId !== undefined) this.payerId = data.payerId
     } catch (e) {
       console.error('Failed to load from localStorage', e)
     }
@@ -833,7 +853,7 @@ export const billBreakdown = computed(() => {
     const subtotalRounded = Math.round(individualSubtotal * 100) / 100
     const taxRounded = Math.round(taxShare * 100) / 100
     const tipRounded = Math.round(tipShare * 100) / 100
-    const totalRounded = Math.round((individualSubtotal + taxShare + tipShare) * 100) / 100
+    const totalRounded = Math.max(0, Math.round((individualSubtotal + taxShare + tipShare) * 100) / 100)
     
     calculatedGrandTotal += totalRounded
 
@@ -896,10 +916,18 @@ export const shareTextSummary = computed(() => {
   const breakdown = billBreakdown.value
   const currency = store.currencySymbol
   
+  const activePayerId = store.payerId || (store.participants[0] && store.participants[0].id) || null
+  const payerParticipant = store.participants.find(p => p.id === activePayerId)
+  const payerName = payerParticipant ? payerParticipant.name : 'Payer'
+
   let text = `💸 Splat split: ${store.billName} 💸\n\n`
   
   breakdown.forEach(p => {
-    text += `👤 ${p.name} owes ${currency}${p.total.toFixed(2)}\n`
+    if (p.id === activePayerId) {
+      text += `👤 ${p.name} (Payer) paid total\n`
+    } else {
+      text += `👤 ${p.name} owes ${payerName}: ${currency}${p.total.toFixed(2)}\n`
+    }
     text += `   ↳ Subtotal: ${currency}${p.subtotal.toFixed(2)}\n`
     if (p.items && p.items.length > 0) {
       p.items.forEach((item: any) => {
@@ -992,7 +1020,7 @@ export function calculateSplitBreakdown(split: any) {
     const subtotalRounded = Math.round(individualSubtotal * 100) / 100
     const taxRounded = Math.round(taxShare * 100) / 100
     const tipRounded = Math.round(tipShare * 100) / 100
-    const totalRounded = Math.round((individualSubtotal + taxShare + tipShare) * 100) / 100
+    const totalRounded = Math.max(0, Math.round((individualSubtotal + taxShare + tipShare) * 100) / 100)
     
     calculatedGrandTotal += totalRounded
 

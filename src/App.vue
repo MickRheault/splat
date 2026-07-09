@@ -159,6 +159,10 @@ const isScanLimitReached = computed(() => {
   return !!(store.usageInfo && !store.usageInfo.passType && store.usageInfo.freeScansRemaining <= 0)
 })
 
+const isOnline = ref(window.navigator.onLine)
+window.addEventListener('online', () => { isOnline.value = true })
+window.addEventListener('offline', () => { isOnline.value = false })
+
 // Paywall / Subscription States
 const selectedPaywallOption = ref<'trip' | 'yearly'>('trip')
 const isPurchasing = ref(false)
@@ -623,12 +627,43 @@ const decrementAssignment = (itemId: string, participantId: string) => {
   const current = item.assignedQuantities[participantId] || 0
   if (current <= 0) return
   
-  if (current === 1) {
+  // If current is less than or equal to 1, decrementing deletes it
+  if (current <= 1) {
     delete item.assignedQuantities[participantId]
     item.assignedTo = item.assignedTo.filter(pId => pId !== participantId)
   } else {
-    item.assignedQuantities[participantId] = current - 1
+    item.assignedQuantities[participantId] = Math.max(0, current - 1)
   }
+  store.saveToLocalStorage()
+}
+
+const onAllocationValueInput = (itemId: string, participantId: string, event: Event) => {
+  const item = store.items.find(i => i.id === itemId)
+  if (!item) return
+  if (!item.assignedQuantities) item.assignedQuantities = {}
+  
+  const target = event.target as HTMLInputElement
+  const rawValue = parseFloat(target.value)
+  const value = isNaN(rawValue) ? 0 : rawValue
+  
+  const otherAssignedSum = Object.entries(item.assignedQuantities)
+    .filter(([pId]) => pId !== participantId)
+    .reduce((sum, [, val]) => sum + (Number(val) || 0), 0)
+    
+  const maxAllowed = Math.max(0, (item.quantity || 1) - otherAssignedSum)
+  const clampedValue = Math.min(maxAllowed, Math.max(0, value))
+  
+  if (clampedValue > 0) {
+    item.assignedQuantities[participantId] = clampedValue
+    if (!item.assignedTo.includes(participantId)) {
+      item.assignedTo.push(participantId)
+    }
+  } else {
+    delete item.assignedQuantities[participantId]
+    item.assignedTo = item.assignedTo.filter(pId => pId !== participantId)
+  }
+  
+  target.value = String(clampedValue)
   store.saveToLocalStorage()
 }
 
@@ -678,8 +713,20 @@ const captureNativeImage = async (source: CameraSource) => {
   }
 }
 
+const checkConfirmDataLoss = () => {
+  if (store.items.length > 0 || store.participants.length > 0) {
+    return confirm('Are you sure you want to discard your current split?')
+  }
+  return true
+}
+
 // Trigger native device camera
 const triggerCamera = () => {
+  if (!checkConfirmDataLoss()) return
+  if (!isOnline.value) {
+    alert('Network Connection Required to Scan. Tap "Manual" instead.')
+    return
+  }
   if (isScanLimitReached.value) {
     store.showPaywall = true
     return
@@ -693,6 +740,11 @@ const triggerCamera = () => {
 
 // Trigger gallery file picker
 const triggerGallery = () => {
+  if (!checkConfirmDataLoss()) return
+  if (!isOnline.value) {
+    alert('Network Connection Required to Scan. Tap "Manual" instead.')
+    return
+  }
   if (isScanLimitReached.value) {
     store.showPaywall = true
     return
@@ -720,14 +772,30 @@ const onFileCaptured = (event: Event) => {
 
 // Select a demo template to quickly test the app
 const loadDemoReceipt = (index: number) => {
+  if (!checkConfirmDataLoss()) return
   store.simulateOCR(`demo_image_uri_${index}`)
 }
 
 // Start splitting manually by skipping OCR and initializing a blank item
 const startManualEntry = () => {
+  if (!checkConfirmDataLoss()) return
   store.reset()
   store.step = 'edit'
   store.addItem('New Item', 0)
+}
+
+const onCategoryChanged = () => {
+  store.items.forEach(item => {
+    const qty = Number(item.quantity) || 1
+    if (store.category === 'transport_fuel' || store.category === 'lodging') {
+      item.isSplitEvenly = true
+    } else if (store.category === 'tickets_entertainment') {
+      item.isSplitEvenly = false
+    } else if (qty > 1) {
+      item.isSplitEvenly = true
+    }
+  })
+  store.saveToLocalStorage()
 }
 
 
@@ -802,6 +870,11 @@ const goBack = () => {
 
 // Reset app back to landing page
 const handleReset = () => {
+  if (store.items.length > 0 || store.participants.length > 0) {
+    if (!confirm('Are you sure you want to reset the current split? All items and participants will be deleted.')) {
+      return
+    }
+  }
   store.reset()
 }
 
@@ -950,6 +1023,24 @@ const clearBulkAssignments = () => {
 // Format participant initials for circular badges
 const getInitials = (name: string) => {
   return name.trim().split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+}
+
+const getCategoryIcon = (category: string) => {
+  switch (category) {
+    case 'food_drink': return 'pi pi-utensils'
+    case 'groceries': return 'pi pi-shopping-cart'
+    case 'transport_fuel': return 'pi pi-car'
+    case 'lodging': return 'pi pi-home'
+    case 'tickets_entertainment': return 'pi pi-ticket'
+    case 'shopping': return 'pi pi-shopping-bag'
+    case 'activities': return 'pi pi-compass'
+    default: return 'pi pi-cog'
+  }
+}
+
+const getPayerName = () => {
+  const p = store.participants.find(part => part.id === store.payerId)
+  return p ? p.name : (store.participants[0] ? store.participants[0].name : 'Me')
 }
 
 // Copy full summary to clipboard
@@ -1128,17 +1219,18 @@ const selectAllText = (event: Event) => {
         <!-- Option 1: Live Camera Snap -->
         <div 
           class="capture-option-card" 
-          :class="{ 'locked-option': isScanLimitReached }"
+          :class="{ 'locked-option': isScanLimitReached || !isOnline }"
           @click="triggerCamera"
         >
-          <i :class="isScanLimitReached ? 'pi pi-lock text-rose-500/80 capture-icon-sm' : 'pi pi-camera capture-icon-sm'" style="font-size: 48px !important;"></i>
+          <i :class="!isOnline ? 'pi pi-wifi text-amber-500/80 capture-icon-sm' : (isScanLimitReached ? 'pi pi-lock text-rose-500/80 capture-icon-sm' : 'pi pi-camera capture-icon-sm')" style="font-size: 48px !important;"></i>
           <div>
             <h4 class="font-bold text-lg flex items-center gap-1.5 justify-center xs:justify-start">
               Take Live Photo
-              <span v-if="isScanLimitReached" class="text-xs text-rose-500/90 font-black uppercase tracking-wider">(Locked)</span>
+              <span v-if="!isOnline" class="text-xs text-amber-500 font-black uppercase tracking-wider">(Offline)</span>
+              <span v-else-if="isScanLimitReached" class="text-xs text-rose-500/90 font-black uppercase tracking-wider">(Locked)</span>
             </h4>
             <p class="text-secondary text-sm">
-              {{ isScanLimitReached ? 'Upgrade to scan physical receipts' : 'Snap a photo of your receipt' }}
+              {{ !isOnline ? 'Network Connection Required to Scan. Tap "Manual" instead.' : (isScanLimitReached ? 'Upgrade to scan physical receipts' : 'Snap a photo of your receipt') }}
             </p>
           </div>
           <input 
@@ -1154,17 +1246,18 @@ const selectAllText = (event: Event) => {
         <!-- Option 2: Gallery Upload -->
         <div 
           class="capture-option-card" 
-          :class="{ 'locked-option': isScanLimitReached }"
+          :class="{ 'locked-option': isScanLimitReached || !isOnline }"
           @click="triggerGallery"
         >
-          <i :class="isScanLimitReached ? 'pi pi-lock text-rose-500/80 capture-icon-sm' : 'pi pi-images capture-icon-sm'" style="font-size: 48px !important;"></i>
+          <i :class="!isOnline ? 'pi pi-wifi text-amber-500/80 capture-icon-sm' : (isScanLimitReached ? 'pi pi-lock text-rose-500/80 capture-icon-sm' : 'pi pi-images capture-icon-sm')" style="font-size: 48px !important;"></i>
           <div>
             <h4 class="font-bold text-lg flex items-center gap-1.5 justify-center xs:justify-start">
               Choose from Gallery
-              <span v-if="isScanLimitReached" class="text-xs text-rose-500/90 font-black uppercase tracking-wider">(Locked)</span>
+              <span v-if="!isOnline" class="text-xs text-amber-500 font-black uppercase tracking-wider">(Offline)</span>
+              <span v-else-if="isScanLimitReached" class="text-xs text-rose-500/90 font-black uppercase tracking-wider">(Locked)</span>
             </h4>
             <p class="text-secondary text-sm">
-              {{ isScanLimitReached ? 'Upgrade to upload images' : 'Upload an existing photo or screenshot' }}
+              {{ !isOnline ? 'Network Connection Required to Scan. Tap "Manual" instead.' : (isScanLimitReached ? 'Upgrade to upload images' : 'Upload an existing photo or screenshot') }}
             </p>
           </div>
           <input 
@@ -1249,9 +1342,12 @@ const selectAllText = (event: Event) => {
             <div 
               v-for="split in visibleSplits" 
               :key="split.splitId" 
-              class="history-card"
+              class="history-card flex items-center"
               @click="loadSavedSplit(split)"
             >
+              <div class="avatar-badge shrink-0 mr-3 flex items-center justify-center" style="width: 32px; height: 32px; font-size: 14px;">
+                <i :class="getCategoryIcon(split.category || 'food_drink')"></i>
+              </div>
               <div class="flex-1 min-w-0 pr-2">
                 <h5 class="font-bold text-sm text-slate-800 dark:text-slate-100 truncate text-left m-0">{{ split.billName || 'Untitled Bill' }}</h5>
                 <!-- Participant list -->
@@ -1290,7 +1386,7 @@ const selectAllText = (event: Event) => {
     <!-- Step 2: Edit Items -->
     <div v-else-if="store.step === 'edit'" class="step-view">
       <!-- Bill Title Editor -->
-      <div class="flex flex-col gap-1.5 px-1 mb-1">
+      <div class="flex flex-col gap-1.5 px-1 mb-3">
         <label class="text-xs font-semibold text-secondary uppercase tracking-wider">Bill / Event Title</label>
         <input 
           v-model="store.billName" 
@@ -1300,6 +1396,45 @@ const selectAllText = (event: Event) => {
           @change="store.saveToLocalStorage()"
           @focus="selectAllText"
         />
+      </div>
+
+      <!-- Bill Settings Grid -->
+      <div class="grid grid-cols-2 gap-3 px-1 mb-4">
+        <!-- Category Selector -->
+        <div class="flex flex-col gap-1 text-left">
+          <label class="text-[10px] font-extrabold text-secondary uppercase tracking-wider">Category</label>
+          <select 
+            v-model="store.category" 
+            class="p-2 border-3 border-black rounded-lg font-bold bg-white text-black shadow-[3px_3px_0px_rgba(0,0,0,1)] text-xs focus:outline-none focus:border-primary"
+            @change="onCategoryChanged"
+          >
+            <option value="food_drink">🍔 Food & Drink</option>
+            <option value="groceries">🛒 Groceries</option>
+            <option value="transport_fuel">⛽ Transport / Fuel</option>
+            <option value="lodging">🏨 Lodging</option>
+            <option value="tickets_entertainment">🎫 Tickets / Event</option>
+            <option value="shopping">🛍 Shopping</option>
+            <option value="activities">🏂 Activities</option>
+            <option value="general">⚙ General / Other</option>
+          </select>
+        </div>
+
+        <!-- Currency Selector -->
+        <div class="flex flex-col gap-1 text-left">
+          <label class="text-[10px] font-extrabold text-secondary uppercase tracking-wider">Currency</label>
+          <select 
+            v-model="store.currencySymbol" 
+            class="p-2 border-3 border-black rounded-lg font-bold bg-white text-black shadow-[3px_3px_0px_rgba(0,0,0,1)] text-xs focus:outline-none focus:border-primary"
+            @change="store.saveToLocalStorage()"
+          >
+            <option value="$">US Dollar ($)</option>
+            <option value="€">Euro (€)</option>
+            <option value="£">Pound (£)</option>
+            <option value="฿">Thai Baht (฿)</option>
+            <option value="¥">Yen/Yuan (¥)</option>
+            <option value="₩">Won (₩)</option>
+          </select>
+        </div>
       </div>
 
       <div class="bill-card">
@@ -1528,6 +1663,18 @@ const selectAllText = (event: Event) => {
           </p>
         </div>
 
+        <!-- Paid By Selector -->
+        <div class="mt-4 pt-3 border-t-2 border-dashed border-slate-700/50 flex flex-col gap-1.5 text-left" v-if="store.participants.length > 0">
+          <label class="text-[10px] font-extrabold text-secondary uppercase tracking-wider">Paid By</label>
+          <select 
+            v-model="store.payerId" 
+            class="p-2 border-3 border-black rounded-lg font-bold bg-white text-black shadow-[3px_3px_0px_rgba(0,0,0,1)] text-xs focus:outline-none focus:border-primary"
+            @change="store.saveToLocalStorage()"
+          >
+            <option :value="null">Me (Default)</option>
+            <option v-for="p in store.participants" :key="p.id" :value="p.id">{{ p.name }}</option>
+          </select>
+        </div>
 
       </div>
     </div>
@@ -1701,6 +1848,24 @@ const selectAllText = (event: Event) => {
       <!-- Compact person cards -->
       <div class="bill-card">
         <h3 class="font-bold border-b border-slate-200 dark:border-slate-700 pb-2 mb-2">Final Splits</h3>
+
+        <div class="flex justify-between items-center mb-4 border-b border-dashed border-slate-200 dark:border-slate-700 pb-3 text-xs">
+          <!-- Category Indicator -->
+          <div class="flex items-center gap-1.5 font-bold">
+            <div class="avatar-badge" style="width: 28px; height: 28px; font-size: 11px;">
+              <i :class="getCategoryIcon(store.category)"></i>
+            </div>
+            <span class="capitalize text-slate-700 dark:text-slate-300">
+              {{ store.category.replace('_', ' & ') }}
+            </span>
+          </div>
+
+          <!-- Payer Indicator -->
+          <div class="flex items-center gap-1 font-bold text-secondary">
+            <span>Paid By:</span>
+            <span class="text-indigo-500 font-extrabold">{{ getPayerName() }}</span>
+          </div>
+        </div>
         
         <div class="flex flex-col gap-5">
           <div 
@@ -1983,9 +2148,14 @@ const selectAllText = (event: Event) => {
                     :disabled="!(selectedItem.assignedQuantities && selectedItem.assignedQuantities[p.id] > 0)"
                     @click="decrementAssignment(selectedItem.id, p.id)" 
                   />
-                  <span class="text-sm font-bold w-6 text-center">
-                    {{ (selectedItem.assignedQuantities && selectedItem.assignedQuantities[p.id]) || 0 }}
-                  </span>
+                  <input 
+                    type="number" 
+                    step="any"
+                    min="0"
+                    :value="(selectedItem.assignedQuantities && selectedItem.assignedQuantities[p.id]) || 0"
+                    @input="onAllocationValueInput(selectedItem.id, p.id, $event)"
+                    class="w-12 text-center font-bold border-2 border-black rounded bg-white text-black p-0.5 text-xs focus:outline-none focus:border-primary"
+                  />
                   <Button 
                     icon="pi pi-plus" 
                     class="p-button-rounded p-button-text p-button-sm" 
