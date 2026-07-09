@@ -43,6 +43,7 @@ Implement a series of stabilization features and guardrails across the app to se
 - **Negative Clamping**: Clamps each Participant's final payable total to `0.00` minimum to prevent negative shares. Global negative Adjustments are distributed proportionally based only on positive subtotals.
 - **Penny-Rounding Correction**: Resolves fractional-cent rounding discrepancy remainders by adjusting the total of the Participant with the highest payable amount.
 - **Aggregation Rounding Policy**: Math engine sums raw floating-point numbers during aggregation to prevent compounding rounding errors, only rounding individual itemized shares for visual display.
+- **Historical Reset Policy**: Restoration of historical bills tracks modification state using `isModified`. Unmodified splits allow frictionless exit on Reset; modified splits warn before resetting edits to leave history intact.
 
 ## Testing Decisions
 
