@@ -38,6 +38,12 @@ Implement a series of stabilization features and guardrails across the app to se
 #### 2. Backend / Types (Vercel Serverless)
 - **Typings Scope**: Add local typings scope declarations (`declare const process: any;`) at the top of serverless handler entry points to satisfy Vercel's independent compilation engine.
 
+### Core Split Engine Rules
+- **Participant Deletion**: Deleting a Participant immediately cleans up their Allocations. If the affected Item is shared unevenly (split by quantity), the system will leave the Item in an Under-allocation state, forcing the user to manually correct the assigned quantities.
+- **Negative Clamping**: Clamps each Participant's final payable total to `0.00` minimum to prevent negative shares. Global negative Adjustments are distributed proportionally based only on positive subtotals.
+- **Penny-Rounding Correction**: Resolves fractional-cent rounding discrepancy remainders by adjusting the total of the Participant with the highest payable amount.
+- **Aggregation Rounding Policy**: Math engine sums raw floating-point numbers during aggregation to prevent compounding rounding errors, only rounding individual itemized shares for visual display.
+
 ## Testing Decisions
 
 - **Flow Validation**: Verify that skipping OCR populates an empty split state and transitions to Step 2 correctly.
