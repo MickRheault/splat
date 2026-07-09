@@ -1796,8 +1796,8 @@ const selectAllText = (event: Event) => {
                     Everyone
                   </span>
                   
-                  <!-- Case 2: 50% or greater assigned (Everyone minus the excluded) -->
-                  <template v-else-if="item.assignedTo.length >= store.participants.length / 2">
+                  <!-- Case 2: Everyone minus the excluded (only for 4+ participants and strict majority assigned) -->
+                  <template v-else-if="store.participants.length >= 4 && item.assignedTo.length > store.participants.length / 2">
                     <span class="avatar-badge everyone">Everyone</span>
                     <span 
                       v-for="p in store.participants.filter(p => !item.assignedTo.includes(p.id))" 
