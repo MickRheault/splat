@@ -42,3 +42,12 @@ A deterministic adjustment applied to resolve fractional-cent discrepancy remain
 
 #### Display-Only Itemized Rounding
 The policy of keeping item allocations as raw floating-point numbers during summation. Individual item shares are rounded to two decimal places for display purposes only in breakdown modals, preventing compounding rounding errors in the subtotal and grand total calculations.
+
+#### Category
+The classification of the purchase type (e.g., food_drink, transport_fuel, lodging, tickets_entertainment, groceries, shopping, activities, general). The category sets default splitting modes and UI styling and is auto-detected by the LLM scanner.
+
+#### Payer
+The designated participant who paid the overall bill. Other participants owe their calculated shares to this payer during settlement.
+
+#### Weighted Allocation
+An allocation where the assigned quantity is represented as a decimal/floating-point number (e.g. nights, distance weight, or split ratios) instead of an integer.
