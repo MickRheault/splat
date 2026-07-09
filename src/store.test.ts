@@ -1,8 +1,46 @@
 import { describe, expect, test, beforeEach, vi } from 'vitest'
+
+let isNativeVal = false
+
+const mockPreferencesRemove = vi.fn()
+const mockPreferencesGet = vi.fn()
+const mockPreferencesSet = vi.fn()
+
+vi.mock('@capacitor/preferences', () => {
+  return {
+    Preferences: {
+      get: (...args: any[]) => mockPreferencesGet(...args),
+      set: (...args: any[]) => mockPreferencesSet(...args),
+      remove: (...args: any[]) => mockPreferencesRemove(...args),
+    }
+  }
+})
+
+vi.mock('@capacitor/core', () => {
+  return {
+    Capacitor: {
+      isNativePlatform: () => isNativeVal,
+      getPlatform: () => isNativeVal ? 'android' : 'web',
+    }
+  }
+})
+
+vi.mock('@capgo/capacitor-updater', () => {
+  return {
+    CapacitorUpdater: {
+      getDeviceId: () => Promise.resolve({ deviceId: 'cap-device-123' })
+    }
+  }
+})
+
 import { store, itemsSubtotal, tipAmount, totalAdjustments, totalBill, billBreakdown, shareTextSummary, calculateSplitBreakdown } from './store'
 
 describe('Splat Core Store & Math Logic', () => {
   beforeEach(() => {
+    isNativeVal = false
+    mockPreferencesRemove.mockReset()
+    mockPreferencesGet.mockReset()
+    mockPreferencesSet.mockReset()
     store.reset()
   })
 
@@ -50,6 +88,34 @@ describe('Splat Core Store & Math Logic', () => {
       expect(store.participants[0].name).toBe('Alice')
       expect(store.participants[1].name).toBe('Person 2')
       expect(store.items[0].assignedTo).toEqual([aliceId])
+    })
+
+    test('should auto-assign newly added participant to items assigned to everyone', () => {
+      store.addParticipant('Alice')
+      store.addParticipant('Bob')
+      const aliceId = store.participants[0].id
+      const bobId = store.participants[1].id
+      
+      store.addItem('Truffle Fries', 15)
+      expect(store.items[0]!.assignedTo).toEqual([aliceId, bobId])
+
+      store.addParticipant('Charlie')
+      const charlieId = store.participants[2].id
+      expect(store.items[0]!.assignedTo).toEqual([aliceId, bobId, charlieId])
+      expect(store.items[0]!.assignedQuantities![charlieId]).toBe(1)
+    })
+
+    test('should truncate participants when setting count less than current count', () => {
+      store.addParticipant('Alice')
+      store.addParticipant('Bob')
+      const aliceId = store.participants[0].id
+      
+      store.addItem('Tacos', 10)
+      
+      store.setParticipantCount(1)
+      expect(store.participants).toHaveLength(1)
+      expect(store.participants[0].name).toBe('Alice')
+      expect(store.items[0]!.assignedTo).toEqual([aliceId])
     })
   })
 
@@ -558,6 +624,59 @@ describe('Splat Core Store & Math Logic', () => {
       expect(bobBreakdown!.total).toBe(11)
     })
 
+    test('should compute correct participant totals with percentage adjustments, percentage tips, and multi-quantity uneven allocations', () => {
+      const splitData = {
+        splitId: 'test-split-456',
+        billName: 'Complex Stateless Split Test',
+        timestamp: Date.now(),
+        participantsCount: 2,
+        currencySymbol: '$',
+        items: [
+          { 
+            id: '1', 
+            name: 'Pizzas', 
+            price: 40, 
+            quantity: 2, 
+            isSplitEvenly: false,
+            assignedTo: ['alice', 'bob'], 
+            assignedQuantities: { alice: 1, bob: 1 } 
+          }
+        ],
+        participants: [
+          { id: 'alice', name: 'Alice' },
+          { id: 'bob', name: 'Bob' }
+        ],
+        adjustments: [
+          { id: 'tax', name: 'Tax', value: 10, type: 'percent' }
+        ],
+        tipInput: 15,
+        tipType: 'percent'
+      }
+
+      const breakdown = calculateSplitBreakdown(splitData)
+      expect(breakdown).toHaveLength(2)
+
+      const aliceBreakdown = breakdown.find((p: any) => p.id === 'alice')
+      const bobBreakdown = breakdown.find((p: any) => p.id === 'bob')
+
+      expect(aliceBreakdown).toBeDefined()
+      expect(bobBreakdown).toBeDefined()
+
+      // Items Subtotal = $40.
+      // Alice share: 1/2 of Pizzas = $20 subtotal.
+      // Bob share: 1/2 of Pizzas = $20 subtotal.
+      // Adjustments (10% of subtotal): $4 total. Alice share = $2, Bob share = $2.
+      // Tip (15% of subtotal): $6 total. Alice share = $3, Bob share = $3.
+      // Alice Total = 20 + 2 + 3 = 25.
+      // Bob Total = 20 + 2 + 3 = 25.
+      expect(aliceBreakdown!.subtotal).toBe(20)
+      expect(aliceBreakdown!.tax).toBe(2)
+      expect(aliceBreakdown!.tip).toBe(3)
+      expect(aliceBreakdown!.total).toBe(25)
+      expect(aliceBreakdown!.items).toHaveLength(1)
+      expect(aliceBreakdown!.items[0].name).toBe('1x Pizzas')
+    })
+
     test('should clamp final participant total to 0.00 if negative subtotal exceeds adjustments', () => {
       const splitData = {
         items: [
@@ -630,6 +749,353 @@ describe('Splat Core Store & Math Logic', () => {
       expect(store.isModified).toBe(true)
       await store.loadSplit(mockSplit)
       expect(store.isModified).toBe(false)
+    })
+  })
+
+  describe('Storage & Capacitor Native Platform Coverage', () => {
+    test('should invoke Preferences set/get on native platform', async () => {
+      isNativeVal = true
+      mockPreferencesGet.mockResolvedValue({ value: JSON.stringify({ billName: 'Native Split Test' }) })
+      
+      await store.loadFromLocalStorage()
+      expect(mockPreferencesGet).toHaveBeenCalledWith({ key: 'splat_store' })
+      expect(store.billName).toBe('Native Split Test')
+
+      await store.saveToLocalStorage()
+      expect(mockPreferencesSet).toHaveBeenCalledWith({
+        key: 'splat_store',
+        value: expect.any(String)
+      })
+    })
+
+    test('should handle Preferences get/set error gracefully', async () => {
+      isNativeVal = true
+      mockPreferencesGet.mockRejectedValue(new Error('Preferences read error'))
+      mockPreferencesSet.mockRejectedValue(new Error('Preferences write error'))
+
+      // Should not throw
+      await expect(store.loadFromLocalStorage()).resolves.not.toThrow()
+      await expect(store.saveToLocalStorage()).resolves.not.toThrow()
+    })
+
+    test('should handle clearSimulatedUsage and fetchUsage on native platform', async () => {
+      isNativeVal = true
+      mockPreferencesRemove.mockResolvedValue({})
+      
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+        Promise.resolve(new Response(JSON.stringify({ passType: 'trip', freeScansRemaining: 5 }), { status: 200 }))
+      )
+
+      await store.clearSimulatedUsage()
+      expect(mockPreferencesRemove).toHaveBeenCalledWith({ key: 'splat_simulated_usage' })
+      
+      fetchSpy.mockRestore()
+    })
+
+    test('should fetch usage on native platform', async () => {
+      isNativeVal = true
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+        Promise.resolve(new Response(JSON.stringify({ passType: 'trip', freeScansRemaining: 5 }), { status: 200 }))
+      )
+
+      await store.fetchUsage()
+      expect(fetchSpy).toHaveBeenCalled()
+      
+      fetchSpy.mockRestore()
+    })
+  })
+
+  describe('OCR parseWithGemini Edge Cases and Errors', () => {
+    test('should set ocrError when image format is invalid', async () => {
+      vi.stubEnv('DEV', true)
+      vi.stubEnv('MODE', 'development')
+      
+      store.apiKey = 'key'
+      await store.parseWithGemini('invalid_image_string')
+      expect(store.ocrError).toContain('Invalid image format')
+
+      vi.unstubAllEnvs()
+    })
+
+    test('should set ocrError when Gemini API response is not ok', async () => {
+      vi.stubEnv('DEV', true)
+      vi.stubEnv('MODE', 'development')
+      
+      store.apiKey = 'key'
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+        Promise.resolve(new Response('Internal Server Error', { status: 500 }))
+      )
+
+      await store.parseWithGemini('data:image/png;base64,abcdef')
+      expect(store.ocrError).toContain('Gemini API returned status 500')
+      
+      fetchSpy.mockRestore()
+      vi.unstubAllEnvs()
+    })
+
+    test('should set ocrError when serverless endpoint fails', async () => {
+      store.apiKey = '' // Trigger serverless path
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+        Promise.resolve(new Response(JSON.stringify({ error: 'Serverless rate limit' }), { status: 429 }))
+      )
+
+      await store.parseWithGemini('data:image/png;base64,abcdef')
+      expect(store.ocrError).toContain('Serverless rate limit')
+      fetchSpy.mockRestore()
+    })
+
+    test('should handle LIMIT_EXCEEDED error in catch block', async () => {
+      store.apiKey = 'key'
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('LIMIT_EXCEEDED'))
+
+      await store.parseWithGemini('data:image/png;base64,abcdef')
+      expect(store.showPaywall).toBe(true)
+      expect(store.ocrError).toBe('Scan limit reached. Upgrade to continue!')
+      
+      fetchSpy.mockRestore()
+    })
+
+    test('should handle RATE_LIMIT_EXCEEDED error in catch block', async () => {
+      store.apiKey = 'key'
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('RATE_LIMIT_EXCEEDED'))
+
+      await store.parseWithGemini('data:image/png;base64,abcdef')
+      expect(store.ocrError).toBe('Please wait 1 minute between scans.')
+      
+      fetchSpy.mockRestore()
+    })
+
+    test('should handle timeout AbortError in catch block', async () => {
+      store.apiKey = 'key'
+      const abortError = new Error('Request timed out after 30 seconds.')
+      abortError.name = 'AbortError'
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(abortError)
+
+      await store.parseWithGemini('data:image/png;base64,abcdef')
+      expect(store.ocrError).toBe('Request timed out after 30 seconds.')
+      
+      fetchSpy.mockRestore()
+    })
+
+    test('should categorize items split evenly for transport or lodging', async () => {
+      vi.stubEnv('DEV', true)
+      vi.stubEnv('MODE', 'development')
+      
+      store.apiKey = 'key'
+      const mockResponse = {
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                category: 'lodging',
+                restaurant: 'Hotel',
+                items: [{ name: 'Room', price: 100, quantity: 1 }]
+              })
+            }]
+          }
+        }]
+      }
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+        Promise.resolve(new Response(JSON.stringify(mockResponse), { status: 200 }))
+      )
+
+      await store.parseWithGemini('data:image/png;base64,abcdef')
+      expect(store.items[0].isSplitEvenly).toBe(true)
+      
+      fetchSpy.mockRestore()
+      vi.unstubAllEnvs()
+    })
+  })
+
+  describe('History Database Error Handling', () => {
+    test('should log error when saveToHistory fails', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      isNativeVal = true
+      mockPreferencesSet.mockRejectedValue(new Error('Preferences write error'))
+
+      await store.saveToHistory()
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to save split history', expect.any(Error))
+
+      consoleSpy.mockRestore()
+    })
+  })
+
+  describe('Image Compressor & Usage Limits Edge Cases', () => {
+
+    test('should block parseWithGemini and simulateOCR when scans are exhausted', async () => {
+      store.usageInfo = {
+        passType: null,
+        freeScansUsed: 5,
+        freeScansLimit: 5,
+        freeScansRemaining: 0
+      }
+
+      await store.parseWithGemini('data:image/png;base64,abcdef')
+      expect(store.showPaywall).toBe(true)
+      expect(store.ocrError).toContain('Scan limit reached')
+
+      store.ocrError = null
+      store.showPaywall = false
+      store.simulateOCR('data:image/png;base64,abcdef')
+      expect(store.showPaywall).toBe(true)
+      expect(store.ocrError).toContain('Scan limit reached')
+    })
+
+    test('should decrement simulated scan count', () => {
+      store.setSimulatedUsage(null, 2)
+      expect(store.simulatedUsage.freeScansRemaining).toBe(3)
+
+      store.decrementSimulatedScan()
+      expect(store.simulatedUsage.freeScansUsed).toBe(3)
+      expect(store.simulatedUsage.freeScansRemaining).toBe(2)
+    })
+
+    test('should not decrement simulated scan count if passType is configured', () => {
+      store.setSimulatedUsage('trip', 2)
+      store.decrementSimulatedScan()
+      expect(store.simulatedUsage.freeScansUsed).toBe(2)
+    })
+
+    test('should handle template templates and fallbacks in simulateOCR', () => {
+      vi.useFakeTimers()
+      
+      // template 1
+      store.simulateOCR('demo_image_uri_1')
+      vi.advanceTimersByTime(1500)
+      expect(store.billName).toContain('Avocado Bistro')
+
+      // fallback / random template
+      store.simulateOCR('demo_image_uri_random')
+      vi.advanceTimersByTime(1500)
+      expect(store.billName).toBeDefined()
+
+      vi.useRealTimers()
+    })
+
+    test('should invoke parseWithGemini inside simulateOCR when not in test mode', () => {
+      vi.stubEnv('MODE', 'development')
+      const spy = vi.spyOn(store, 'parseWithGemini').mockResolvedValue(undefined)
+      
+      store.simulateOCR('data:image/png;base64,abcdef')
+      expect(spy).toHaveBeenCalledWith('data:image/png;base64,abcdef')
+      
+      spy.mockRestore()
+      vi.unstubAllEnvs()
+    })
+  })
+
+  describe('Storage Error Handler Catch Blocks', () => {
+    test('loadSplit should handle image read error gracefully', async () => {
+      const mockSplit = {
+        splitId: 'split_img_err',
+        billName: 'Error Split',
+        items: [],
+        participants: [],
+        adjustments: [],
+        tipInput: 0,
+        tipType: 'percent',
+        currencySymbol: '$'
+      }
+      isNativeVal = true
+      mockPreferencesGet.mockRejectedValue(new Error('Read error'))
+      
+      await store.loadSplit(mockSplit)
+      expect(store.receiptImage).toBeNull()
+    })
+
+    test('loadFromLocalStorage handles corrupt JSON error gracefully', async () => {
+      const originalJSONParse = JSON.parse
+      JSON.parse = () => { throw new Error('JSON Parse Error') }
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      await store.loadFromLocalStorage()
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to load from localStorage', expect.any(Error))
+
+      JSON.parse = originalJSONParse
+      consoleSpy.mockRestore()
+    })
+
+    test('saveToLocalStorage handles JSON stringify error gracefully', async () => {
+      const originalStringify = JSON.stringify
+      JSON.stringify = () => { throw new Error('Stringify Error') }
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      await store.saveToLocalStorage()
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to save to localStorage', expect.any(Error))
+
+      JSON.stringify = originalStringify
+      consoleSpy.mockRestore()
+    })
+
+    test('saveToHistory should catch image write errors gracefully', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      isNativeVal = true
+      mockPreferencesGet.mockResolvedValue({ value: '[]' })
+      mockPreferencesSet.mockRejectedValue(new Error('Preferences write error'))
+      
+      store.receiptImage = 'data:image/png;base64,abcdef'
+      await store.saveToHistory()
+      
+      expect(warnSpy).toHaveBeenCalledWith('Failed to compress/save history image', expect.any(Error))
+      
+      warnSpy.mockRestore()
+      errorSpy.mockRestore()
+    })
+
+    test('loadFromLocalStorage recovers non-simulated usage info and migrates item assignedTo list', async () => {
+      isNativeVal = true
+      
+      mockPreferencesGet.mockImplementation(({ key }) => {
+        if (key === 'splat_simulated_usage') return Promise.resolve({ value: null })
+        if (key === 'splat_usage_info') return Promise.resolve({ value: JSON.stringify({ passType: 'trip', freeScansRemaining: 0 }) })
+        if (key === 'splat_store') {
+          return Promise.resolve({
+            value: JSON.stringify({
+              splitId: 'split_load_test',
+              billName: 'Load Test Bill',
+              items: [{ id: 'item_1', name: 'Meal', price: 10, quantity: 1, assignedTo: ['alice'], assignedQuantities: {} }],
+              participants: [{ id: 'alice', name: 'Alice' }],
+              adjustments: []
+            })
+          })
+        }
+        return Promise.resolve({ value: null })
+      })
+
+      await store.loadFromLocalStorage()
+      expect(store.usageInfo.passType).toBe('trip')
+      expect(store.items[0]!.assignedQuantities!['alice']).toBe(1)
+    })
+
+    test('saveToHistory updates existing history entry if splitId matches', async () => {
+      isNativeVal = true
+      
+      const mockHistory = [
+        {
+          splitId: 'matching_split_id',
+          billName: 'Old Bill Name',
+          items: [],
+          participants: [],
+          adjustments: [],
+          tipInput: 0,
+          tipType: 'percent'
+        }
+      ]
+
+      mockPreferencesGet.mockImplementation(({ key }) => {
+        if (key === 'splat_history') return Promise.resolve({ value: JSON.stringify(mockHistory) })
+        return Promise.resolve({ value: null })
+      })
+
+      store.splitId = 'matching_split_id'
+      store.billName = 'New Bill Name'
+      await store.saveToHistory()
+
+      expect(mockPreferencesSet).toHaveBeenCalledWith({
+        key: 'splat_history',
+        value: expect.stringContaining('New Bill Name')
+      })
     })
   })
 })
