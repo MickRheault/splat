@@ -2776,17 +2776,17 @@ const selectAllText = (event: Event) => {
     class="neobrutalist-dialog"
   >
     <div class="flex flex-col gap-2.5 py-1 max-h-[300px] overflow-y-auto pr-1">
-      <button 
+      <div 
         v-for="opt in selectorOptions" 
         :key="String(opt.value)"
         @click="selectOption(opt.value)"
-        class="selection-row w-full font-bold text-white active:translate-x-[2px] active:translate-y-[2px]"
+        class="selection-row w-full font-bold active:translate-x-[2px] active:translate-y-[2px]"
       >
         <div class="flex items-center gap-3">
           <span v-if="opt.icon" class="text-lg leading-none">{{ opt.icon }}</span>
-          <span class="text-sm font-extrabold text-white">{{ opt.label }}</span>
+          <span class="text-sm font-extrabold">{{ opt.label }}</span>
         </div>
-      </button>
+      </div>
     </div>
   </Dialog>
 </template>
