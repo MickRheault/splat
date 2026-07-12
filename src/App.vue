@@ -13,7 +13,7 @@ import { Clipboard } from '@capacitor/clipboard'
 import { CapacitorUpdater } from '@capgo/capacitor-updater'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { App } from '@capacitor/app'
-import { Purchases } from '@revenuecat/purchases-capacitor'
+import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor'
 
 // Import reactive store and computed properties
 import { 
@@ -430,6 +430,7 @@ onMounted(async () => {
         const apiKey = Capacitor.getPlatform() === 'ios' ? iosKey : androidKey
         try {
           const deviceId = await getDeviceId()
+          await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG })
           await Purchases.configure({
             apiKey: apiKey,
             appUserID: deviceId
