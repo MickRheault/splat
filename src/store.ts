@@ -1063,7 +1063,7 @@ export function calculateSplitBreakdown(split: any) {
   if (roundingError !== 0 && list.length > 0) {
     let maxIdx = 0
     let maxSub = -1
-    list.forEach((p, idx) => {
+    list.forEach((p: any, idx: number) => {
       if (p.subtotal > maxSub) {
         maxSub = p.subtotal
         maxIdx = idx
