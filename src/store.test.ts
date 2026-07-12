@@ -650,7 +650,7 @@ describe('Splat Core Store & Math Logic', () => {
           { id: 'tax', name: 'Tax', value: 10, type: 'percent' }
         ],
         tipInput: 15,
-        tipType: 'percent'
+        tipType: 'percentage'
       }
 
       const breakdown = calculateSplitBreakdown(splitData)
@@ -783,7 +783,7 @@ describe('Splat Core Store & Math Logic', () => {
         participants: [],
         adjustments: [],
         tipInput: 0,
-        tipType: 'percent',
+        tipType: 'percentage',
         currencySymbol: '$'
       }
       store.addItem('Snacks', 15)
@@ -1034,7 +1034,7 @@ describe('Splat Core Store & Math Logic', () => {
         participants: [],
         adjustments: [],
         tipInput: 0,
-        tipType: 'percent',
+        tipType: 'percentage',
         currencySymbol: '$'
       }
       isNativeVal = true
@@ -1120,7 +1120,7 @@ describe('Splat Core Store & Math Logic', () => {
           participants: [],
           adjustments: [],
           tipInput: 0,
-          tipType: 'percent'
+          tipType: 'percentage'
         }
       ]
 
