@@ -962,7 +962,7 @@ export function calculateSplitBreakdown(split: any) {
   const adjustments = split.adjustments || []
   const totalAdjustmentsVal = adjustments.reduce((sum: number, adj: any) => {
     const val = Number(adj.value) || 0
-    if (adj.type === 'percent') {
+    if (adj.type === 'percent' || adj.type === 'percentage') {
       return sum + (itemsSubtotalVal * (val / 100))
     }
     return sum + val
@@ -971,7 +971,7 @@ export function calculateSplitBreakdown(split: any) {
   // 3. Calculate tip
   const tipInput = split.tipInput || 0
   const tipType = split.tipType || 'percent'
-  const tipAmountVal = tipType === 'percent' 
+  const tipAmountVal = (tipType === 'percent' || tipType === 'percentage')
     ? itemsSubtotalVal * (Number(tipInput) / 100) 
     : Number(tipInput)
 
@@ -1062,13 +1062,13 @@ export function calculateSplitBreakdown(split: any) {
   const roundingError = Math.round((totalBillVal - calculatedGrandTotal) * 100) / 100
   if (roundingError !== 0 && list.length > 0) {
     let maxIdx = 0
-    let maxTotal = list[0].total
-    for (let i = 1; i < list.length; i++) {
-      if (list[i].total > maxTotal) {
-        maxTotal = list[i].total
-        maxIdx = i
+    let maxSub = -1
+    list.forEach((p, idx) => {
+      if (p.subtotal > maxSub) {
+        maxSub = p.subtotal
+        maxIdx = idx
       }
-    }
+    })
     list[maxIdx].total = Math.round((list[maxIdx].total + roundingError) * 100) / 100
   }
 

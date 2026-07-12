@@ -677,6 +677,47 @@ describe('Splat Core Store & Math Logic', () => {
       expect(aliceBreakdown!.items[0].name).toBe('1x Pizzas')
     })
 
+    test('should compute correct participant totals with percentage tip type (percentage vs percent)', () => {
+      const splitData = {
+        splitId: 'test-split-789',
+        billName: 'Percentage Tip Test',
+        timestamp: Date.now(),
+        participantsCount: 2,
+        currencySymbol: '$',
+        items: [
+          { id: '1', name: 'Burger', price: 12.50, assignedTo: ['alice', 'bob'], quantity: 1, assignedQuantities: {} }
+        ],
+        participants: [
+          { id: 'alice', name: 'Alice' },
+          { id: 'bob', name: 'Bob' }
+        ],
+        adjustments: [],
+        tipInput: 18,
+        tipType: 'percentage'
+      }
+
+      const breakdown = calculateSplitBreakdown(splitData)
+      expect(breakdown).toHaveLength(2)
+
+      const aliceBreakdown = breakdown.find((p: any) => p.id === 'alice')
+      const bobBreakdown = breakdown.find((p: any) => p.id === 'bob')
+
+      expect(aliceBreakdown).toBeDefined()
+      expect(bobBreakdown).toBeDefined()
+
+      // Items Subtotal = $12.50.
+      // Tip (18% of $12.50) = $2.25.
+      // Total Bill = $14.75.
+      // Alice Total = 6.25 + 1.125 (rounded/corrected: Alice gets 7.37, Bob gets 7.38)
+      // Since Bob gets the penny rounding correction:
+      // Alice Total: $7.37
+      // Bob Total: $7.38
+      expect(aliceBreakdown!.subtotal).toBe(6.25)
+      expect(aliceBreakdown!.total).toBe(7.37)
+      expect(bobBreakdown!.subtotal).toBe(6.25)
+      expect(bobBreakdown!.total).toBe(7.38)
+    })
+
     test('should clamp final participant total to 0.00 if negative subtotal exceeds adjustments', () => {
       const splitData = {
         items: [
