@@ -469,8 +469,37 @@ Return format must be EXACTLY this JSON structure:
       const res = await fetch(`${apiBase}/api/usage?deviceId=${deviceId}`)
       if (res.ok) {
         this.usageInfo = await res.json()
-        await setStorageItem('splat_usage_info', JSON.stringify(this.usageInfo))
       }
+
+      // Sync active entitlements locally using the RevenueCat SDK
+      if (isNative) {
+        try {
+          const { Purchases } = await import('@revenuecat/purchases-capacitor')
+          const { customerInfo } = await Purchases.getCustomerInfo()
+          if (customerInfo && customerInfo.entitlements && customerInfo.entitlements.active) {
+            if (customerInfo.entitlements.active['trip']) {
+              this.usageInfo = {
+                ...this.usageInfo,
+                passType: 'trip'
+              }
+            } else if (customerInfo.entitlements.active['yearly']) {
+              this.usageInfo = {
+                ...this.usageInfo,
+                passType: 'yearly'
+              }
+            } else {
+              this.usageInfo = {
+                ...this.usageInfo,
+                passType: null
+              }
+            }
+          }
+        } catch (rcErr) {
+          console.warn('Failed to fetch RevenueCat entitlement info', rcErr)
+        }
+      }
+
+      await setStorageItem('splat_usage_info', JSON.stringify(this.usageInfo))
     } catch (err) {
       console.warn('Failed to fetch usage limits', err)
     }
