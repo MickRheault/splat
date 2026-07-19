@@ -188,6 +188,7 @@ export const store = reactive({
     freeScansRemaining: 5
   } as any,
   simulatedUsage: null as any,
+  fetchUsageCount: 0,
 
   reset() {
     this.step = 'capture'
@@ -458,12 +459,16 @@ Return format must be EXACTLY this JSON structure:
   },
 
   async fetchUsage() {
+    this.fetchUsageCount++
+    const currentCount = this.fetchUsageCount
+
     if (this.simulatedUsage) {
       this.usageInfo = { ...this.simulatedUsage }
       return
     }
     
     const isNative = Capacitor.isNativePlatform()
+    let fetchedUsageInfo = null
 
     // 1. Try to fetch usage limits from the backend API
     try {
@@ -471,7 +476,7 @@ Return format must be EXACTLY this JSON structure:
       const apiBase = isNative ? 'https://splat-chi.vercel.app' : ''
       const res = await fetch(`${apiBase}/api/usage?deviceId=${deviceId}`)
       if (res.ok) {
-        this.usageInfo = await res.json()
+        fetchedUsageInfo = await res.json()
       }
     } catch (err) {
       console.warn('Failed to fetch usage limits from backend', err)
@@ -488,21 +493,22 @@ Return format must be EXACTLY this JSON structure:
           const tripEnt = customerInfo.entitlements.active['trip']
           const yearlyEnt = customerInfo.entitlements.active['yearly']
           
+          const baseInfo = fetchedUsageInfo || this.usageInfo || {}
           if (tripEnt) {
-            this.usageInfo = {
-              ...this.usageInfo,
+            fetchedUsageInfo = {
+              ...baseInfo,
               passType: 'trip',
               expirationDate: tripEnt.expirationDate
             }
           } else if (yearlyEnt) {
-            this.usageInfo = {
-              ...this.usageInfo,
+            fetchedUsageInfo = {
+              ...baseInfo,
               passType: 'yearly',
               expirationDate: yearlyEnt.expirationDate
             }
           } else {
-            this.usageInfo = {
-              ...this.usageInfo,
+            fetchedUsageInfo = {
+              ...baseInfo,
               passType: null,
               expirationDate: null
             }
@@ -511,6 +517,15 @@ Return format must be EXACTLY this JSON structure:
       } catch (rcErr) {
         console.warn('Failed to fetch RevenueCat entitlement info', rcErr)
       }
+    }
+
+    // Discard result if a newer fetch has started
+    if (currentCount !== this.fetchUsageCount) {
+      return
+    }
+
+    if (fetchedUsageInfo) {
+      this.usageInfo = fetchedUsageInfo
     }
 
     // 3. Save updated usage details locally

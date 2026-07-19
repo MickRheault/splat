@@ -369,7 +369,9 @@ onMounted(async () => {
   ]);
 
   // 2. Fetch usage metrics from server in the background (Non-blocking)
-  store.fetchUsage();
+  if (!Capacitor.isNativePlatform()) {
+    store.fetchUsage();
+  }
 
   // 3. Sync DB usage state when the phone app is resumed from background
   document.addEventListener('visibilitychange', () => {
