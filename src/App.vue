@@ -13,7 +13,7 @@ import { Clipboard } from '@capacitor/clipboard'
 import { CapacitorUpdater } from '@capgo/capacitor-updater'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { App } from '@capacitor/app'
-import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor'
+import { Purchases, LOG_LEVEL, PRODUCT_CATEGORY } from '@revenuecat/purchases-capacitor'
 
 // Import reactive store and computed properties
 import { 
@@ -193,7 +193,13 @@ const handlePaywallPurchase = async () => {
       }
       
       if (!purchased) {
-        const { products } = await Purchases.getProducts({ productIdentifiers: [productId] })
+        const type = selectedPaywallOption.value === 'trip' 
+          ? PRODUCT_CATEGORY.NON_SUBSCRIPTION 
+          : PRODUCT_CATEGORY.SUBSCRIPTION
+        const { products } = await Purchases.getProducts({ 
+          productIdentifiers: [productId],
+          type
+        })
         if (products && products.length > 0) {
           await Purchases.purchaseStoreProduct({ product: products[0] })
         } else {
