@@ -442,6 +442,7 @@ onMounted(async () => {
             appUserID: deviceId
           })
           console.log('RevenueCat initialized successfully for device ID:', deviceId)
+          await store.fetchUsage()
         } catch (err) {
           console.warn('RevenueCat initialization failed:', err)
         }
