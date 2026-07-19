@@ -488,7 +488,9 @@ Return format must be EXACTLY this JSON structure:
         const { Purchases } = await import('@revenuecat/purchases-capacitor')
         const { customerInfo } = await Purchases.getCustomerInfo()
         console.log('RevenueCat CustomerInfo active entitlements:', JSON.stringify(customerInfo?.entitlements?.active || {}))
+        console.log('RevenueCat CustomerInfo purchased products:', JSON.stringify(customerInfo?.allPurchasedProductIdentifiers || []))
         
+        let hasActiveEntitlement = false
         if (customerInfo && customerInfo.entitlements && customerInfo.entitlements.active) {
           const tripEnt = customerInfo.entitlements.active['trip']
           const yearlyEnt = customerInfo.entitlements.active['yearly']
@@ -500,18 +502,41 @@ Return format must be EXACTLY this JSON structure:
               passType: 'trip',
               expirationDate: tripEnt.expirationDate
             }
+            hasActiveEntitlement = true
           } else if (yearlyEnt) {
             fetchedUsageInfo = {
               ...baseInfo,
               passType: 'yearly',
               expirationDate: yearlyEnt.expirationDate
             }
-          } else {
-            fetchedUsageInfo = {
-              ...baseInfo,
-              passType: null,
-              expirationDate: null
+            hasActiveEntitlement = true
+          }
+        }
+
+        // Fallback for one-time purchases if entitlement configuration/linking is missing in RC dashboard
+        if (!hasActiveEntitlement && customerInfo && customerInfo.allPurchasedProductIdentifiers && customerInfo.allPurchasedProductIdentifiers.includes('splat_14day_trip')) {
+          const purchaseDateStr = customerInfo.allPurchaseDates?.['splat_14day_trip']
+          if (purchaseDateStr) {
+            const purchaseDate = new Date(purchaseDateStr)
+            const expiryDate = new Date(purchaseDate.getTime() + 14 * 24 * 60 * 60 * 1000)
+            if (expiryDate.getTime() > Date.now()) {
+              const baseInfo = fetchedUsageInfo || this.usageInfo || {}
+              fetchedUsageInfo = {
+                ...baseInfo,
+                passType: 'trip',
+                expirationDate: expiryDate.toISOString()
+              }
+              hasActiveEntitlement = true
             }
+          }
+        }
+
+        if (!hasActiveEntitlement) {
+          const baseInfo = fetchedUsageInfo || this.usageInfo || {}
+          fetchedUsageInfo = {
+            ...baseInfo,
+            passType: null,
+            expirationDate: null
           }
         }
       } catch (rcErr) {
