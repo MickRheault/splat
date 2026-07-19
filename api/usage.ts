@@ -30,6 +30,13 @@ export default async function handler(req: any, res: any) {
     if (hasKV && kv) {
       const passKey = `pass:${deviceId}`;
       const passType = await kv.get(passKey); // "trip", "yearly", or null
+      let expirationDate = null;
+      if (passType) {
+        const ttl = await kv.ttl(passKey);
+        if (ttl > 0) {
+          expirationDate = new Date(Date.now() + ttl * 1000).toISOString();
+        }
+      }
 
       const currentMonth = new Date().toISOString().slice(0, 7);
       const freeScansKey = `free:${deviceId}:${currentMonth}`;
@@ -37,6 +44,7 @@ export default async function handler(req: any, res: any) {
 
       res.status(200).json({
         passType,
+        expirationDate,
         freeScansUsed,
         freeScansLimit: 5,
         freeScansRemaining: Math.max(0, 5 - freeScansUsed)

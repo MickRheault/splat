@@ -485,20 +485,26 @@ Return format must be EXACTLY this JSON structure:
         console.log('RevenueCat CustomerInfo active entitlements:', JSON.stringify(customerInfo?.entitlements?.active || {}))
         
         if (customerInfo && customerInfo.entitlements && customerInfo.entitlements.active) {
-          if (customerInfo.entitlements.active['trip']) {
+          const tripEnt = customerInfo.entitlements.active['trip']
+          const yearlyEnt = customerInfo.entitlements.active['yearly']
+          
+          if (tripEnt) {
             this.usageInfo = {
               ...this.usageInfo,
-              passType: 'trip'
+              passType: 'trip',
+              expirationDate: tripEnt.expirationDate
             }
-          } else if (customerInfo.entitlements.active['yearly']) {
+          } else if (yearlyEnt) {
             this.usageInfo = {
               ...this.usageInfo,
-              passType: 'yearly'
+              passType: 'yearly',
+              expirationDate: yearlyEnt.expirationDate
             }
           } else {
             this.usageInfo = {
               ...this.usageInfo,
-              passType: null
+              passType: null,
+              expirationDate: null
             }
           }
         }
