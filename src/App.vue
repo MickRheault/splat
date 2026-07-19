@@ -336,7 +336,7 @@ const handleDevAction = async (type: 'trip' | 'yearly' | 'reset') => {
 
     // 2. Register client-side simulation state
     if (type === 'reset') {
-      store.setSimulatedUsage(null, 0)
+      store.clearSimulatedUsage()
       store.ocrError = null
       alert('Usage and active passes reset client and server-side!')
     } else {
