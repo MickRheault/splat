@@ -43,6 +43,23 @@ const formatPassDate = (isoString: string | null | undefined) => {
   }
 }
 
+const formatPurchasesError = (e: any): string => {
+  if (!e) return 'Unknown error'
+  const details = []
+  if (e.message) details.push(e.message)
+  if (e.readableErrorCode) details.push(`Code: ${e.readableErrorCode}`)
+  if (e.underlyingErrorMessage) details.push(`Detail: ${e.underlyingErrorMessage}`)
+  
+  if (details.length === 0) {
+    try {
+      return JSON.stringify(e)
+    } catch {
+      return String(e)
+    }
+  }
+  return details.join('\n')
+}
+
 // Local UI states
 const cameraInput = ref<HTMLInputElement | null>(null)
 const galleryInput = ref<HTMLInputElement | null>(null)
@@ -248,7 +265,7 @@ const handlePaywallPurchase = async () => {
     if (e.userCancelled) {
       console.log('User cancelled purchase')
     } else {
-      alert('Purchase failed: ' + (e.message || 'Unknown error'))
+      alert('Purchase failed:\n' + formatPurchasesError(e))
     }
   } finally {
     isPurchasing.value = false
@@ -274,7 +291,7 @@ const handleRestorePurchases = async () => {
     }
   } catch (e: any) {
     console.error('Restore purchases failed:', e)
-    alert('Restore failed: ' + (e.message || 'Unknown error'))
+    alert('Restore failed:\n' + formatPurchasesError(e))
   } finally {
     isPurchasing.value = false
   }
