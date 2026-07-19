@@ -541,6 +541,10 @@ Return format must be EXACTLY this JSON structure:
         }
       } catch (rcErr) {
         console.warn('Failed to fetch RevenueCat entitlement info', rcErr)
+        if (fetchedUsageInfo) {
+          fetchedUsageInfo.passType = this.usageInfo?.passType || null
+          fetchedUsageInfo.expirationDate = this.usageInfo?.expirationDate || null
+        }
       }
     }
 
