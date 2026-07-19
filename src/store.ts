@@ -462,46 +462,56 @@ Return format must be EXACTLY this JSON structure:
       this.usageInfo = { ...this.simulatedUsage }
       return
     }
+    
+    const isNative = Capacitor.isNativePlatform()
+
+    // 1. Try to fetch usage limits from the backend API
     try {
       const deviceId = await getDeviceId()
-      const isNative = Capacitor.isNativePlatform()
       const apiBase = isNative ? 'https://splat-chi.vercel.app' : ''
       const res = await fetch(`${apiBase}/api/usage?deviceId=${deviceId}`)
       if (res.ok) {
         this.usageInfo = await res.json()
       }
+    } catch (err) {
+      console.warn('Failed to fetch usage limits from backend', err)
+    }
 
-      // Sync active entitlements locally using the RevenueCat SDK
-      if (isNative) {
-        try {
-          const { Purchases } = await import('@revenuecat/purchases-capacitor')
-          const { customerInfo } = await Purchases.getCustomerInfo()
-          if (customerInfo && customerInfo.entitlements && customerInfo.entitlements.active) {
-            if (customerInfo.entitlements.active['trip']) {
-              this.usageInfo = {
-                ...this.usageInfo,
-                passType: 'trip'
-              }
-            } else if (customerInfo.entitlements.active['yearly']) {
-              this.usageInfo = {
-                ...this.usageInfo,
-                passType: 'yearly'
-              }
-            } else {
-              this.usageInfo = {
-                ...this.usageInfo,
-                passType: null
-              }
+    // 2. Sync active entitlements locally using the RevenueCat SDK
+    if (isNative) {
+      try {
+        const { Purchases } = await import('@revenuecat/purchases-capacitor')
+        const { customerInfo } = await Purchases.getCustomerInfo()
+        console.log('RevenueCat CustomerInfo active entitlements:', JSON.stringify(customerInfo?.entitlements?.active || {}))
+        
+        if (customerInfo && customerInfo.entitlements && customerInfo.entitlements.active) {
+          if (customerInfo.entitlements.active['trip']) {
+            this.usageInfo = {
+              ...this.usageInfo,
+              passType: 'trip'
+            }
+          } else if (customerInfo.entitlements.active['yearly']) {
+            this.usageInfo = {
+              ...this.usageInfo,
+              passType: 'yearly'
+            }
+          } else {
+            this.usageInfo = {
+              ...this.usageInfo,
+              passType: null
             }
           }
-        } catch (rcErr) {
-          console.warn('Failed to fetch RevenueCat entitlement info', rcErr)
         }
+      } catch (rcErr) {
+        console.warn('Failed to fetch RevenueCat entitlement info', rcErr)
       }
+    }
 
+    // 3. Save updated usage details locally
+    try {
       await setStorageItem('splat_usage_info', JSON.stringify(this.usageInfo))
-    } catch (err) {
-      console.warn('Failed to fetch usage limits', err)
+    } catch (storageErr) {
+      console.warn('Failed to save usage limits to storage', storageErr)
     }
   },
 
