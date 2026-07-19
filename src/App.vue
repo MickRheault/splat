@@ -279,8 +279,9 @@ const handleRestorePurchases = async () => {
     if (Capacitor.isNativePlatform()) {
       const { customerInfo } = await Purchases.restorePurchases()
       const hasActivePass = !!(
-        (customerInfo.entitlements.active && (customerInfo.entitlements.active['trip'] || customerInfo.entitlements.active['yearly'])) ||
-        (customerInfo.allPurchasedProductIdentifiers && customerInfo.allPurchasedProductIdentifiers.includes('splat_14day_trip'))
+        customerInfo.entitlements?.active?.['trip'] ||
+        customerInfo.entitlements?.active?.['yearly'] ||
+        customerInfo.allPurchasedProductIdentifiers?.includes('splat_14day_trip')
       )
       if (hasActivePass) {
         await store.fetchUsage()
