@@ -1,28 +1,9 @@
 import { reactive, computed } from 'vue'
 import { Capacitor } from '@capacitor/core'
 import { Preferences } from '@capacitor/preferences'
-import { CapacitorUpdater } from '@capgo/capacitor-updater'
+import { billingManager, getDeviceId } from './services/billing'
 
-export const getDeviceId = async (): Promise<string> => {
-  try {
-    if (Capacitor.isNativePlatform()) {
-      const res = await CapacitorUpdater.getDeviceId()
-      if (res && res.deviceId) {
-        return res.deviceId
-      }
-    }
-  } catch (err) {
-    console.warn('Failed to get Capacitor Device ID', err)
-  }
-  
-  // Fallback to localStorage uuid for local web development
-  let devId = localStorage.getItem('splat_dev_device_id')
-  if (!devId) {
-    devId = `web_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    localStorage.setItem('splat_dev_device_id', devId)
-  }
-  return devId
-}
+export { getDeviceId }
 
 export const getStorageItem = async (key: string): Promise<string | null> => {
   if (Capacitor.isNativePlatform()) {
@@ -462,102 +443,17 @@ Return format must be EXACTLY this JSON structure:
     this.fetchUsageCount++
     const currentCount = this.fetchUsageCount
 
-    if (this.simulatedUsage) {
-      this.usageInfo = { ...this.simulatedUsage }
-      return
-    }
-    
-    const isNative = Capacitor.isNativePlatform()
-    let fetchedUsageInfo = null
-
-    // 1. Try to fetch usage limits from the backend API
-    try {
-      const deviceId = await getDeviceId()
-      const apiBase = isNative ? 'https://splat-chi.vercel.app' : ''
-      const res = await fetch(`${apiBase}/api/usage?deviceId=${deviceId}`)
-      if (res.ok) {
-        fetchedUsageInfo = await res.json()
-      }
-    } catch (err) {
-      console.warn('Failed to fetch usage limits from backend', err)
-    }
-
-    // 2. Sync active entitlements locally using the RevenueCat SDK
-    if (isNative) {
-      try {
-        const { Purchases } = await import('@revenuecat/purchases-capacitor')
-        const { customerInfo } = await Purchases.getCustomerInfo()
-        console.log('RevenueCat CustomerInfo active entitlements:', JSON.stringify(customerInfo?.entitlements?.active || {}))
-        console.log('RevenueCat CustomerInfo purchased products:', JSON.stringify(customerInfo?.allPurchasedProductIdentifiers || []))
-        
-        let hasActiveEntitlement = false
-        if (customerInfo && customerInfo.entitlements && customerInfo.entitlements.active) {
-          const tripEnt = customerInfo.entitlements.active['trip']
-          const yearlyEnt = customerInfo.entitlements.active['yearly']
-          
-          const baseInfo = fetchedUsageInfo || this.usageInfo || {}
-          if (tripEnt) {
-            fetchedUsageInfo = {
-              ...baseInfo,
-              passType: 'trip',
-              expirationDate: tripEnt.expirationDate
-            }
-            hasActiveEntitlement = true
-          } else if (yearlyEnt) {
-            fetchedUsageInfo = {
-              ...baseInfo,
-              passType: 'yearly',
-              expirationDate: yearlyEnt.expirationDate
-            }
-            hasActiveEntitlement = true
-          }
-        }
-
-        // Fallback for one-time purchases if entitlement configuration/linking is missing in RC dashboard
-        if (!hasActiveEntitlement && customerInfo && customerInfo.allPurchasedProductIdentifiers && customerInfo.allPurchasedProductIdentifiers.includes('splat_14day_trip')) {
-          const purchaseDateStr = customerInfo.allPurchaseDates?.['splat_14day_trip']
-          if (purchaseDateStr) {
-            const purchaseDate = new Date(purchaseDateStr)
-            const expiryDate = new Date(purchaseDate.getTime() + 14 * 24 * 60 * 60 * 1000)
-            if (expiryDate.getTime() > Date.now()) {
-              const baseInfo = fetchedUsageInfo || this.usageInfo || {}
-              fetchedUsageInfo = {
-                ...baseInfo,
-                passType: 'trip',
-                expirationDate: expiryDate.toISOString()
-              }
-              hasActiveEntitlement = true
-            }
-          }
-        }
-
-        if (!hasActiveEntitlement) {
-          const baseInfo = fetchedUsageInfo || this.usageInfo || {}
-          fetchedUsageInfo = {
-            ...baseInfo,
-            passType: null,
-            expirationDate: null
-          }
-        }
-      } catch (rcErr) {
-        console.warn('Failed to fetch RevenueCat entitlement info', rcErr)
-        if (fetchedUsageInfo) {
-          fetchedUsageInfo.passType = this.usageInfo?.passType || null
-          fetchedUsageInfo.expirationDate = this.usageInfo?.expirationDate || null
-        }
-      }
-    }
+    const fetched = await billingManager.fetchStatus(this.usageInfo)
 
     // Discard result if a newer fetch has started
     if (currentCount !== this.fetchUsageCount) {
       return
     }
 
-    if (fetchedUsageInfo) {
-      this.usageInfo = fetchedUsageInfo
-    }
+    this.usageInfo = fetched
+    this.simulatedUsage = billingManager.getSimulatedUsage()
 
-    // 3. Save updated usage details locally
+    // Save updated usage details locally
     try {
       await setStorageItem('splat_usage_info', JSON.stringify(this.usageInfo))
     } catch (storageErr) {
@@ -565,19 +461,15 @@ Return format must be EXACTLY this JSON structure:
     }
   },
 
-  setSimulatedUsage(passType: string | null, freeScansUsed: number) {
-    const usage = {
-      passType,
-      freeScansUsed,
-      freeScansLimit: 5,
-      freeScansRemaining: Math.max(0, 5 - freeScansUsed)
-    }
+  setSimulatedUsage(passType: 'trip' | 'yearly' | null, freeScansUsed: number) {
+    const usage = billingManager.setSimulatedUsage(passType, freeScansUsed)
     this.simulatedUsage = usage
     this.usageInfo = { ...usage }
     setStorageItem('splat_simulated_usage', JSON.stringify(usage))
   },
 
   clearSimulatedUsage() {
+    billingManager.clearSimulatedUsage()
     this.simulatedUsage = null
     if (Capacitor.isNativePlatform()) {
       Preferences.remove({ key: 'splat_simulated_usage' })
@@ -766,8 +658,10 @@ Return format must be EXACTLY this JSON structure:
     try {
       const simUsageStr = await getStorageItem('splat_simulated_usage')
       if (simUsageStr) {
-        this.simulatedUsage = JSON.parse(simUsageStr)
-        this.usageInfo = { ...this.simulatedUsage }
+        const parsed = JSON.parse(simUsageStr)
+        this.simulatedUsage = parsed
+        this.usageInfo = { ...parsed }
+        billingManager.setSimulatedUsage(parsed.passType, parsed.freeScansUsed)
       } else {
         const usageStr = await getStorageItem('splat_usage_info')
         if (usageStr) {

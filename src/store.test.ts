@@ -21,7 +21,8 @@ vi.mock('@capacitor/core', () => {
     Capacitor: {
       isNativePlatform: () => isNativeVal,
       getPlatform: () => isNativeVal ? 'android' : 'web',
-    }
+    },
+    registerPlugin: () => ({})
   }
 })
 
@@ -30,6 +31,19 @@ vi.mock('@capgo/capacitor-updater', () => {
     CapacitorUpdater: {
       getDeviceId: () => Promise.resolve({ deviceId: 'cap-device-123' })
     }
+  }
+})
+
+vi.mock('@revenuecat/purchases-capacitor', () => {
+  return {
+    Purchases: {
+      getCustomerInfo: () => Promise.resolve({ entitlements: { active: {} }, allPurchasedProductIdentifiers: [] }),
+      configure: () => Promise.resolve({}),
+      setLogLevel: () => Promise.resolve({}),
+    },
+    LOG_LEVEL: {
+      DEBUG: 0,
+    },
   }
 })
 
