@@ -5,6 +5,11 @@ let isNativeVal = false;
 const mockConfigure = vi.fn();
 const mockSetLogLevel = vi.fn();
 const mockGetCustomerInfo = vi.fn();
+const mockGetOfferings = vi.fn();
+const mockPurchasePackage = vi.fn();
+const mockGetProducts = vi.fn();
+const mockPurchaseStoreProduct = vi.fn();
+const mockRestorePurchases = vi.fn();
 
 vi.mock('@capacitor/core', () => {
   return {
@@ -29,9 +34,18 @@ vi.mock('@revenuecat/purchases-capacitor', () => {
       configure: (...args: any[]) => mockConfigure(...args),
       setLogLevel: (...args: any[]) => mockSetLogLevel(...args),
       getCustomerInfo: (...args: any[]) => mockGetCustomerInfo(...args),
+      getOfferings: (...args: any[]) => mockGetOfferings(...args),
+      purchasePackage: (...args: any[]) => mockPurchasePackage(...args),
+      getProducts: (...args: any[]) => mockGetProducts(...args),
+      purchaseStoreProduct: (...args: any[]) => mockPurchaseStoreProduct(...args),
+      restorePurchases: (...args: any[]) => mockRestorePurchases(...args),
     },
     LOG_LEVEL: {
       DEBUG: 0,
+    },
+    PRODUCT_CATEGORY: {
+      NON_SUBSCRIPTION: 'NON_SUBSCRIPTION',
+      SUBSCRIPTION: 'SUBSCRIPTION',
     },
   };
 });
@@ -42,6 +56,11 @@ describe('BillingManager - Core Billing Functions', () => {
     mockConfigure.mockClear();
     mockSetLogLevel.mockClear();
     mockGetCustomerInfo.mockClear();
+    mockGetOfferings.mockClear();
+    mockPurchasePackage.mockClear();
+    mockGetProducts.mockClear();
+    mockPurchaseStoreProduct.mockClear();
+    mockRestorePurchases.mockClear();
     isNativeVal = false;
     billingManager.clearSimulatedUsage();
     (billingManager as any).initialized = false;
@@ -144,7 +163,6 @@ describe('BillingManager - Core Billing Functions', () => {
       Promise.resolve(new Response(JSON.stringify({ passType: null, freeScansRemaining: 5 }), { status: 200 }))
     );
 
-    // Mock 1 day ago purchase date
     const purchaseDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     mockGetCustomerInfo.mockResolvedValue({
@@ -183,5 +201,80 @@ describe('BillingManager - Core Billing Functions', () => {
     const status = await billingManager.fetchStatus(currentUsage);
     expect(status.passType).toBe('yearly');
     expect(status.expirationDate).toBe('2027-01-01T00:00:00.000Z');
+  });
+
+  test('purchase handles native offerings flow', async () => {
+    isNativeVal = true;
+    mockGetOfferings.mockResolvedValue({
+      current: {
+        availablePackages: [
+          { identifier: 'trip', product: { identifier: 'splat_14day_trip' } },
+        ],
+      },
+    });
+    mockPurchasePackage.mockResolvedValue({});
+
+    await billingManager.purchase('trip');
+
+    expect(mockGetOfferings).toHaveBeenCalled();
+    expect(mockPurchasePackage).toHaveBeenCalledWith({
+      aPackage: { identifier: 'trip', product: { identifier: 'splat_14day_trip' } },
+    });
+  });
+
+  test('purchase falls back to direct product purchase on native', async () => {
+    isNativeVal = true;
+    mockGetOfferings.mockRejectedValue(new Error('Offerings failed'));
+    mockGetProducts.mockResolvedValue({
+      products: [{ identifier: 'splat_14day_trip' }],
+    });
+    mockPurchaseStoreProduct.mockResolvedValue({});
+
+    await billingManager.purchase('trip');
+
+    expect(mockGetProducts).toHaveBeenCalledWith({
+      productIdentifiers: ['splat_14day_trip'],
+      type: 'NON_SUBSCRIPTION',
+    });
+    expect(mockPurchaseStoreProduct).toHaveBeenCalledWith({
+      product: { identifier: 'splat_14day_trip' },
+    });
+  });
+
+  test('purchase simulates fetch call on web platform', async () => {
+    isNativeVal = false;
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(new Response(null, { status: 200 }))
+    );
+
+    await billingManager.purchase('yearly');
+
+    expect(fetchSpy).toHaveBeenCalled();
+  });
+
+  test('restore returns true if active entitlements found on native', async () => {
+    isNativeVal = true;
+    mockRestorePurchases.mockResolvedValue({
+      customerInfo: {
+        entitlements: {
+          active: {
+            yearly: {
+              expirationDate: '2027-01-01T00:00:00.000Z',
+            },
+          },
+        },
+      },
+    });
+
+    const success = await billingManager.restore();
+    expect(success).toBe(true);
+    expect(mockRestorePurchases).toHaveBeenCalled();
+  });
+
+  test('restore throws error on web platform', async () => {
+    isNativeVal = false;
+    await expect(billingManager.restore()).rejects.toThrow(
+      'Restore purchases is only available on native platforms.'
+    );
   });
 });

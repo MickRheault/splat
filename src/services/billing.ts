@@ -192,12 +192,69 @@ export class BillingManager {
     return fetchedUsageInfo || currentUsage || defaultUsage;
   }
 
-  public async purchase(packageId: string): Promise<void> {
-    // Stub
+  public async purchase(option: 'trip' | 'yearly'): Promise<void> {
+    const isNative = Capacitor.isNativePlatform();
+    
+    if (isNative) {
+      const productId = option === 'trip' ? 'splat_14day_trip' : 'splat_yearly_pro';
+      let purchased = false;
+      
+      try {
+        const offerings = await Purchases.getOfferings();
+        if (offerings.current !== null && offerings.current.availablePackages.length > 0) {
+          const pkg = offerings.current.availablePackages.find(p => p.identifier === option);
+          if (pkg) {
+            await Purchases.purchasePackage({ aPackage: pkg });
+            purchased = true;
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to purchase package via offerings, trying direct product purchase:', err);
+      }
+      
+      if (!purchased) {
+        const { PRODUCT_CATEGORY } = await import('@revenuecat/purchases-capacitor');
+        const type = option === 'trip' 
+          ? PRODUCT_CATEGORY.NON_SUBSCRIPTION 
+          : PRODUCT_CATEGORY.SUBSCRIPTION;
+          
+        const { products } = await Purchases.getProducts({ 
+          productIdentifiers: [productId],
+          type
+        });
+        if (products && products.length > 0) {
+          await Purchases.purchaseStoreProduct({ product: products[0] });
+        } else {
+          throw new Error(`Product not found: ${productId}`);
+        }
+      }
+    } else {
+      const deviceId = await getDeviceId();
+      const response = await fetch('/api/mock-purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId, type: option })
+      });
+
+      if (!response.ok) {
+        throw new Error('Server activation failed');
+      }
+    }
   }
 
-  public async restore(): Promise<void> {
-    // Stub
+  public async restore(): Promise<boolean> {
+    const isNative = Capacitor.isNativePlatform();
+    if (isNative) {
+      const { customerInfo } = await Purchases.restorePurchases();
+      const hasActivePass = !!(
+        customerInfo.entitlements?.active?.['trip'] ||
+        customerInfo.entitlements?.active?.['yearly'] ||
+        customerInfo.allPurchasedProductIdentifiers?.includes('splat_14day_trip')
+      );
+      return hasActivePass;
+    } else {
+      throw new Error('Restore purchases is only available on native platforms.');
+    }
   }
 
   public formatError(e: any): string {
