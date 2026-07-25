@@ -1,9 +1,10 @@
 import { describe, expect, test, beforeEach, vi } from 'vitest';
-import { billingManager, getDeviceId } from './billing';
+import { billingManager, getDeviceId, UsageInfo } from './billing';
 
 let isNativeVal = false;
 const mockConfigure = vi.fn();
 const mockSetLogLevel = vi.fn();
+const mockGetCustomerInfo = vi.fn();
 
 vi.mock('@capacitor/core', () => {
   return {
@@ -27,6 +28,7 @@ vi.mock('@revenuecat/purchases-capacitor', () => {
     Purchases: {
       configure: (...args: any[]) => mockConfigure(...args),
       setLogLevel: (...args: any[]) => mockSetLogLevel(...args),
+      getCustomerInfo: (...args: any[]) => mockGetCustomerInfo(...args),
     },
     LOG_LEVEL: {
       DEBUG: 0,
@@ -34,16 +36,16 @@ vi.mock('@revenuecat/purchases-capacitor', () => {
   };
 });
 
-describe('BillingManager - Init, Device ID, Error Formatting', () => {
+describe('BillingManager - Core Billing Functions', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     mockConfigure.mockClear();
     mockSetLogLevel.mockClear();
+    mockGetCustomerInfo.mockClear();
     isNativeVal = false;
     billingManager.clearSimulatedUsage();
-    // Reset private initialized state by hacking or reinstantiating if possible,
-    // but since it's a singleton, we can access private field:
     (billingManager as any).initialized = false;
+    (billingManager as any).fetchUsageCount = 0;
   });
 
   test('getDeviceId returns local device ID in web mode', async () => {
@@ -90,5 +92,96 @@ describe('BillingManager - Init, Device ID, Error Formatting', () => {
         underlyingErrorMessage: 'Underlying cause',
       })
     ).toBe('RC Error\nCode: 123\nDetail: Underlying cause');
+  });
+
+  test('fetchStatus returns simulatedUsage if set', async () => {
+    const sim = billingManager.setSimulatedUsage('yearly', 1);
+    const status = await billingManager.fetchStatus();
+    expect(status.passType).toBe('yearly');
+    expect(status.freeScansRemaining).toBe(4);
+  });
+
+  test('fetchStatus handles Vercel fetch on web platform', async () => {
+    isNativeVal = false;
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ passType: null, freeScansRemaining: 3 }), { status: 200 }))
+    );
+
+    const status = await billingManager.fetchStatus();
+    expect(status.freeScansRemaining).toBe(3);
+    expect(status.passType).toBeNull();
+    expect(fetchSpy).toHaveBeenCalled();
+  });
+
+  test('fetchStatus handles active entitlements on native platform', async () => {
+    isNativeVal = true;
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ passType: null, freeScansRemaining: 5 }), { status: 200 }))
+    );
+
+    mockGetCustomerInfo.mockResolvedValue({
+      customerInfo: {
+        entitlements: {
+          active: {
+            trip: {
+              expirationDate: '2026-08-01T00:00:00.000Z',
+            },
+          },
+        },
+        allPurchasedProductIdentifiers: ['splat_14day_trip'],
+      },
+    });
+
+    const status = await billingManager.fetchStatus();
+    expect(status.passType).toBe('trip');
+    expect(status.expirationDate).toBe('2026-08-01T00:00:00.000Z');
+    expect(mockGetCustomerInfo).toHaveBeenCalled();
+  });
+
+  test('fetchStatus falls back to purchase dates for missing entitlement mapping', async () => {
+    isNativeVal = true;
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ passType: null, freeScansRemaining: 5 }), { status: 200 }))
+    );
+
+    // Mock 1 day ago purchase date
+    const purchaseDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    mockGetCustomerInfo.mockResolvedValue({
+      customerInfo: {
+        entitlements: {
+          active: {},
+        },
+        allPurchasedProductIdentifiers: ['splat_14day_trip'],
+        allPurchaseDates: {
+          splat_14day_trip: purchaseDate,
+        },
+      },
+    });
+
+    const status = await billingManager.fetchStatus();
+    expect(status.passType).toBe('trip');
+    expect(status.expirationDate).toBeDefined();
+  });
+
+  test('fetchStatus preserves currentUsage if RevenueCat check throws an error', async () => {
+    isNativeVal = true;
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ passType: null, freeScansRemaining: 5 }), { status: 200 }))
+    );
+
+    mockGetCustomerInfo.mockRejectedValue(new Error('Network offline'));
+
+    const currentUsage: UsageInfo = {
+      passType: 'yearly',
+      freeScansUsed: 0,
+      freeScansLimit: 5,
+      freeScansRemaining: 5,
+      expirationDate: '2027-01-01T00:00:00.000Z',
+    };
+
+    const status = await billingManager.fetchStatus(currentUsage);
+    expect(status.passType).toBe('yearly');
+    expect(status.expirationDate).toBe('2027-01-01T00:00:00.000Z');
   });
 });

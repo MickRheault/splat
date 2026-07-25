@@ -73,13 +73,123 @@ export class BillingManager {
   }
 
   public async fetchStatus(currentUsage?: UsageInfo): Promise<UsageInfo> {
-    // Stub for Commit 2
-    return currentUsage || {
+    this.fetchUsageCount++;
+    const currentCount = this.fetchUsageCount;
+
+    if (this.simulatedUsage) {
+      return { ...this.simulatedUsage };
+    }
+
+    const isNative = Capacitor.isNativePlatform();
+    let fetchedUsageInfo: UsageInfo | null = null;
+
+    // 1. Try to fetch usage limits from the Vercel backend API
+    try {
+      const deviceId = await getDeviceId();
+      const apiBase = isNative ? 'https://splat-chi.vercel.app' : '';
+      const res = await fetch(`${apiBase}/api/usage?deviceId=${deviceId}`);
+      if (res.ok) {
+        fetchedUsageInfo = await res.json();
+      }
+    } catch (err) {
+      console.warn('Failed to fetch usage limits from backend', err);
+    }
+
+    // 2. Sync active entitlements locally using the RevenueCat SDK
+    if (isNative) {
+      try {
+        const { Purchases } = await import('@revenuecat/purchases-capacitor');
+        const { customerInfo } = await Purchases.getCustomerInfo();
+        console.log('RevenueCat CustomerInfo active entitlements:', JSON.stringify(customerInfo?.entitlements?.active || {}));
+        console.log('RevenueCat CustomerInfo purchased products:', JSON.stringify(customerInfo?.allPurchasedProductIdentifiers || []));
+        
+        let hasActiveEntitlement = false;
+        if (customerInfo && customerInfo.entitlements && customerInfo.entitlements.active) {
+          const tripEnt = customerInfo.entitlements.active['trip'];
+          const yearlyEnt = customerInfo.entitlements.active['yearly'];
+          
+          const baseInfo = fetchedUsageInfo || currentUsage || {
+            passType: null,
+            freeScansUsed: 0,
+            freeScansLimit: 5,
+            freeScansRemaining: 5
+          };
+          
+          if (tripEnt) {
+            fetchedUsageInfo = {
+              ...baseInfo,
+              passType: 'trip',
+              expirationDate: tripEnt.expirationDate
+            };
+            hasActiveEntitlement = true;
+          } else if (yearlyEnt) {
+            fetchedUsageInfo = {
+              ...baseInfo,
+              passType: 'yearly',
+              expirationDate: yearlyEnt.expirationDate
+            };
+            hasActiveEntitlement = true;
+          }
+        }
+
+        // Fallback for one-time purchases if entitlement configuration/linking is missing in RC dashboard
+        if (!hasActiveEntitlement && customerInfo && customerInfo.allPurchasedProductIdentifiers && customerInfo.allPurchasedProductIdentifiers.includes('splat_14day_trip')) {
+          const purchaseDateStr = customerInfo.allPurchaseDates?.['splat_14day_trip'];
+          if (purchaseDateStr) {
+            const purchaseDate = new Date(purchaseDateStr);
+            const expiryDate = new Date(purchaseDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+            if (expiryDate.getTime() > Date.now()) {
+              const baseInfo = fetchedUsageInfo || currentUsage || {
+                passType: null,
+                freeScansUsed: 0,
+                freeScansLimit: 5,
+                freeScansRemaining: 5
+              };
+              fetchedUsageInfo = {
+                ...baseInfo,
+                passType: 'trip',
+                expirationDate: expiryDate.toISOString()
+              };
+              hasActiveEntitlement = true;
+            }
+          }
+        }
+
+        if (!hasActiveEntitlement) {
+          const baseInfo = fetchedUsageInfo || currentUsage || {
+            passType: null,
+            freeScansUsed: 0,
+            freeScansLimit: 5,
+            freeScansRemaining: 5
+          };
+          fetchedUsageInfo = {
+            ...baseInfo,
+            passType: null,
+            expirationDate: null
+          };
+        }
+      } catch (rcErr) {
+        console.warn('Failed to fetch RevenueCat entitlement info', rcErr);
+        if (fetchedUsageInfo) {
+          fetchedUsageInfo.passType = currentUsage?.passType || null;
+          fetchedUsageInfo.expirationDate = currentUsage?.expirationDate || null;
+        }
+      }
+    }
+
+    const defaultUsage: UsageInfo = {
       passType: null,
       freeScansUsed: 0,
       freeScansLimit: 5,
       freeScansRemaining: 5
     };
+
+    // Discard result if a newer fetch has started (latest-win check)
+    if (currentCount !== this.fetchUsageCount) {
+      return currentUsage || defaultUsage;
+    }
+
+    return fetchedUsageInfo || currentUsage || defaultUsage;
   }
 
   public async purchase(packageId: string): Promise<void> {
