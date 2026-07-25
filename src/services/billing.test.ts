@@ -1,5 +1,5 @@
 import { describe, expect, test, beforeEach, vi } from 'vitest';
-import { billingManager, getDeviceId, UsageInfo } from './billing';
+import { billingManager, getDeviceId, type UsageInfo } from './billing';
 
 let isNativeVal = false;
 const mockConfigure = vi.fn();
@@ -114,7 +114,7 @@ describe('BillingManager - Core Billing Functions', () => {
   });
 
   test('fetchStatus returns simulatedUsage if set', async () => {
-    const sim = billingManager.setSimulatedUsage('yearly', 1);
+    billingManager.setSimulatedUsage('yearly', 1);
     const status = await billingManager.fetchStatus();
     expect(status.passType).toBe('yearly');
     expect(status.freeScansRemaining).toBe(4);
@@ -130,6 +130,7 @@ describe('BillingManager - Core Billing Functions', () => {
     expect(status.freeScansRemaining).toBe(3);
     expect(status.passType).toBeNull();
     expect(fetchSpy).toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 
   test('fetchStatus handles active entitlements on native platform', async () => {
@@ -155,6 +156,7 @@ describe('BillingManager - Core Billing Functions', () => {
     expect(status.passType).toBe('trip');
     expect(status.expirationDate).toBe('2026-08-01T00:00:00.000Z');
     expect(mockGetCustomerInfo).toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 
   test('fetchStatus falls back to purchase dates for missing entitlement mapping', async () => {
@@ -180,6 +182,7 @@ describe('BillingManager - Core Billing Functions', () => {
     const status = await billingManager.fetchStatus();
     expect(status.passType).toBe('trip');
     expect(status.expirationDate).toBeDefined();
+    fetchSpy.mockRestore();
   });
 
   test('fetchStatus preserves currentUsage if RevenueCat check throws an error', async () => {
@@ -201,6 +204,7 @@ describe('BillingManager - Core Billing Functions', () => {
     const status = await billingManager.fetchStatus(currentUsage);
     expect(status.passType).toBe('yearly');
     expect(status.expirationDate).toBe('2027-01-01T00:00:00.000Z');
+    fetchSpy.mockRestore();
   });
 
   test('purchase handles native offerings flow', async () => {
