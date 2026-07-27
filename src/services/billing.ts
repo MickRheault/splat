@@ -209,6 +209,41 @@ export class BillingManager {
           }
         }
 
+        // Fallback for yearly subscription if entitlement configuration/linking is missing in RC dashboard
+        if (!hasActiveEntitlement && customerInfo) {
+          const isYearlyPurchased = !!(
+            customerInfo.activeSubscriptions?.includes('splat_yearly_pro') ||
+            customerInfo.allPurchasedProductIdentifiers?.includes('splat_yearly_pro') ||
+            (customerInfo.subscriptionsByProductIdentifier && customerInfo.subscriptionsByProductIdentifier['splat_yearly_pro'])
+          );
+
+          if (isYearlyPurchased) {
+            const subInfo = customerInfo.subscriptionsByProductIdentifier?.['splat_yearly_pro'];
+            const expiryDateStr = subInfo?.expiresDate || customerInfo.allExpirationDates?.['splat_yearly_pro'];
+            
+            const expiryDateMs = expiryDateStr 
+              ? new Date(expiryDateStr).getTime() 
+              : Date.now() + 365 * 24 * 60 * 60 * 1000;
+
+            if (expiryDateMs > Date.now()) {
+              const baseInfo = fetchedUsageInfo || currentUsage || {
+                passType: null,
+                freeScansUsed: 0,
+                freeScansLimit: 5,
+                freeScansRemaining: 5
+              };
+              fetchedUsageInfo = {
+                ...baseInfo,
+                passType: 'yearly',
+                expirationDate: new Date(expiryDateMs).toISOString()
+              };
+              hasActiveEntitlement = true;
+              // Persist valid purchase in native storage for offline/fast load
+              setNativeItem('splat_local_pass_yearly', JSON.stringify({ purchaseDate: Date.now() })).catch(() => {});
+            }
+          }
+        }
+
         if (!hasActiveEntitlement) {
           try {
             const rawLocal = await getNativeItem('splat_local_pass_trip');
@@ -397,6 +432,8 @@ export class BillingManager {
         customerInfo.entitlements?.active?.['trip'] ||
         customerInfo.entitlements?.active?.['yearly'] ||
         customerInfo.allPurchasedProductIdentifiers?.includes('splat_14day_trip') ||
+        customerInfo.allPurchasedProductIdentifiers?.includes('splat_yearly_pro') ||
+        customerInfo.activeSubscriptions?.includes('splat_yearly_pro') ||
         customerInfo.nonSubscriptionTransactions?.some((t: any) => t.productIdentifier === 'splat_14day_trip')
       );
       return hasActivePass;
