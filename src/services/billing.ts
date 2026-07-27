@@ -88,6 +88,22 @@ export class BillingManager {
         });
         console.log('RevenueCat initialized successfully for device ID:', deviceId);
         this.initialized = true;
+
+        // Automatically sync & restore Google Play/App Store purchases silently on boot
+        try {
+          const { customerInfo } = await Purchases.restorePurchases();
+          const hasPass = !!(
+            customerInfo?.entitlements?.active?.['trip'] ||
+            customerInfo?.allPurchasedProductIdentifiers?.includes('splat_14day_trip') ||
+            customerInfo?.nonSubscriptionTransactions?.some((t: any) => t.productIdentifier === 'splat_14day_trip')
+          );
+          if (hasPass) {
+            const purchaseDateMs = Date.now();
+            await setNativeItem('splat_local_pass_trip', JSON.stringify({ purchaseDate: purchaseDateMs }));
+          }
+        } catch (syncErr) {
+          console.warn('Silent purchase sync on boot failed:', syncErr);
+        }
       } catch (err) {
         console.warn('RevenueCat initialization failed:', err);
         throw err;
@@ -262,6 +278,20 @@ export class BillingManager {
     return fetchedUsageInfo || currentUsage || defaultUsage;
   }
 
+  public isAlreadyOwnedError(err: any): boolean {
+    if (!err) return false;
+    const msg = String(err.message || err.underlyingErrorMessage || err).toLowerCase();
+    const code = err.code || err.readableErrorCode;
+    return (
+      code === 6 ||
+      code === 'PRODUCT_ALREADY_PURCHASED' ||
+      code === 'ITEM_ALREADY_OWNED' ||
+      msg.includes('already owned') ||
+      msg.includes('already_purchased') ||
+      msg.includes('already purchased')
+    );
+  }
+
   public async purchase(option: 'trip' | 'yearly'): Promise<void> {
     const isNative = Capacitor.isNativePlatform();
     
@@ -278,24 +308,37 @@ export class BillingManager {
             purchased = true;
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn('Failed to purchase package via offerings, trying direct product purchase:', err);
+        if (this.isAlreadyOwnedError(err)) {
+          console.log('Item already owned via offerings, activating pass...');
+          purchased = true;
+        }
       }
       
       if (!purchased) {
-        const { PRODUCT_CATEGORY } = await import('@revenuecat/purchases-capacitor');
-        const type = option === 'trip' 
-          ? PRODUCT_CATEGORY.NON_SUBSCRIPTION 
-          : PRODUCT_CATEGORY.SUBSCRIPTION;
-          
-        const { products } = await Purchases.getProducts({ 
-          productIdentifiers: [productId],
-          type
-        });
-        if (products && products.length > 0) {
-          await Purchases.purchaseStoreProduct({ product: products[0] });
-        } else {
-          throw new Error(`Product not found: ${productId}`);
+        try {
+          const { PRODUCT_CATEGORY } = await import('@revenuecat/purchases-capacitor');
+          const type = option === 'trip' 
+            ? PRODUCT_CATEGORY.NON_SUBSCRIPTION 
+            : PRODUCT_CATEGORY.SUBSCRIPTION;
+            
+          const { products } = await Purchases.getProducts({ 
+            productIdentifiers: [productId],
+            type
+          });
+          if (products && products.length > 0) {
+            await Purchases.purchaseStoreProduct({ product: products[0] });
+          } else {
+            throw new Error(`Product not found: ${productId}`);
+          }
+        } catch (err: any) {
+          if (this.isAlreadyOwnedError(err)) {
+            console.log('Item already owned on store, activating pass...');
+            purchased = true;
+          } else {
+            throw err;
+          }
         }
       }
 
