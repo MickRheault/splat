@@ -117,7 +117,7 @@ export class BillingManager {
     this.fetchUsageCount++;
     const currentCount = this.fetchUsageCount;
 
-    if (this.simulatedUsage) {
+    if (this.simulatedUsage && !Capacitor.isNativePlatform()) {
       return { ...this.simulatedUsage };
     }
 

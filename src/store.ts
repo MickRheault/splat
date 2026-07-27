@@ -656,16 +656,20 @@ Return format must be EXACTLY this JSON structure:
 
   async loadFromLocalStorage() {
     try {
-      const simUsageStr = await getStorageItem('splat_simulated_usage')
-      if (simUsageStr) {
-        const parsed = JSON.parse(simUsageStr)
-        this.simulatedUsage = parsed
-        this.usageInfo = { ...parsed }
-        billingManager.setSimulatedUsage(parsed.passType, parsed.freeScansUsed)
+      if (Capacitor.isNativePlatform() || import.meta.env.PROD) {
+        this.clearSimulatedUsage()
       } else {
-        const usageStr = await getStorageItem('splat_usage_info')
-        if (usageStr) {
-          this.usageInfo = JSON.parse(usageStr)
+        const simUsageStr = await getStorageItem('splat_simulated_usage')
+        if (simUsageStr) {
+          const parsed = JSON.parse(simUsageStr)
+          this.simulatedUsage = parsed
+          this.usageInfo = { ...parsed }
+          billingManager.setSimulatedUsage(parsed.passType, parsed.freeScansUsed)
+        } else {
+          const usageStr = await getStorageItem('splat_usage_info')
+          if (usageStr) {
+            this.usageInfo = JSON.parse(usageStr)
+          }
         }
       }
       
