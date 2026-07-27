@@ -236,6 +236,32 @@ export class BillingManager {
         }
 
         if (!hasActiveEntitlement) {
+          try {
+            const rawYearly = await getNativeItem('splat_local_pass_yearly');
+            if (rawYearly) {
+              const { purchaseDate } = JSON.parse(rawYearly);
+              const expiryDate = new Date(purchaseDate + 365 * 24 * 60 * 60 * 1000);
+              if (expiryDate.getTime() > Date.now()) {
+                const baseInfo = fetchedUsageInfo || currentUsage || {
+                  passType: null,
+                  freeScansUsed: 0,
+                  freeScansLimit: 5,
+                  freeScansRemaining: 5
+                };
+                fetchedUsageInfo = {
+                  ...baseInfo,
+                  passType: 'yearly',
+                  expirationDate: expiryDate.toISOString()
+                };
+                hasActiveEntitlement = true;
+              }
+            }
+          } catch (e) {
+            console.warn('Failed to parse local yearly pass fallback', e);
+          }
+        }
+
+        if (!hasActiveEntitlement) {
           const isCurrentPassValid = !!(currentUsage?.passType && currentUsage?.expirationDate && new Date(currentUsage.expirationDate).getTime() > Date.now());
           if (isCurrentPassValid) {
             fetchedUsageInfo = { ...currentUsage };
@@ -345,6 +371,9 @@ export class BillingManager {
       if (option === 'trip') {
         const purchaseDateMs = Date.now();
         await setNativeItem('splat_local_pass_trip', JSON.stringify({ purchaseDate: purchaseDateMs }));
+      } else if (option === 'yearly') {
+        const purchaseDateMs = Date.now();
+        await setNativeItem('splat_local_pass_yearly', JSON.stringify({ purchaseDate: purchaseDateMs }));
       }
     } else {
       const deviceId = await getDeviceId();

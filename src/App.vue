@@ -176,7 +176,7 @@ window.addEventListener('online', () => { isOnline.value = true })
 window.addEventListener('offline', () => { isOnline.value = false })
 
 // Paywall / Subscription States
-const selectedPaywallOption = ref<'trip' | 'yearly'>('trip')
+const selectedPaywallOption = ref<'trip' | 'yearly'>('yearly')
 const isPurchasing = ref(false)
 
 const handlePaywallPurchase = async () => {
@@ -2390,22 +2390,7 @@ const selectAllText = (event: Event) => {
 
         <!-- Pricing Cards -->
         <div class="flex flex-col gap-3">
-          <!-- Option 1: 14-Day Pass -->
-          <div 
-            class="p-4 rounded-xl border-2 cursor-pointer transition-all duration-200"
-            :class="selectedPaywallOption === 'trip' ? 'border-primary bg-primary/5' : 'border-slate-800 bg-slate-900/50'"
-            @click="selectedPaywallOption = 'trip'"
-          >
-            <div class="flex justify-between items-center mb-1">
-              <span class="font-bold text-sm text-slate-100">14-Day Trip Pass</span>
-              <span class="font-black text-primary text-base">$1.99</span>
-            </div>
-            <p class="text-[11px] text-secondary">
-              Unlimited scans for 14 days. One-time payment, no subscription. Best for holidays!
-            </p>
-          </div>
-
-          <!-- Option 2: Yearly subscription -->
+          <!-- Option 1: Yearly subscription -->
           <div 
             class="p-4 rounded-xl border-2 cursor-pointer transition-all duration-200"
             :class="selectedPaywallOption === 'yearly' ? 'border-primary bg-primary/5' : 'border-slate-800 bg-slate-900/50'"
@@ -2420,6 +2405,21 @@ const selectAllText = (event: Event) => {
             </div>
             <p class="text-[11px] text-secondary">
               100 scans per month. Auto-renews annually. Cancel anytime.
+            </p>
+          </div>
+
+          <!-- Option 2: 14-Day Pass -->
+          <div 
+            class="p-4 rounded-xl border-2 cursor-pointer transition-all duration-200"
+            :class="selectedPaywallOption === 'trip' ? 'border-primary bg-primary/5' : 'border-slate-800 bg-slate-900/50'"
+            @click="selectedPaywallOption = 'trip'"
+          >
+            <div class="flex justify-between items-center mb-1">
+              <span class="font-bold text-sm text-slate-100">14-Day Trip Pass</span>
+              <span class="font-black text-primary text-base">$1.99</span>
+            </div>
+            <p class="text-[11px] text-secondary">
+              Unlimited scans for 14 days. One-time payment, no subscription. Best for holidays!
             </p>
           </div>
         </div>
