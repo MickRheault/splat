@@ -140,7 +140,29 @@ export class BillingManager {
     if (isNative) {
       try {
         const { Purchases } = await import('@revenuecat/purchases-capacitor');
-        const { customerInfo } = await Purchases.getCustomerInfo();
+        let { customerInfo } = await Purchases.getCustomerInfo();
+        
+        let hasActiveEnt = !!(
+          customerInfo?.entitlements?.active?.['trip'] ||
+          customerInfo?.entitlements?.active?.['yearly'] ||
+          customerInfo?.activeSubscriptions?.includes('splat_yearly_pro') ||
+          customerInfo?.allPurchasedProductIdentifiers?.includes('splat_yearly_pro') ||
+          customerInfo?.allPurchasedProductIdentifiers?.includes('splat_14day_trip')
+        );
+
+        // If no active entitlement found in RevenueCat cache, restore directly from Google Play / App Store
+        if (!hasActiveEnt) {
+          try {
+            console.log('No active entitlement in cache, restoring from Google Play...');
+            const restored = await Purchases.restorePurchases();
+            if (restored && restored.customerInfo) {
+              customerInfo = restored.customerInfo;
+            }
+          } catch (restoreErr) {
+            console.warn('Failed to restore purchases in fetchStatus:', restoreErr);
+          }
+        }
+
         console.log('RevenueCat CustomerInfo active entitlements:', JSON.stringify(customerInfo?.entitlements?.active || {}));
         console.log('RevenueCat CustomerInfo purchased products:', JSON.stringify(customerInfo?.allPurchasedProductIdentifiers || []));
         
