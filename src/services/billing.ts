@@ -1,6 +1,31 @@
 import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
+
+const getNativeItem = async (key: string): Promise<string | null> => {
+  try {
+    if (Capacitor.isNativePlatform()) {
+      const { value } = await Preferences.get({ key });
+      return value;
+    }
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const setNativeItem = async (key: string, value: string): Promise<void> => {
+  try {
+    if (Capacitor.isNativePlatform()) {
+      await Preferences.set({ key, value });
+    } else {
+      localStorage.setItem(key, value);
+    }
+  } catch (err) {
+    console.warn('Failed to save to Preferences', err);
+  }
+};
 
 export interface UsageInfo {
   passType: 'trip' | 'yearly' | null;
@@ -163,12 +188,14 @@ export class BillingManager {
               expirationDate: expiryDate.toISOString()
             };
             hasActiveEntitlement = true;
+            // Persist valid purchase in native storage for offline/fast load
+            setNativeItem('splat_local_pass_trip', JSON.stringify({ purchaseDate: purchaseDateMs })).catch(() => {});
           }
         }
 
         if (!hasActiveEntitlement) {
           try {
-            const rawLocal = localStorage.getItem('splat_local_pass_trip');
+            const rawLocal = await getNativeItem('splat_local_pass_trip');
             if (rawLocal) {
               const { purchaseDate } = JSON.parse(rawLocal);
               const expiryDate = new Date(purchaseDate + 14 * 24 * 60 * 60 * 1000);
@@ -267,11 +294,7 @@ export class BillingManager {
       }
 
       if (option === 'trip') {
-        try {
-          localStorage.setItem('splat_local_pass_trip', JSON.stringify({ purchaseDate: Date.now() }));
-        } catch (e) {
-          console.warn('Failed to save local pass cache', e);
-        }
+        await setNativeItem('splat_local_pass_trip', JSON.stringify({ purchaseDate: Date.now() }));
       }
     } else {
       const deviceId = await getDeviceId();
