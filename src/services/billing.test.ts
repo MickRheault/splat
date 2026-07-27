@@ -95,7 +95,7 @@ describe('BillingManager - Core Billing Functions', () => {
 
     expect(mockSetLogLevel).toHaveBeenCalled();
     expect(mockConfigure).toHaveBeenCalledWith({
-      apiKey: import.meta.env.VITE_REVENUECAT_ANDROID_API_KEY || 'rc_android_dummy_key',
+      apiKey: import.meta.env.VITE_REVENUECAT_ANDROID_API_KEY || 'goog_mZgnvUYwPfvbGqnfBtFgWszjhfJ',
       appUserID: 'test-device-id',
     });
     expect(billingManager.isInitialized()).toBe(true);

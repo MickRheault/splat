@@ -75,8 +75,8 @@ export class BillingManager {
     if (this.initialized) return;
 
     if (Capacitor.isNativePlatform()) {
-      const iosKey = import.meta.env.VITE_REVENUECAT_IOS_API_KEY || 'rc_ios_dummy_key';
-      const androidKey = import.meta.env.VITE_REVENUECAT_ANDROID_API_KEY || 'rc_android_dummy_key';
+      const iosKey = import.meta.env.VITE_REVENUECAT_IOS_API_KEY || 'test_MlALuJJDksnsTRIcdJEahEJkwlV';
+      const androidKey = import.meta.env.VITE_REVENUECAT_ANDROID_API_KEY || 'goog_mZgnvUYwPfvbGqnfBtFgWszjhfJ';
       const apiKey = Capacitor.getPlatform() === 'ios' ? iosKey : androidKey;
       
       try {
