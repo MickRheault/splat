@@ -299,7 +299,11 @@ export class BillingManager {
         }
 
         if (!hasActiveEntitlement) {
-          const isCurrentPassValid = !!(currentUsage?.passType && currentUsage?.expirationDate && new Date(currentUsage.expirationDate).getTime() > Date.now());
+          const currentExpiryMs = currentUsage?.expirationDate ? new Date(currentUsage.expirationDate).getTime() : NaN;
+          const isCurrentPassValid = !!(
+            currentUsage?.passType &&
+            (isNaN(currentExpiryMs) || currentExpiryMs > Date.now())
+          );
           if (isCurrentPassValid) {
             fetchedUsageInfo = { ...currentUsage };
             hasActiveEntitlement = true;
@@ -407,10 +411,26 @@ export class BillingManager {
 
       if (option === 'trip') {
         const purchaseDateMs = Date.now();
+        const expiryDate = new Date(purchaseDateMs + 14 * 24 * 60 * 60 * 1000).toISOString();
         await setNativeItem('splat_local_pass_trip', JSON.stringify({ purchaseDate: purchaseDateMs }));
+        await setNativeItem('splat_usage_info', JSON.stringify({
+          passType: 'trip',
+          freeScansUsed: 0,
+          freeScansLimit: 5,
+          freeScansRemaining: 5,
+          expirationDate: expiryDate
+        }));
       } else if (option === 'yearly') {
         const purchaseDateMs = Date.now();
+        const expiryDate = new Date(purchaseDateMs + 365 * 24 * 60 * 60 * 1000).toISOString();
         await setNativeItem('splat_local_pass_yearly', JSON.stringify({ purchaseDate: purchaseDateMs }));
+        await setNativeItem('splat_usage_info', JSON.stringify({
+          passType: 'yearly',
+          freeScansUsed: 0,
+          freeScansLimit: 5,
+          freeScansRemaining: 5,
+          expirationDate: expiryDate
+        }));
       }
     } else {
       const deviceId = await getDeviceId();
