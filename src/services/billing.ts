@@ -220,17 +220,23 @@ export class BillingManager {
         }
 
         if (!hasActiveEntitlement) {
-          const baseInfo = fetchedUsageInfo || currentUsage || {
-            passType: null,
-            freeScansUsed: 0,
-            freeScansLimit: 5,
-            freeScansRemaining: 5
-          };
-          fetchedUsageInfo = {
-            ...baseInfo,
-            passType: null,
-            expirationDate: null
-          };
+          const isCurrentPassValid = !!(currentUsage?.passType && currentUsage?.expirationDate && new Date(currentUsage.expirationDate).getTime() > Date.now());
+          if (isCurrentPassValid) {
+            fetchedUsageInfo = { ...currentUsage };
+            hasActiveEntitlement = true;
+          } else {
+            const baseInfo = fetchedUsageInfo || currentUsage || {
+              passType: null,
+              freeScansUsed: 0,
+              freeScansLimit: 5,
+              freeScansRemaining: 5
+            };
+            fetchedUsageInfo = {
+              ...baseInfo,
+              passType: null,
+              expirationDate: null
+            };
+          }
         }
       } catch (rcErr) {
         console.warn('Failed to fetch RevenueCat entitlement info', rcErr);
@@ -294,7 +300,8 @@ export class BillingManager {
       }
 
       if (option === 'trip') {
-        await setNativeItem('splat_local_pass_trip', JSON.stringify({ purchaseDate: Date.now() }));
+        const purchaseDateMs = Date.now();
+        await setNativeItem('splat_local_pass_trip', JSON.stringify({ purchaseDate: purchaseDateMs }));
       }
     } else {
       const deviceId = await getDeviceId();
