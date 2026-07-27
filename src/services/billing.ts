@@ -134,24 +134,35 @@ export class BillingManager {
 
         // Fallback for one-time purchases if entitlement configuration/linking is missing in RC dashboard
         if (!hasActiveEntitlement && customerInfo && customerInfo.allPurchasedProductIdentifiers && customerInfo.allPurchasedProductIdentifiers.includes('splat_14day_trip')) {
-          const purchaseDateStr = customerInfo.allPurchaseDates?.['splat_14day_trip'];
-          if (purchaseDateStr) {
-            const purchaseDate = new Date(purchaseDateStr);
-            const expiryDate = new Date(purchaseDate.getTime() + 14 * 24 * 60 * 60 * 1000);
-            if (expiryDate.getTime() > Date.now()) {
-              const baseInfo = fetchedUsageInfo || currentUsage || {
-                passType: null,
-                freeScansUsed: 0,
-                freeScansLimit: 5,
-                freeScansRemaining: 5
-              };
-              fetchedUsageInfo = {
-                ...baseInfo,
-                passType: 'trip',
-                expirationDate: expiryDate.toISOString()
-              };
-              hasActiveEntitlement = true;
+          let purchaseDateStr = customerInfo.allPurchaseDates?.['splat_14day_trip'];
+          
+          if (!purchaseDateStr && customerInfo.nonSubscriptionTransactions && customerInfo.nonSubscriptionTransactions.length > 0) {
+            const nonSubTx = customerInfo.nonSubscriptionTransactions
+              .filter((t: any) => t.productIdentifier === 'splat_14day_trip')
+              .sort((a: any, b: any) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime())[0];
+            if (nonSubTx && nonSubTx.purchaseDate) {
+              purchaseDateStr = nonSubTx.purchaseDate;
             }
+          }
+
+          const purchaseDateMs = purchaseDateStr 
+            ? new Date(purchaseDateStr).getTime() 
+            : (customerInfo.requestDate ? new Date(customerInfo.requestDate).getTime() : Date.now());
+
+          const expiryDate = new Date(purchaseDateMs + 14 * 24 * 60 * 60 * 1000);
+          if (expiryDate.getTime() > Date.now()) {
+            const baseInfo = fetchedUsageInfo || currentUsage || {
+              passType: null,
+              freeScansUsed: 0,
+              freeScansLimit: 5,
+              freeScansRemaining: 5
+            };
+            fetchedUsageInfo = {
+              ...baseInfo,
+              passType: 'trip',
+              expirationDate: expiryDate.toISOString()
+            };
+            hasActiveEntitlement = true;
           }
         }
 
@@ -249,7 +260,8 @@ export class BillingManager {
       const hasActivePass = !!(
         customerInfo.entitlements?.active?.['trip'] ||
         customerInfo.entitlements?.active?.['yearly'] ||
-        customerInfo.allPurchasedProductIdentifiers?.includes('splat_14day_trip')
+        customerInfo.allPurchasedProductIdentifiers?.includes('splat_14day_trip') ||
+        customerInfo.nonSubscriptionTransactions?.some((t: any) => t.productIdentifier === 'splat_14day_trip')
       );
       return hasActivePass;
     } else {

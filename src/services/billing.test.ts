@@ -185,6 +185,34 @@ describe('BillingManager - Core Billing Functions', () => {
     fetchSpy.mockRestore();
   });
 
+  test('fetchStatus handles nonSubscriptionTransactions for in-app one-time purchases', async () => {
+    isNativeVal = true;
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ passType: null, freeScansRemaining: 5 }), { status: 200 }))
+    );
+
+    const purchaseDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+
+    mockGetCustomerInfo.mockResolvedValue({
+      customerInfo: {
+        entitlements: { active: {} },
+        allPurchasedProductIdentifiers: ['splat_14day_trip'],
+        nonSubscriptionTransactions: [
+          {
+            productIdentifier: 'splat_14day_trip',
+            purchaseDate: purchaseDate,
+            transactionIdentifier: 'tx_123',
+          },
+        ],
+      },
+    });
+
+    const status = await billingManager.fetchStatus();
+    expect(status.passType).toBe('trip');
+    expect(status.expirationDate).toBeDefined();
+    fetchSpy.mockRestore();
+  });
+
   test('fetchStatus preserves currentUsage if RevenueCat check throws an error', async () => {
     isNativeVal = true;
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
