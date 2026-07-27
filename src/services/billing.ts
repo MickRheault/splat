@@ -167,6 +167,32 @@ export class BillingManager {
         }
 
         if (!hasActiveEntitlement) {
+          try {
+            const rawLocal = localStorage.getItem('splat_local_pass_trip');
+            if (rawLocal) {
+              const { purchaseDate } = JSON.parse(rawLocal);
+              const expiryDate = new Date(purchaseDate + 14 * 24 * 60 * 60 * 1000);
+              if (expiryDate.getTime() > Date.now()) {
+                const baseInfo = fetchedUsageInfo || currentUsage || {
+                  passType: null,
+                  freeScansUsed: 0,
+                  freeScansLimit: 5,
+                  freeScansRemaining: 5
+                };
+                fetchedUsageInfo = {
+                  ...baseInfo,
+                  passType: 'trip',
+                  expirationDate: expiryDate.toISOString()
+                };
+                hasActiveEntitlement = true;
+              }
+            }
+          } catch (e) {
+            console.warn('Failed to parse local pass fallback', e);
+          }
+        }
+
+        if (!hasActiveEntitlement) {
           const baseInfo = fetchedUsageInfo || currentUsage || {
             passType: null,
             freeScansUsed: 0,
@@ -237,6 +263,14 @@ export class BillingManager {
           await Purchases.purchaseStoreProduct({ product: products[0] });
         } else {
           throw new Error(`Product not found: ${productId}`);
+        }
+      }
+
+      if (option === 'trip') {
+        try {
+          localStorage.setItem('splat_local_pass_trip', JSON.stringify({ purchaseDate: Date.now() }));
+        } catch (e) {
+          console.warn('Failed to save local pass cache', e);
         }
       }
     } else {
