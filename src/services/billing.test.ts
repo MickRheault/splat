@@ -309,4 +309,25 @@ describe('BillingManager - Core Billing Functions', () => {
       'Restore purchases is only available on native platforms.'
     );
   });
+
+  test('purchase yearly saves local native pass and fetchStatus preserves passType yearly', async () => {
+    isNativeVal = true;
+    mockGetOfferings.mockResolvedValue({
+      current: {
+        availablePackages: [{ identifier: 'yearly', product: { identifier: 'splat_yearly_pro' } }],
+      },
+    });
+    mockPurchasePackage.mockResolvedValue({});
+    mockGetCustomerInfo.mockResolvedValue({
+      customerInfo: {
+        entitlements: { active: {} },
+        allPurchasedProductIdentifiers: [],
+        activeSubscriptions: []
+      }
+    });
+
+    await billingManager.purchase('yearly');
+    const usage = await billingManager.fetchStatus();
+    expect(usage.passType).toBe('yearly');
+  });
 });

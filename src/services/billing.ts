@@ -244,32 +244,7 @@ export class BillingManager {
           }
         }
 
-        if (!hasActiveEntitlement) {
-          try {
-            const rawLocal = await getNativeItem('splat_local_pass_trip');
-            if (rawLocal) {
-              const { purchaseDate } = JSON.parse(rawLocal);
-              const expiryDate = new Date(purchaseDate + 14 * 24 * 60 * 60 * 1000);
-              if (expiryDate.getTime() > Date.now()) {
-                const baseInfo = fetchedUsageInfo || currentUsage || {
-                  passType: null,
-                  freeScansUsed: 0,
-                  freeScansLimit: 5,
-                  freeScansRemaining: 5
-                };
-                fetchedUsageInfo = {
-                  ...baseInfo,
-                  passType: 'trip',
-                  expirationDate: expiryDate.toISOString()
-                };
-                hasActiveEntitlement = true;
-              }
-            }
-          } catch (e) {
-            console.warn('Failed to parse local pass fallback', e);
-          }
-        }
-
+        // 1. Native Preferences check for yearly subscription
         if (!hasActiveEntitlement) {
           try {
             const rawYearly = await getNativeItem('splat_local_pass_yearly');
@@ -293,6 +268,33 @@ export class BillingManager {
             }
           } catch (e) {
             console.warn('Failed to parse local yearly pass fallback', e);
+          }
+        }
+
+        // 2. Native Preferences check for trip pass
+        if (!hasActiveEntitlement) {
+          try {
+            const rawLocal = await getNativeItem('splat_local_pass_trip');
+            if (rawLocal) {
+              const { purchaseDate } = JSON.parse(rawLocal);
+              const expiryDate = new Date(purchaseDate + 14 * 24 * 60 * 60 * 1000);
+              if (expiryDate.getTime() > Date.now()) {
+                const baseInfo = fetchedUsageInfo || currentUsage || {
+                  passType: null,
+                  freeScansUsed: 0,
+                  freeScansLimit: 5,
+                  freeScansRemaining: 5
+                };
+                fetchedUsageInfo = {
+                  ...baseInfo,
+                  passType: 'trip',
+                  expirationDate: expiryDate.toISOString()
+                };
+                hasActiveEntitlement = true;
+              }
+            }
+          } catch (e) {
+            console.warn('Failed to parse local trip pass fallback', e);
           }
         }
 

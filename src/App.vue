@@ -311,10 +311,8 @@ onMounted(async () => {
     loadSavedNames()
   ]);
 
-  // 2. Fetch usage metrics from server in the background (Non-blocking)
-  if (!Capacitor.isNativePlatform()) {
-    store.fetchUsage();
-  }
+  // 2. Fetch usage metrics and entitlements in the background
+  store.fetchUsage();
 
   // 3. Sync DB usage state when the phone app is resumed from background
   document.addEventListener('visibilitychange', () => {
