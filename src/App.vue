@@ -2390,43 +2390,51 @@ const selectAllText = (event: Event) => {
         <div class="flex flex-col gap-3">
           <!-- Option 1: Yearly subscription -->
           <div 
-            class="p-4 rounded-xl border-2 cursor-pointer transition-all duration-200"
-            :class="selectedPaywallOption === 'yearly' ? 'border-primary bg-primary/5' : 'border-slate-800 bg-slate-900/50'"
+            class="relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200"
+            :class="selectedPaywallOption === 'yearly' ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10' : 'border-slate-800 bg-slate-900/50 hover:border-slate-700'"
             @click="selectedPaywallOption = 'yearly'"
           >
+            <div class="absolute -top-2.5 right-4 bg-emerald-500 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider">
+              BEST VALUE
+            </div>
             <div class="flex justify-between items-center mb-1">
-              <span class="font-bold text-sm text-slate-100">Yearly Pro Plan</span>
+              <div class="flex items-center gap-2">
+                <i class="pi pi-star-fill text-amber-400 text-sm"></i>
+                <span class="font-bold text-sm text-slate-100">Yearly Pro Plan</span>
+              </div>
               <div class="flex flex-col items-end">
-                <span class="font-black text-primary text-base">$9.99/year</span>
-                <span class="text-[9px] text-emerald-400 font-bold uppercase">Save 80%</span>
+                <span class="font-black text-primary text-base">$9.99<span class="text-xs font-semibold text-secondary">/yr</span></span>
               </div>
             </div>
             <p class="text-[11px] text-secondary">
-              100 scans per month. Auto-renews annually. Cancel anytime.
+              100 scans per month (~$0.83/mo). Auto-renews annually. Cancel anytime.
             </p>
           </div>
 
           <!-- Option 2: 14-Day Pass -->
           <div 
-            class="p-4 rounded-xl border-2 cursor-pointer transition-all duration-200"
-            :class="selectedPaywallOption === 'trip' ? 'border-primary bg-primary/5' : 'border-slate-800 bg-slate-900/50'"
+            class="relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200"
+            :class="selectedPaywallOption === 'trip' ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10' : 'border-slate-800 bg-slate-900/50 hover:border-slate-700'"
             @click="selectedPaywallOption = 'trip'"
           >
             <div class="flex justify-between items-center mb-1">
-              <span class="font-bold text-sm text-slate-100">14-Day Trip Pass</span>
+              <div class="flex items-center gap-2">
+                <i class="pi pi-bolt text-primary text-sm"></i>
+                <span class="font-bold text-sm text-slate-100">14-Day Trip Pass</span>
+              </div>
               <span class="font-black text-primary text-base">$1.99</span>
             </div>
             <p class="text-[11px] text-secondary">
-              Unlimited scans for 14 days. One-time payment, no subscription. Best for holidays!
+              Unlimited scans for 14 days. One-time payment, no subscription. Perfect for holidays!
             </p>
           </div>
         </div>
 
         <!-- Call to Action button -->
         <Button 
-          :label="isPurchasing ? 'Processing...' : 'Purchase Plan'" 
+          :label="isPurchasing ? 'Processing...' : (selectedPaywallOption === 'yearly' ? 'Subscribe Yearly Pro — $9.99' : 'Buy 14-Day Pass — $1.99')" 
           icon="pi pi-bolt" 
-          class="w-full p-button-lg mt-2" 
+          class="w-full p-button-lg mt-2 font-bold" 
           :loading="isPurchasing"
           @click="handlePaywallPurchase" 
         />
