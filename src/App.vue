@@ -1169,7 +1169,7 @@ const selectAllText = (event: Event) => {
     </div>
     
     <!-- Step indicator visualization -->
-    <div class="stepper" v-else-if="!store.isParsing">
+    <div class="stepper" v-else-if="!store.isParsing" aria-label="Progress Stepper">
       <div 
         class="step-node" 
         :class="{ 
@@ -1177,8 +1177,13 @@ const selectAllText = (event: Event) => {
           'completed': store.step !== 'edit',
           'selectable': isStepSelectable('edit')
         }"
+        :aria-current="store.step === 'edit' ? 'step' : undefined"
+        title="Step 1: Receipt Items"
         @click="navigateToStep('edit')"
-      >1</div>
+      >
+        <i v-if="store.step !== 'edit'" class="pi pi-check text-xs"></i>
+        <span v-else>1</span>
+      </div>
       <div 
         class="step-node" 
         :class="{ 
@@ -1186,8 +1191,13 @@ const selectAllText = (event: Event) => {
           'completed': store.step !== 'edit' && store.step !== 'participants',
           'selectable': isStepSelectable('participants')
         }"
+        :aria-current="store.step === 'participants' ? 'step' : undefined"
+        title="Step 2: Participants"
         @click="navigateToStep('participants')"
-      >2</div>
+      >
+        <i v-if="store.step === 'allocate' || store.step === 'share'" class="pi pi-check text-xs"></i>
+        <span v-else>2</span>
+      </div>
       <div 
         class="step-node" 
         :class="{ 
@@ -1195,14 +1205,21 @@ const selectAllText = (event: Event) => {
           'completed': store.step === 'share',
           'selectable': isStepSelectable('allocate')
         }"
+        :aria-current="store.step === 'allocate' ? 'step' : undefined"
+        title="Step 3: Assign Items"
         @click="navigateToStep('allocate')"
-      >3</div>
+      >
+        <i v-if="store.step === 'share'" class="pi pi-check text-xs"></i>
+        <span v-else>3</span>
+      </div>
       <div 
         class="step-node" 
         :class="{ 
           'active': store.step === 'share',
           'selectable': isStepSelectable('share')
         }"
+        :aria-current="store.step === 'share' ? 'step' : undefined"
+        title="Step 4: Summary & Breakdown"
         @click="navigateToStep('share')"
       >4</div>
     </div>
@@ -1245,7 +1262,7 @@ const selectAllText = (event: Event) => {
       </div>
 
       <div class="flex flex-col gap-4">
-        <!-- Option 1: Live Camera Snap -->
+        <!-- Option 1: Live Camera -->
         <div 
           class="capture-option-card" 
           :class="{ 'locked-option': isScanLimitReached || !isOnline }"
@@ -1254,7 +1271,7 @@ const selectAllText = (event: Event) => {
           <i :class="!isOnline ? 'pi pi-wifi text-amber-500/80 capture-icon-sm' : (isScanLimitReached ? 'pi pi-lock text-rose-500/80 capture-icon-sm' : 'pi pi-camera capture-icon-sm')" style="font-size: 48px !important;"></i>
           <div>
             <h4 class="font-bold text-lg flex items-center gap-1.5 justify-center xs:justify-start">
-              Take Live Photo
+              Scan Receipt with Camera
               <span v-if="!isOnline" class="text-xs text-amber-500 font-black uppercase tracking-wider">(Offline)</span>
               <span v-else-if="isScanLimitReached" class="text-xs text-rose-500/90 font-black uppercase tracking-wider">(Locked)</span>
             </h4>
@@ -1272,7 +1289,7 @@ const selectAllText = (event: Event) => {
           />
         </div>
 
-        <!-- Option 2: Gallery Upload -->
+        <!-- Option 2: Upload Receipt Image from Gallery -->
         <div 
           class="capture-option-card" 
           :class="{ 'locked-option': isScanLimitReached || !isOnline }"
@@ -1281,7 +1298,7 @@ const selectAllText = (event: Event) => {
           <i :class="!isOnline ? 'pi pi-wifi text-amber-500/80 capture-icon-sm' : (isScanLimitReached ? 'pi pi-lock text-rose-500/80 capture-icon-sm' : 'pi pi-images capture-icon-sm')" style="font-size: 48px !important;"></i>
           <div>
             <h4 class="font-bold text-lg flex items-center gap-1.5 justify-center xs:justify-start">
-              Choose from Gallery
+              Upload Receipt Image from Gallery
               <span v-if="!isOnline" class="text-xs text-amber-500 font-black uppercase tracking-wider">(Offline)</span>
               <span v-else-if="isScanLimitReached" class="text-xs text-rose-500/90 font-black uppercase tracking-wider">(Locked)</span>
             </h4>
@@ -1317,7 +1334,7 @@ const selectAllText = (event: Event) => {
             @click="loadDemoReceipt(1)" 
           />
           <Button 
-            label="✍ Manual" 
+            label="✍ Enter Receipt Items Manually" 
             class="p-button-outlined p-button-sm" 
             @click="startManualEntry" 
           />
@@ -1626,8 +1643,8 @@ const selectAllText = (event: Event) => {
     <!-- Step 3: Participants -->
     <div v-else-if="store.step === 'participants'" class="step-view">
       <div class="bill-card">
-        <h3 class="font-bold mb-1">Who is Splitting?</h3>
-        <p class="text-secondary text-[11px] mb-3 italic">Tip: Tap the initial badge to pick from saved custom names.</p>
+        <h3 class="font-bold mb-1">How many people are splitting?</h3>
+        <p class="text-secondary text-[11px] mb-3 italic">Select participant count or add custom names below:</p>
         
         <!-- Quick Split buttons -->
         <div class="mb-2 py-2">
@@ -2665,10 +2682,10 @@ const selectAllText = (event: Event) => {
     <!-- Right: Next Button -->
     <Button 
       v-if="store.step !== 'share'" 
-      :label="store.step === 'allocate' ? 'Finish' : 'Next'" 
+      :label="store.step === 'edit' ? 'Add Participants' : (store.step === 'participants' ? 'Assign Items' : 'Calculate Split')" 
       :icon="store.step === 'allocate' ? 'pi pi-check' : 'pi pi-chevron-right'" 
       iconPos="right" 
-      class="p-button-sm min-w-[70px]" 
+      class="p-button-sm min-w-[120px] font-bold" 
       :disabled="!canGoNext" 
       @click="goNext" 
     />
