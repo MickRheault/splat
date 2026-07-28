@@ -9,10 +9,15 @@
   --surface-color: #1c1917;
   --text-color: #ffffff;
   --text-secondary: #d6d3d1;
+  --text-muted: #78716c;
   
-  --primary-color: #ec4899;  /* Vivid Neon Pink */
-  --primary-hover: #f472b6;  /* Punchy pink hover */
-  --accent-color: #4ade80;   /* Vibrant Green */
+  /* Color Semantics */
+  --primary-color: #ec4899;   /* Primary Action / Selected / Active (Vivid Pink) */
+  --primary-hover: #f472b6;   /* Primary Hover */
+  --success-color: #22c55e;   /* Success / Completed / Valid (Green) */
+  --warning-color: #facc15;   /* Warning / Caution (Yellow) */
+  --error-color: #ef4444;     /* Destructive / Error / Remove (Red) */
+  --accent-color: #4ade80;    /* Vibrant Green */
   
   --neon-yellow: #facc15;
   --neon-cyan: #06b6d4;
@@ -20,15 +25,22 @@
   --neon-purple: #8b5cf6;
   
   --stroke-color: #000000;
-  --border-color: #000000;
-  --border-width: 3px;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-width: 2px;
   
-  --shadow-block: 6px 6px 0px var(--primary-color);
-  --shadow-block-sm: 4px 4px 0px var(--primary-color);
+  /* Spacing Tokens */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
   
-  --radius-lg: 24px;
-  --radius-md: 16px;
-  --radius-sm: 10px;
+  --shadow-block: 4px 4px 0px var(--stroke-color);
+  --shadow-block-sm: 2px 2px 0px var(--stroke-color);
+  
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 8px;
 }
 
 * {
@@ -86,7 +98,7 @@ body {
   background: var(--neon-yellow);
 }
 
-/* Headings */
+/* Headings & Typography */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-bubble);
   font-weight: 900;
@@ -94,7 +106,23 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: 0.03em;
   line-height: 1.1;
   color: var(--text-color);
-  text-shadow: 2px 2px 0px rgba(236, 72, 153, 0.7);
+  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.5);
+}
+
+/* Global Text Truncation & Wrapping Utility Classes */
+.truncate-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.break-word-text {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.min-w-zero {
+  min-width: 0;
 }
 
 /* Header & Navigation Stepper */
