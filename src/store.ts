@@ -277,7 +277,7 @@ export const store = reactive({
     }
 
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 30000)
+    const timeoutId = setTimeout(() => controller.abort(), 45000)
 
     try {
       const isNative = Capacitor.isNativePlatform()
@@ -428,7 +428,7 @@ Return format must be EXACTLY this JSON structure:
         this.showPaywall = true
         this.ocrError = 'Scan limit reached. Upgrade to continue!'
       } else if (e.name === 'AbortError') {
-        this.ocrError = 'Request timed out after 30 seconds.'
+        this.ocrError = 'Request timed out after 45 seconds.'
       } else {
         this.ocrError = e.message || 'Failed to parse receipt'
       }

@@ -10,7 +10,7 @@ const kv = (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
   : null;
 
 export const config = {
-  maxDuration: 30,
+  maxDuration: 45,
 };
 
 function getWeekKey(deviceId: string) {

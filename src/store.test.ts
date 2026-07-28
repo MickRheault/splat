@@ -922,12 +922,12 @@ describe('Splat Core Store & Math Logic', () => {
 
     test('should handle timeout AbortError in catch block', async () => {
       store.apiKey = 'key'
-      const abortError = new Error('Request timed out after 30 seconds.')
+      const abortError = new Error('Request timed out after 45 seconds.')
       abortError.name = 'AbortError'
       const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(abortError)
 
       await store.parseWithGemini('data:image/png;base64,abcdef')
-      expect(store.ocrError).toBe('Request timed out after 30 seconds.')
+      expect(store.ocrError).toBe('Request timed out after 45 seconds.')
       
       fetchSpy.mockRestore()
     })
