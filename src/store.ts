@@ -174,7 +174,7 @@ export const store = reactive({
   reset() {
     this.step = 'capture'
     this.receiptImage = null
-    this.splitId = `split_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    this.splitId = `split_${Date.now()}_${typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID().slice(0, 8) : Math.random().toString(36).substring(2, 10)}`
     this.billName = 'New Split'
     this.items = []
     this.participants = []
@@ -196,14 +196,8 @@ export const store = reactive({
       return
     }
 
-    // Reset active split state for the new scan
-    this.participants = []
-    this.items = []
-    this.adjustments = []
-    this.tipInput = 0
-    this.ocrError = null
-    this.splitId = `split_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-
+    // Reuse reset() to clear active split state for the new scan
+    this.reset()
     this.isParsing = true
     this.receiptImage = imageSrc
     this.saveToLocalStorage()

@@ -35,6 +35,31 @@ export interface UsageInfo {
   expirationDate?: string | null;
 }
 
+const checkLocalPassFallback = async (
+  key: string,
+  passType: 'yearly' | 'trip',
+  durationDays: number,
+  baseUsageInfo: UsageInfo
+): Promise<UsageInfo | null> => {
+  try {
+    const raw = await getNativeItem(key);
+    if (raw) {
+      const { purchaseDate } = JSON.parse(raw);
+      const expiryMs = purchaseDate + durationDays * 24 * 60 * 60 * 1000;
+      if (expiryMs > Date.now()) {
+        return {
+          ...baseUsageInfo,
+          passType,
+          expirationDate: new Date(expiryMs).toISOString()
+        };
+      }
+    }
+  } catch (e) {
+    console.warn(`Failed to parse local ${passType} pass fallback`, e);
+  }
+  return null;
+};
+
 export const getDeviceId = async (): Promise<string> => {
   try {
     if (Capacitor.isNativePlatform()) {
@@ -267,56 +292,27 @@ export class BillingManager {
         }
 
         // 1. Native Preferences check for yearly subscription
+        const defaultBase = fetchedUsageInfo || currentUsage || {
+          passType: null,
+          freeScansUsed: 0,
+          freeScansLimit: 5,
+          freeScansRemaining: 5
+        };
+
         if (!hasActiveEntitlement) {
-          try {
-            const rawYearly = await getNativeItem('splat_local_pass_yearly');
-            if (rawYearly) {
-              const { purchaseDate } = JSON.parse(rawYearly);
-              const expiryDate = new Date(purchaseDate + 365 * 24 * 60 * 60 * 1000);
-              if (expiryDate.getTime() > Date.now()) {
-                const baseInfo = fetchedUsageInfo || currentUsage || {
-                  passType: null,
-                  freeScansUsed: 0,
-                  freeScansLimit: 5,
-                  freeScansRemaining: 5
-                };
-                fetchedUsageInfo = {
-                  ...baseInfo,
-                  passType: 'yearly',
-                  expirationDate: expiryDate.toISOString()
-                };
-                hasActiveEntitlement = true;
-              }
-            }
-          } catch (e) {
-            console.warn('Failed to parse local yearly pass fallback', e);
+          const yearlyLocal = await checkLocalPassFallback('splat_local_pass_yearly', 'yearly', 365, defaultBase);
+          if (yearlyLocal) {
+            fetchedUsageInfo = yearlyLocal;
+            hasActiveEntitlement = true;
           }
         }
 
         // 2. Native Preferences check for trip pass
         if (!hasActiveEntitlement) {
-          try {
-            const rawLocal = await getNativeItem('splat_local_pass_trip');
-            if (rawLocal) {
-              const { purchaseDate } = JSON.parse(rawLocal);
-              const expiryDate = new Date(purchaseDate + 14 * 24 * 60 * 60 * 1000);
-              if (expiryDate.getTime() > Date.now()) {
-                const baseInfo = fetchedUsageInfo || currentUsage || {
-                  passType: null,
-                  freeScansUsed: 0,
-                  freeScansLimit: 5,
-                  freeScansRemaining: 5
-                };
-                fetchedUsageInfo = {
-                  ...baseInfo,
-                  passType: 'trip',
-                  expirationDate: expiryDate.toISOString()
-                };
-                hasActiveEntitlement = true;
-              }
-            }
-          } catch (e) {
-            console.warn('Failed to parse local trip pass fallback', e);
+          const tripLocal = await checkLocalPassFallback('splat_local_pass_trip', 'trip', 14, defaultBase);
+          if (tripLocal) {
+            fetchedUsageInfo = tripLocal;
+            hasActiveEntitlement = true;
           }
         }
 
