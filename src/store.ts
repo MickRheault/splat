@@ -423,7 +423,7 @@ Return format must be EXACTLY this JSON structure:
     } catch (e: any) {
       console.error(e)
       if (e.message && e.message.includes('RATE_LIMIT_EXCEEDED')) {
-        this.ocrError = 'Please wait 1 minute between scans.'
+        this.ocrError = 'Rate limit reached (max 4 scans per minute). Please wait a moment.'
       } else if (e.message && e.message.includes('LIMIT_EXCEEDED')) {
         this.showPaywall = true
         this.ocrError = 'Scan limit reached. Upgrade to continue!'

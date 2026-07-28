@@ -915,7 +915,7 @@ describe('Splat Core Store & Math Logic', () => {
       const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('RATE_LIMIT_EXCEEDED'))
 
       await store.parseWithGemini('data:image/png;base64,abcdef')
-      expect(store.ocrError).toBe('Please wait 1 minute between scans.')
+      expect(store.ocrError).toBe('Rate limit reached (max 4 scans per minute). Please wait a moment.')
       
       fetchSpy.mockRestore()
     })

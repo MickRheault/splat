@@ -48,13 +48,13 @@ export default async function handler(req: any, res: any) {
     // 1. Vercel KV limits and subscription checks (only run if KV env vars are set)
     const hasKV = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN;
     if (hasKV && deviceId && kv) {
-      // A. Rate Limiting: Max 1 scan per 60 seconds per device ID
+      // A. Rate Limiting: Max 4 scans per 60 seconds per device ID
       const rateLimitKey = `ratelimit:${deviceId}`;
-      const isRateLimited = await kv.get(rateLimitKey);
-      if (isRateLimited) {
+      const rateLimitCount = (await kv.get<number>(rateLimitKey)) || 0;
+      if (rateLimitCount >= 4) {
         res.status(429).json({ 
           error: 'RATE_LIMIT_EXCEEDED', 
-          message: 'Please wait a minute before scanning another receipt.' 
+          message: 'Rate limit reached (max 4 scans per minute). Please wait a moment.' 
         });
         return;
       }
@@ -95,8 +95,9 @@ export default async function handler(req: any, res: any) {
           return;
         }
 
-        // Set rate limit cooldown (60 seconds)
-        await kv.set(rateLimitKey, '1', { ex: 60 });
+        // Increment rate limit count (4 per 60 seconds)
+        await kv.incr(rateLimitKey);
+        await kv.expire(rateLimitKey, 60);
         // Increment free scan count
         await kv.incr(freeScansKey);
         // Set TTL on free scan key for 35 days so it auto-deletes later
@@ -114,8 +115,9 @@ export default async function handler(req: any, res: any) {
           return;
         }
 
-        // Set rate limit cooldown (60 seconds)
-        await kv.set(rateLimitKey, '1', { ex: 60 });
+        // Increment rate limit count (4 per 60 seconds)
+        await kv.incr(rateLimitKey);
+        await kv.expire(rateLimitKey, 60);
         // Increment weekly usage count
         await kv.incr(weekKey);
         // Set TTL on week key for 8 days
