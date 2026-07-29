@@ -224,8 +224,8 @@ describe('BillingManager - Core Billing Functions', () => {
     const currentUsage: UsageInfo = {
       passType: 'yearly',
       freeScansUsed: 0,
-      freeScansLimit: 5,
-      freeScansRemaining: 5,
+      freeScansLimit: 3,
+      freeScansRemaining: 3,
       expirationDate: '2027-01-01T00:00:00.000Z',
     };
 

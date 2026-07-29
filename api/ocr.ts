@@ -82,15 +82,15 @@ export default async function handler(req: any, res: any) {
           await kv.expire(ipKey, 24 * 60 * 60); // 24 hours expiry
         }
 
-        // No active pass. Check monthly free scan limit (cap of 5)
+        // No active pass. Check monthly free scan limit (cap of 3)
         const currentMonth = new Date().toISOString().slice(0, 7); // e.g. "2026-06"
         const freeScansKey = `free:${deviceId}:${currentMonth}`;
         const freeScansUsed = (await kv.get<number>(freeScansKey)) || 0;
 
-        if (freeScansUsed >= 5) {
+        if (freeScansUsed >= 3) {
           res.status(403).json({ 
             error: 'LIMIT_EXCEEDED', 
-            message: 'You have used all 5 free scans for this month. Upgrade to continue!' 
+            message: 'You have reached your 3 free scans for this month.' 
           });
           return;
         }

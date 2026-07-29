@@ -46,17 +46,18 @@ export default async function handler(req: any, res: any) {
         passType,
         expirationDate,
         freeScansUsed,
-        freeScansLimit: 5,
-        freeScansRemaining: Math.max(0, 5 - freeScansUsed)
+        freeScansLimit: 3,
+        freeScansRemaining: Math.max(0, 3 - freeScansUsed)
       });
-    } else {
-      res.status(200).json({
-        passType: 'dev_unlimited',
-        freeScansUsed: 0,
-        freeScansLimit: 5,
-        freeScansRemaining: 5
-      });
+      return;
     }
+
+    res.status(200).json({
+      passType: null,
+      freeScansUsed: 0,
+      freeScansLimit: 3,
+      freeScansRemaining: 3
+    });
   } catch (e: any) {
     res.status(500).json({ error: e.message || 'Internal Server Error' });
   }
