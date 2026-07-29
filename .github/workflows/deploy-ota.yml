@@ -37,6 +37,8 @@ jobs:
       run: npm ci
 
     - name: Build web project
+      env:
+        VITE_API_BASE_URL: https://splat-bills.vercel.app
       run: npm run build
 
     - name: Package OTA Zip and Manifest
