@@ -354,7 +354,7 @@ Return format must be EXACTLY this JSON structure:
         const response = await fetch(`${apiBase}/api/ocr`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: imageSrc, deviceId }),
+          body: JSON.stringify({ image: imageSrc, deviceId, passType: this.usageInfo?.passType || null }),
           signal: controller.signal
         })
 

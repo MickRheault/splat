@@ -284,8 +284,11 @@ describe('BillingManager - Core Billing Functions', () => {
     expect(fetchSpy).toHaveBeenCalled();
   });
 
-  test('restore returns true if active entitlements found on native', async () => {
+  test('restore returns true and syncs pass if active entitlements found on native', async () => {
     isNativeVal = true;
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(new Response(null, { status: 200 }))
+    );
     mockRestorePurchases.mockResolvedValue({
       customerInfo: {
         entitlements: {
@@ -301,6 +304,8 @@ describe('BillingManager - Core Billing Functions', () => {
     const success = await billingManager.restore();
     expect(success).toBe(true);
     expect(mockRestorePurchases).toHaveBeenCalled();
+    expect(fetchSpy).toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 
   test('restore throws error on web platform', async () => {
