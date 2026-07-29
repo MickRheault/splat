@@ -539,8 +539,8 @@ describe('Splat Core Store & Math Logic', () => {
       expect(aliceBreakdown?.subtotal).toBe(50.00)
       expect(bobBreakdown?.subtotal).toBe(50.00)
       
-      // Verification of suffix name in list
-      expect(aliceBreakdown?.items[0].name).toBe('Wine (Shared)')
+      // Verification of clean item name in list
+      expect(aliceBreakdown?.items[0].name).toBe('Wine')
     })
   })
 

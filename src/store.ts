@@ -861,9 +861,8 @@ export const billBreakdown = computed(() => {
       } else {
         const assignees = item.assignedTo.length > 0 ? item.assignedTo : activeParticipants.map(pr => pr.id)
         if (assignees.includes(p.id)) {
-          const suffix = (qty > 1 && item.isSplitEvenly) ? ' (Shared)' : ''
           participantItems.push({
-            name: `${item.name}${suffix}`,
+            name: item.name,
             sharePrice: Math.round((price / assignees.length) * 100) / 100
           })
         }
@@ -1020,9 +1019,8 @@ export function calculateSplitBreakdown(split: any) {
       } else {
         const assignees = item.assignedTo.length > 0 ? item.assignedTo : activeParticipants.map((pr: any) => pr.id)
         if (assignees.includes(p.id)) {
-          const suffix = (qty > 1 && item.isSplitEvenly) ? ' (Shared)' : ''
           participantItems.push({
-            name: `${item.name}${suffix}`,
+            name: item.name,
             sharePrice: Math.round((price / assignees.length) * 100) / 100
           })
         }
