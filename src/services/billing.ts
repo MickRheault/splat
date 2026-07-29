@@ -200,8 +200,8 @@ export class BillingManager {
           const baseInfo = fetchedUsageInfo || currentUsage || {
             passType: null,
             freeScansUsed: 0,
-            freeScansLimit: 5,
-            freeScansRemaining: 5
+            freeScansLimit: 3,
+            freeScansRemaining: 3
           };
           
           if (tripEnt) {
@@ -243,8 +243,8 @@ export class BillingManager {
             const baseInfo = fetchedUsageInfo || currentUsage || {
               passType: null,
               freeScansUsed: 0,
-              freeScansLimit: 5,
-              freeScansRemaining: 5
+              freeScansLimit: 3,
+              freeScansRemaining: 3
             };
             fetchedUsageInfo = {
               ...baseInfo,
@@ -277,8 +277,8 @@ export class BillingManager {
               const baseInfo = fetchedUsageInfo || currentUsage || {
                 passType: null,
                 freeScansUsed: 0,
-                freeScansLimit: 5,
-                freeScansRemaining: 5
+                freeScansLimit: 3,
+                freeScansRemaining: 3
               };
               fetchedUsageInfo = {
                 ...baseInfo,
@@ -296,8 +296,8 @@ export class BillingManager {
         const defaultBase = fetchedUsageInfo || currentUsage || {
           passType: null,
           freeScansUsed: 0,
-          freeScansLimit: 5,
-          freeScansRemaining: 5
+          freeScansLimit: 3,
+          freeScansRemaining: 3
         };
 
         if (!hasActiveEntitlement) {
@@ -330,8 +330,8 @@ export class BillingManager {
             const baseInfo = fetchedUsageInfo || currentUsage || {
               passType: null,
               freeScansUsed: 0,
-              freeScansLimit: 5,
-              freeScansRemaining: 5
+              freeScansLimit: 3,
+              freeScansRemaining: 3
             };
             fetchedUsageInfo = {
               ...baseInfo,

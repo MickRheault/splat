@@ -2504,22 +2504,22 @@ const selectAllText = (event: Event) => {
             <label class="text-[10px] font-semibold text-secondary uppercase tracking-wider">Simulate Scan Limits</label>
             <div class="grid grid-cols-3 gap-1.5">
               <Button 
-                label="5 Left" 
+                label="3 Left" 
                 class="p-button-outlined p-button-sm text-xs py-1 px-0" 
-                :class="{ 'p-button-primary': store.simulatedUsage && store.simulatedUsage.freeScansRemaining === 5 && !store.simulatedUsage.passType }"
+                :class="{ 'p-button-primary': store.simulatedUsage && store.simulatedUsage.freeScansRemaining === 3 && !store.simulatedUsage.passType }"
                 @click="store.setSimulatedUsage(null, 0); isDevMenuOpen = false" 
               />
               <Button 
                 label="1 Left" 
                 class="p-button-outlined p-button-sm text-xs py-1 px-0" 
                 :class="{ 'p-button-primary': store.simulatedUsage && store.simulatedUsage.freeScansRemaining === 1 && !store.simulatedUsage.passType }"
-                @click="store.setSimulatedUsage(null, 4); isDevMenuOpen = false" 
+                @click="store.setSimulatedUsage(null, 2); isDevMenuOpen = false" 
               />
               <Button 
                 label="0 Left" 
                 class="p-button-outlined p-button-sm text-xs py-1 px-0" 
                 :class="{ 'p-button-primary': store.simulatedUsage && store.simulatedUsage.freeScansRemaining === 0 && !store.simulatedUsage.passType }"
-                @click="store.setSimulatedUsage(null, 5); isDevMenuOpen = false" 
+                @click="store.setSimulatedUsage(null, 3); isDevMenuOpen = false" 
               />
             </div>
           </div>
