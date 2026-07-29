@@ -1737,7 +1737,7 @@ const selectAllText = (event: Event) => {
             ></i>
             <div class="flex-1 min-w-0">
               <div class="alloc-item-header">
-                <span>{{ item.name }} <span v-if="item.quantity > 1" class="text-xs text-slate-400 font-normal">(x{{ item.quantity }}{{ item.isSplitEvenly ? ' - Shared' : '' }})</span></span>
+                <span>{{ item.name }} <span v-if="item.quantity > 1" class="text-xs text-slate-400 font-normal">(x{{ item.quantity }})</span></span>
                 <span class="text-primary">{{ store.currencySymbol }}{{ item.price.toFixed(2) }}</span>
               </div>
               
