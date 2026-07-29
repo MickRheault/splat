@@ -688,7 +688,7 @@ describe('Splat Core Store & Math Logic', () => {
       expect(aliceBreakdown!.tip).toBe(3)
       expect(aliceBreakdown!.total).toBe(25)
       expect(aliceBreakdown!.items).toHaveLength(1)
-      expect(aliceBreakdown!.items[0].name).toBe('1x Pizzas')
+      expect(aliceBreakdown!.items[0].name).toBe('Pizzas (x1)')
     })
 
     test('should compute correct participant totals with percentage tip type (percentage vs percent)', () => {
