@@ -2,6 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
+import { API_BASE_URL } from '../config';
 
 const getNativeItem = async (key: string): Promise<string | null> => {
   try {
@@ -152,7 +153,7 @@ export class BillingManager {
     // 1. Try to fetch usage limits from the Vercel backend API
     try {
       const deviceId = await getDeviceId();
-      const apiBase = isNative ? 'https://splat-chi.vercel.app' : '';
+      const apiBase = isNative ? API_BASE_URL : '';
       const res = await fetch(`${apiBase}/api/usage?deviceId=${deviceId}`);
       if (res.ok) {
         fetchedUsageInfo = await res.json();

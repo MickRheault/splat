@@ -2,6 +2,7 @@ import { reactive, computed } from 'vue'
 import { Capacitor } from '@capacitor/core'
 import { Preferences } from '@capacitor/preferences'
 import { billingManager, getDeviceId } from './services/billing'
+import { API_BASE_URL } from './config'
 
 export { getDeviceId }
 
@@ -348,7 +349,7 @@ Return format must be EXACTLY this JSON structure:
 
         resJson = await response.json()
       } else {
-        const apiBase = isNative ? 'https://splat-chi.vercel.app' : ''
+        const apiBase = isNative ? API_BASE_URL : ''
         const deviceId = await getDeviceId()
         const response = await fetch(`${apiBase}/api/ocr`, {
           method: 'POST',

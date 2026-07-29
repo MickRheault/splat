@@ -14,6 +14,7 @@ import { CapacitorUpdater } from '@capgo/capacitor-updater'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { App } from '@capacitor/app'
 import { billingManager } from './services/billing'
+import { API_BASE_URL, UPDATE_MANIFEST_URL } from './config'
 
 // Import reactive store and computed properties
 import { 
@@ -243,7 +244,7 @@ const handleDevAction = async (type: 'trip' | 'yearly' | 'reset') => {
   isPerformingDevAction.value = true
   try {
     const isNative = Capacitor.isNativePlatform()
-    const apiBase = isNative ? 'https://splat-chi.vercel.app' : ''
+    const apiBase = isNative ? API_BASE_URL : ''
     const deviceId = await getDeviceId()
 
     // 1. Try to synchronize with Vercel backend KV database
@@ -346,7 +347,7 @@ onMounted(async () => {
     // Run background update checks without blocking startup
     (async () => {
       try {
-        const response = await fetch('https://splat-chi.vercel.app/updates/update.json')
+        const response = await fetch(UPDATE_MANIFEST_URL)
         if (response.ok) {
           const manifest = await response.json()
           

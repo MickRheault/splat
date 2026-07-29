@@ -53,10 +53,11 @@ jobs:
         cd ..
         
         # Update the manifest pointing to Vercel
+        API_BASE_URL="${VITE_API_BASE_URL:-https://splat-bills.vercel.app}"
         cat <<EOF > public/updates/update.json
         {
           "version": "$VERSION",
-          "url": "https://splat-chi.vercel.app/updates/v$VERSION.zip"
+          "url": "$API_BASE_URL/updates/v$VERSION.zip"
         }
         EOF
 
