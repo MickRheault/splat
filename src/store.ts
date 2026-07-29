@@ -854,7 +854,7 @@ export const billBreakdown = computed(() => {
         const count = assignedQ[p.id] || 0
         if (count > 0) {
           participantItems.push({
-            name: `${count}x ${item.name}`,
+            name: `${item.name} (x${count})`,
             sharePrice: Math.round(((count / qty) * price) * 100) / 100
           })
         }
@@ -1012,7 +1012,7 @@ export function calculateSplitBreakdown(split: any) {
         const count = assignedQ[p.id] || 0
         if (count > 0) {
           participantItems.push({
-            name: `${count}x ${item.name}`,
+            name: `${item.name} (x${count})`,
             sharePrice: Math.round(((count / qty) * price) * 100) / 100
           })
         }
