@@ -435,8 +435,8 @@ export class BillingManager {
         await setNativeItem('splat_usage_info', JSON.stringify({
           passType: 'trip',
           freeScansUsed: 0,
-          freeScansLimit: 5,
-          freeScansRemaining: 5,
+          freeScansLimit: 3,
+          freeScansRemaining: 3,
           expirationDate: expiryDate
         }));
       } else if (option === 'yearly') {
@@ -446,10 +446,25 @@ export class BillingManager {
         await setNativeItem('splat_usage_info', JSON.stringify({
           passType: 'yearly',
           freeScansUsed: 0,
-          freeScansLimit: 5,
-          freeScansRemaining: 5,
+          freeScansLimit: 3,
+          freeScansRemaining: 3,
           expirationDate: expiryDate
         }));
+      }
+
+      // Clear dev mode simulated usage if active
+      this.clearSimulatedUsage();
+
+      // Sync pass with server Upstash KV
+      try {
+        const deviceId = await getDeviceId();
+        await fetch(`${API_BASE_URL}/api/mock-purchase`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deviceId, type: option })
+        });
+      } catch (syncErr) {
+        console.warn('Failed to sync native purchase to server KV:', syncErr);
       }
     } else {
       const deviceId = await getDeviceId();
@@ -469,14 +484,54 @@ export class BillingManager {
     const isNative = Capacitor.isNativePlatform();
     if (isNative) {
       const { customerInfo } = await Purchases.restorePurchases();
-      const hasActivePass = !!(
+      
+      const isTrip = !!(
         customerInfo.entitlements?.active?.['trip'] ||
-        customerInfo.entitlements?.active?.['yearly'] ||
         customerInfo.allPurchasedProductIdentifiers?.includes('splat_14day_trip') ||
-        customerInfo.allPurchasedProductIdentifiers?.includes('splat_yearly_pro') ||
-        customerInfo.activeSubscriptions?.includes('splat_yearly_pro') ||
         customerInfo.nonSubscriptionTransactions?.some((t: any) => t.productIdentifier === 'splat_14day_trip')
       );
+
+      const isYearly = !!(
+        customerInfo.entitlements?.active?.['yearly'] ||
+        customerInfo.allPurchasedProductIdentifiers?.includes('splat_yearly_pro') ||
+        customerInfo.activeSubscriptions?.includes('splat_yearly_pro') ||
+        (customerInfo.subscriptionsByProductIdentifier && customerInfo.subscriptionsByProductIdentifier['splat_yearly_pro'])
+      );
+
+      const hasActivePass = isTrip || isYearly;
+
+      if (hasActivePass) {
+        const passType = isYearly ? 'yearly' : 'trip';
+        const purchaseDateMs = Date.now();
+        const durationDays = passType === 'yearly' ? 365 : 14;
+        const expiryDate = new Date(purchaseDateMs + durationDays * 24 * 60 * 60 * 1000).toISOString();
+
+        // 1. Save to native preferences for fast offline load
+        await setNativeItem(`splat_local_pass_${passType}`, JSON.stringify({ purchaseDate: purchaseDateMs }));
+        await setNativeItem('splat_usage_info', JSON.stringify({
+          passType,
+          freeScansUsed: 0,
+          freeScansLimit: 3,
+          freeScansRemaining: 3,
+          expirationDate: expiryDate
+        }));
+
+        // 2. Clear dev mode simulated usage if active
+        this.clearSimulatedUsage();
+
+        // 3. Sync pass with server Upstash KV
+        try {
+          const deviceId = await getDeviceId();
+          await fetch(`${API_BASE_URL}/api/mock-purchase`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ deviceId, type: passType })
+          });
+        } catch (syncErr) {
+          console.warn('Failed to sync restored pass to server KV:', syncErr);
+        }
+      }
+
       return hasActivePass;
     } else {
       throw new Error('Restore purchases is only available on native platforms.');

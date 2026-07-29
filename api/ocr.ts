@@ -61,7 +61,11 @@ export default async function handler(req: any, res: any) {
 
       // B. Check subscription / pass status
       const passKey = `pass:${deviceId}`;
-      const passType = await kv.get(passKey); // e.g. "trip" or "yearly"
+      let passType = await kv.get(passKey); // e.g. "trip" or "yearly"
+      if (!passType && req.body?.passType && (req.body.passType === 'trip' || req.body.passType === 'yearly')) {
+        passType = req.body.passType;
+        await kv.set(passKey, passType, { ex: passType === 'trip' ? 14 * 24 * 60 * 60 : 365 * 24 * 60 * 60 });
+      }
 
       if (!passType) {
         // IP-based Rate Limiting for Free Scans: Max 10 scans per day per IP
