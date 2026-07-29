@@ -352,8 +352,8 @@ export class BillingManager {
     const defaultUsage: UsageInfo = {
       passType: null,
       freeScansUsed: 0,
-      freeScansLimit: 5,
-      freeScansRemaining: 5
+      freeScansLimit: 3,
+      freeScansRemaining: 3
     };
 
     // Discard result if a newer fetch has started (latest-win check)
@@ -560,8 +560,8 @@ export class BillingManager {
     const usage: UsageInfo = {
       passType,
       freeScansUsed,
-      freeScansLimit: 5,
-      freeScansRemaining: Math.max(0, 5 - freeScansUsed)
+      freeScansLimit: 3,
+      freeScansRemaining: Math.max(0, 3 - freeScansUsed)
     };
     this.simulatedUsage = usage;
     return usage;
