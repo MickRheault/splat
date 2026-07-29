@@ -166,8 +166,8 @@ export const store = reactive({
   usageInfo: {
     passType: null,
     freeScansUsed: 0,
-    freeScansLimit: 5,
-    freeScansRemaining: 5
+    freeScansLimit: 3,
+    freeScansRemaining: 3
   } as any,
   simulatedUsage: null as any,
   fetchUsageCount: 0,

@@ -981,7 +981,7 @@ describe('Splat Core Store & Math Logic', () => {
       store.usageInfo = {
         passType: null,
         freeScansUsed: 5,
-        freeScansLimit: 5,
+        freeScansLimit: 3,
         freeScansRemaining: 0
       }
 
@@ -998,11 +998,11 @@ describe('Splat Core Store & Math Logic', () => {
 
     test('should decrement simulated scan count', () => {
       store.setSimulatedUsage(null, 2)
-      expect(store.simulatedUsage.freeScansRemaining).toBe(3)
+      expect(store.simulatedUsage.freeScansRemaining).toBe(1)
 
       store.decrementSimulatedScan()
       expect(store.simulatedUsage.freeScansUsed).toBe(3)
-      expect(store.simulatedUsage.freeScansRemaining).toBe(2)
+      expect(store.simulatedUsage.freeScansRemaining).toBe(0)
     })
 
     test('should not decrement simulated scan count if passType is configured', () => {
