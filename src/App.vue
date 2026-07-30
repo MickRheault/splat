@@ -2394,65 +2394,103 @@ const selectAllText = (event: Event) => {
     <Dialog 
       v-model:visible="store.showPaywall" 
       modal 
-      header="Unlock Pro Features ⚡" 
-      :style="{ width: '90%', maxWidth: '400px' }"
+      header="Unlock Splat Pro ⚡" 
+      :style="{ width: '92%', maxWidth: '380px' }"
       :draggable="false"
       class="dark:bg-slate-900"
     >
-      <div class="flex flex-col gap-4">
+      <div class="flex flex-col gap-3.5">
         <p class="text-xs text-secondary text-center leading-relaxed">
-          You've reached your free scan limit. Upgrade to continue splitting bills instantly with advanced AI!
+          You've used all your free scans for this month. Upgrade to continue splitting bills instantly!
         </p>
 
+        <!-- Concise Pro Features List -->
+        <div class="grid grid-cols-3 gap-1.5 p-2 bg-slate-950/40 border border-slate-800 rounded-xl text-center">
+          <div class="flex flex-col items-center gap-0.5">
+            <span class="text-xs">⚡</span>
+            <span class="text-[10px] font-bold text-slate-200">AI Scanning</span>
+          </div>
+          <div class="flex flex-col items-center gap-0.5 border-x border-slate-800">
+            <span class="text-xs">👥</span>
+            <span class="text-[10px] font-bold text-slate-200">Unlimited People</span>
+          </div>
+          <div class="flex flex-col items-center gap-0.5">
+            <span class="text-xs">🎯</span>
+            <span class="text-[10px] font-bold text-slate-200">Custom Splits</span>
+          </div>
+        </div>
+
         <!-- Pricing Cards -->
-        <div class="flex flex-col gap-3">
-          <!-- Option 1: Yearly subscription -->
+        <div class="flex flex-col gap-2.5 mt-1">
+          <!-- Option 1: Yearly Subscription (Recommended) -->
           <div 
-            class="relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200"
-            :class="selectedPaywallOption === 'yearly' ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10' : 'border-slate-800 bg-slate-900/50 hover:border-slate-700'"
+            class="relative p-3.5 rounded-xl border-2 cursor-pointer transition-all duration-200 flex items-center justify-between gap-3"
+            :class="selectedPaywallOption === 'yearly' ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10' : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'"
             @click="selectedPaywallOption = 'yearly'"
           >
-            <div class="absolute -top-2.5 right-4 bg-emerald-500 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider">
-              BEST VALUE
+            <!-- Badge -->
+            <div class="absolute -top-2.5 right-3 bg-emerald-500 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+              SAVE 60% • BEST VALUE
             </div>
-            <div class="flex justify-between items-center mb-1">
-              <div class="flex items-center gap-2">
-                <i class="pi pi-star-fill text-amber-400 text-sm"></i>
-                <span class="font-bold text-sm text-slate-100">Yearly Pro Plan</span>
+
+            <!-- Radio circle icon -->
+            <i 
+              class="pi text-lg shrink-0"
+              :class="selectedPaywallOption === 'yearly' ? 'pi-check-circle text-primary font-bold' : 'pi-circle text-slate-600'"
+            ></i>
+
+            <!-- Plan details -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="font-extrabold text-sm text-slate-100">Yearly Pro Pass</span>
               </div>
-              <div class="flex flex-col items-end">
-                <span class="font-black text-primary text-base">$9.99<span class="text-xs font-semibold text-secondary">/yr</span></span>
-              </div>
+              <p class="text-[10px] text-secondary mt-0.5">
+                Full 1 year access • $0.83 / month
+              </p>
             </div>
-            <p class="text-[11px] text-secondary">
-              100 scans per month (~$0.83/mo). Auto-renews annually. Cancel anytime.
-            </p>
+
+            <!-- Price -->
+            <div class="flex flex-col items-end shrink-0">
+              <span class="font-black text-primary text-base">$9.99</span>
+              <span class="text-[9px] font-semibold text-secondary">/ year</span>
+            </div>
           </div>
 
-          <!-- Option 2: 14-Day Pass -->
+          <!-- Option 2: 14-Day Trip Pass -->
           <div 
-            class="relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200"
-            :class="selectedPaywallOption === 'trip' ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10' : 'border-slate-800 bg-slate-900/50 hover:border-slate-700'"
+            class="relative p-3.5 rounded-xl border-2 cursor-pointer transition-all duration-200 flex items-center justify-between gap-3"
+            :class="selectedPaywallOption === 'trip' ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10' : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'"
             @click="selectedPaywallOption = 'trip'"
           >
-            <div class="flex justify-between items-center mb-1">
-              <div class="flex items-center gap-2">
-                <i class="pi pi-bolt text-primary text-sm"></i>
-                <span class="font-bold text-sm text-slate-100">14-Day Trip Pass</span>
+            <!-- Radio circle icon -->
+            <i 
+              class="pi text-lg shrink-0"
+              :class="selectedPaywallOption === 'trip' ? 'pi-check-circle text-primary font-bold' : 'pi-circle text-slate-600'"
+            ></i>
+
+            <!-- Plan details -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="font-extrabold text-sm text-slate-100">14-Day Trip Pass</span>
               </div>
-              <span class="font-black text-primary text-base">$1.99</span>
+              <p class="text-[10px] text-secondary mt-0.5">
+                One-time payment • No subscription
+              </p>
             </div>
-            <p class="text-[11px] text-secondary">
-              Unlimited scans for 14 days. One-time payment, no subscription. Perfect for holidays!
-            </p>
+
+            <!-- Price -->
+            <div class="flex flex-col items-end shrink-0">
+              <span class="font-black text-primary text-base">$1.99</span>
+              <span class="text-[9px] font-semibold text-secondary">14 days</span>
+            </div>
           </div>
         </div>
 
         <!-- Call to Action button -->
         <Button 
-          :label="isPurchasing ? 'Processing...' : (selectedPaywallOption === 'yearly' ? 'Subscribe Yearly Pro — $9.99' : 'Buy 14-Day Pass — $1.99')" 
+          :label="isPurchasing ? 'Processing...' : (selectedPaywallOption === 'yearly' ? 'Unlock Yearly Pro — $9.99' : 'Get 14-Day Pass — $1.99')" 
           icon="pi pi-bolt" 
-          class="w-full p-button-lg mt-2 font-bold" 
+          class="w-full p-button-lg mt-1 font-extrabold" 
           :loading="isPurchasing"
           @click="handlePaywallPurchase" 
         />
@@ -2462,13 +2500,13 @@ const selectAllText = (event: Event) => {
           v-if="Capacitor.isNativePlatform()"
           label="Restore Purchases" 
           icon="pi pi-refresh" 
-          class="w-full p-button-outlined p-button-secondary p-button-sm mt-1" 
+          class="w-full p-button-outlined p-button-secondary p-button-sm" 
           :loading="isPurchasing"
           @click="handleRestorePurchases" 
         />
 
         <p class="text-[10px] text-slate-500 text-center leading-normal">
-          By upgrading, you agree to our Terms and Privacy Policy. Secure processing powered by App Store / Google Play.
+          By upgrading, you agree to our Terms and Privacy Policy. Secure payment processed by Google Play / App Store.
         </p>
       </div>
     </Dialog>
