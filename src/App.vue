@@ -307,7 +307,11 @@ onMounted(async () => {
   };
   console.log('[PERF] App.vue onMounted started. Elapsed since bootstrap:', getElapsed());
 
-  // 1. Load local persistent data concurrently (Non-blocking)
+  // 1. Clear any leftover draft split on cold launch so app starts fresh
+  await removeStorageItem('splat_store')
+  store.reset()
+
+  // 2. Load local persistent data concurrently (Non-blocking)
   const dbLoadStart = performance.now();
   const localDataPromise = Promise.all([
     store.loadFromLocalStorage(),
