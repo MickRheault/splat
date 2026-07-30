@@ -2825,7 +2825,7 @@ const selectAllText = (event: Event) => {
       <!-- Quick suggestion chips -->
       <div class="flex flex-wrap gap-1.5 mt-1">
         <button 
-          v-for="chip in ['CAD', 'AUD', 'CHF', '₹', 'R$', 'kr', '₫', 'AED', 'SGD', 'RM']" 
+          v-for="chip in ['CLP$', 'COP$', 'PEN', 'EGP', 'ILS', 'HUF', 'Ksh', '₡', 'RSD', 'GHS']" 
           :key="chip"
           type="button"
           class="text-[11px] font-semibold px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-md border border-slate-700 transition-colors"
