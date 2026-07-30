@@ -780,17 +780,42 @@ const openCategorySelector = () => {
   isSelectorOpen.value = true
 }
 
+const isCustomCurrencyOpen = ref(false)
+const customCurrencyInput = ref('')
+
+const DEFAULT_CURRENCIES = [
+  { value: '$', label: 'US / CA / AU Dollar ($)' },
+  { value: '€', label: 'Euro (€)' },
+  { value: '£', label: 'British Pound (£)' },
+  { value: '฿', label: 'Thai Baht (฿)' },
+  { value: '¥', label: 'Japanese Yen / Yuan (¥)' },
+  { value: '₩', label: 'South Korean Won (₩)' },
+  { value: '₹', label: 'Indian Rupee (₹)' },
+  { value: 'CHF', label: 'Swiss Franc (CHF)' },
+  { value: 'CAD$', label: 'Canadian Dollar (CAD$)' },
+  { value: 'AUD$', label: 'Australian Dollar (AUD$)' },
+  { value: 'SGD$', label: 'Singapore Dollar (SGD$)' },
+  { value: 'HKD$', label: 'Hong Kong Dollar (HKD$)' },
+  { value: 'NZD$', label: 'New Zealand Dollar (NZD$)' },
+  { value: 'MXN$', label: 'Mexican Peso (MXN$)' },
+  { value: 'R$', label: 'Brazilian Real (R$)' },
+  { value: 'kr', label: 'Nordic Krone (kr)' },
+  { value: 'zł', label: 'Polish Złoty (zł)' },
+  { value: '₫', label: 'Vietnamese Đồng (₫)' },
+  { value: 'RM', label: 'Malaysian Ringgit (RM)' },
+  { value: 'Rp', label: 'Indonesian Rupiah (Rp)' },
+  { value: '₱', label: 'Philippine Peso (₱)' },
+  { value: 'AED', label: 'UAE Dirham (AED)' },
+  { value: 'SAR', label: 'Saudi Riyal (SAR)' },
+  { value: '₺', label: 'Turkish Lira (₺)' },
+  { value: 'R', label: 'South African Rand (R)' },
+  { value: 'custom', label: '✏️ Custom / Manual Entry...' }
+]
+
 const openCurrencySelector = () => {
   selectorType.value = 'currency'
   selectorTitle.value = 'Select Currency'
-  selectorOptions.value = [
-    { value: '$', label: 'US Dollar ($)' },
-    { value: '€', label: 'Euro (€)' },
-    { value: '£', label: 'Pound (£)' },
-    { value: '฿', label: 'Thai Baht (฿)' },
-    { value: '¥', label: 'Yen/Yuan (¥)' },
-    { value: '₩', label: 'Won (₩)' }
-  ]
+  selectorOptions.value = DEFAULT_CURRENCIES
   isSelectorOpen.value = true
 }
 
@@ -799,10 +824,24 @@ const selectOption = (val: any) => {
     store.category = val
     onCategoryChanged()
   } else if (selectorType.value === 'currency') {
-    store.currencySymbol = val
-    store.saveToLocalStorage()
+    if (val === 'custom') {
+      customCurrencyInput.value = store.currencySymbol || ''
+      isCustomCurrencyOpen.value = true
+    } else {
+      store.currencySymbol = val
+      store.saveToLocalStorage()
+    }
   }
   isSelectorOpen.value = false
+}
+
+const applyCustomCurrency = () => {
+  const trimmed = customCurrencyInput.value.trim()
+  if (trimmed) {
+    store.currencySymbol = trimmed
+    store.saveToLocalStorage()
+  }
+  isCustomCurrencyOpen.value = false
 }
 
 const getCategoryLabel = (category: string) => {
@@ -819,15 +858,9 @@ const getCategoryLabel = (category: string) => {
 }
 
 const getCurrencyLabel = (symbol: string) => {
-  switch (symbol) {
-    case '$': return 'US Dollar ($)'
-    case '€': return 'Euro (€)'
-    case '£': return 'Pound (£)'
-    case '฿': return 'Thai Baht (฿)'
-    case '¥': return 'Yen/Yuan (¥)'
-    case '₩': return 'Won (₩)'
-    default: return symbol
-  }
+  const match = DEFAULT_CURRENCIES.find(c => c.value === symbol)
+  if (match && match.value !== 'custom') return match.label
+  return `${symbol}`
 }
 
 
@@ -2765,6 +2798,55 @@ const selectAllText = (event: Event) => {
           <span v-if="opt.icon" class="text-lg leading-none">{{ opt.icon }}</span>
           <span class="text-sm font-extrabold">{{ opt.label }}</span>
         </div>
+      </div>
+    </div>
+  </Dialog>
+
+  <!-- Custom Currency Dialog -->
+  <Dialog 
+    v-model:visible="isCustomCurrencyOpen" 
+    modal 
+    header="Custom Currency Symbol" 
+    :style="{ width: '90%', maxWidth: '340px' }"
+    :draggable="false"
+    class="dark:bg-slate-900"
+  >
+    <div class="flex flex-col gap-3">
+      <p class="text-xs text-secondary">Type any currency symbol or code (e.g. CAD, ₹, CHF, R$, ₫, AED):</p>
+      
+      <InputText 
+        v-model="customCurrencyInput" 
+        placeholder="e.g. CAD, CHF, ₹, R$" 
+        class="w-full text-base font-bold" 
+        maxlength="8"
+        @keyup.enter="applyCustomCurrency"
+      />
+
+      <!-- Quick suggestion chips -->
+      <div class="flex flex-wrap gap-1.5 mt-1">
+        <button 
+          v-for="chip in ['CAD', 'AUD', 'CHF', '₹', 'R$', 'kr', '₫', 'AED', 'SGD', 'RM']" 
+          :key="chip"
+          type="button"
+          class="text-[11px] font-semibold px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-md border border-slate-700 transition-colors"
+          @click="customCurrencyInput = chip"
+        >
+          {{ chip }}
+        </button>
+      </div>
+
+      <div class="flex gap-2 mt-2">
+        <Button 
+          label="Cancel" 
+          class="p-button-outlined p-button-secondary flex-1 p-button-sm" 
+          @click="isCustomCurrencyOpen = false" 
+        />
+        <Button 
+          label="Set Currency" 
+          class="p-button-primary flex-1 p-button-sm font-bold" 
+          :disabled="!customCurrencyInput.trim()"
+          @click="applyCustomCurrency" 
+        />
       </div>
     </div>
   </Dialog>
