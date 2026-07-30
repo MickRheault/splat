@@ -1348,10 +1348,10 @@ const selectAllText = (event: Event) => {
       <!-- Usage Limit / Plan Info Indicator -->
       <div v-if="store.usageInfo" class="text-center mt-5 p-3 rounded-xl border border-dashed border-slate-800 bg-slate-950/20">
         <p v-if="store.usageInfo.passType === 'trip'" class="text-xs text-primary font-extrabold flex justify-center items-center gap-1.5">
-          <i class="pi pi-bolt"></i> 14-Day Pass Active <span v-if="store.usageInfo.expirationDate">(Until {{ formatPassDate(store.usageInfo.expirationDate) }})</span><span v-else>(Unlimited Scans)</span>
+          <i class="pi pi-bolt"></i> 14-Day Pass Active <span v-if="store.usageInfo.expirationDate">&nbsp;(Until {{ formatPassDate(store.usageInfo.expirationDate) }})</span><span v-else>&nbsp;(Unlimited Scans)</span>
         </p>
         <p v-else-if="store.usageInfo.passType === 'yearly'" class="text-xs text-emerald-400 font-extrabold flex justify-center items-center gap-1.5">
-          <i class="pi pi-star-fill"></i> Yearly Pro Active (100 scans/mo)
+          <i class="pi pi-star-fill"></i> Yearly Pro Active &nbsp;(100 scans/mo)
         </p>
         <p v-else-if="store.usageInfo.passType === 'dev_unlimited'" class="text-xs text-secondary font-bold italic">
           🛠️ Dev Mode (Bypassed / Unlimited)
