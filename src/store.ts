@@ -653,6 +653,18 @@ Return format must be EXACTLY this JSON structure:
     try {
       if (Capacitor.isNativePlatform() || import.meta.env.PROD) {
         this.clearSimulatedUsage()
+        const usageStr = await getStorageItem('splat_usage_info')
+        if (usageStr) {
+          const cached = JSON.parse(usageStr)
+          if (cached && cached.expirationDate) {
+            const expMs = new Date(cached.expirationDate).getTime()
+            if (isNaN(expMs) || expMs > Date.now()) {
+              this.usageInfo = cached
+            }
+          } else if (cached) {
+            this.usageInfo = cached
+          }
+        }
       } else {
         const simUsageStr = await getStorageItem('splat_simulated_usage')
         if (simUsageStr) {
