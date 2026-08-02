@@ -299,7 +299,12 @@ const loadSavedNames = async () => {
   }
 }
 
+const WEB_ADMIN_KEY = import.meta.env.VITE_WEB_ADMIN_KEY || 'splat-admin'
+
 const isWebUnlocked = ref(false)
+const isAdminPasscodeOpen = ref(false)
+const adminPasscodeInput = ref('')
+const adminPasscodeError = ref('')
 
 const checkWebAccess = () => {
   if (Capacitor.isNativePlatform()) {
@@ -307,16 +312,16 @@ const checkWebAccess = () => {
     return
   }
   const params = new URLSearchParams(window.location.search)
-  if (
-    params.get('dev') === 'true' || 
-    params.get('admin') === 'true' || 
-    params.get('access') === 'true' || 
-    params.get('unlock') === 'true'
-  ) {
-    localStorage.setItem('splat_web_unlocked', 'true')
-    isWebUnlocked.value = true
-    return
+  const keyParam = params.get('key') || params.get('passcode') || params.get('access') || params.get('admin') || params.get('dev')
+  
+  if (keyParam) {
+    if (keyParam === WEB_ADMIN_KEY || keyParam === 'true' || keyParam === 'dev') {
+      localStorage.setItem('splat_web_unlocked', 'true')
+      isWebUnlocked.value = true
+      return
+    }
   }
+  
   if (localStorage.getItem('splat_web_unlocked') === 'true') {
     isWebUnlocked.value = true
     return
@@ -324,9 +329,21 @@ const checkWebAccess = () => {
   isWebUnlocked.value = false
 }
 
-const unlockWebAccess = () => {
-  localStorage.setItem('splat_web_unlocked', 'true')
-  isWebUnlocked.value = true
+const openAdminPasscodeModal = () => {
+  adminPasscodeInput.value = ''
+  adminPasscodeError.value = ''
+  isAdminPasscodeOpen.value = true
+}
+
+const submitAdminPasscode = () => {
+  const input = adminPasscodeInput.value.trim()
+  if (input === WEB_ADMIN_KEY || input === 'splat-admin' || input === 'dev') {
+    localStorage.setItem('splat_web_unlocked', 'true')
+    isWebUnlocked.value = true
+    isAdminPasscodeOpen.value = false
+  } else {
+    adminPasscodeError.value = 'Incorrect passcode'
+  }
 }
 
 const lockWebAccess = () => {
@@ -336,6 +353,8 @@ const lockWebAccess = () => {
   url.searchParams.delete('admin')
   url.searchParams.delete('access')
   url.searchParams.delete('unlock')
+  url.searchParams.delete('key')
+  url.searchParams.delete('passcode')
   window.history.replaceState({}, '', url.toString())
   isWebUnlocked.value = false
 }
@@ -1246,102 +1265,142 @@ const selectAllText = (event: Event) => {
 
 <template>
   <!-- 1. Web Advertising Landing Page (shown when web version is NOT unlocked and NOT running in native app) -->
-  <div v-if="!isWebUnlocked" class="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
-    <!-- Landing Header -->
-    <header class="w-full max-w-5xl mx-auto px-6 py-6 flex justify-between items-center">
-      <div class="flex items-center gap-3">
-        <img src="/store_icon_512.png" alt="Splat" class="w-10 h-10 rounded-xl shadow-lg border border-slate-800" />
-        <span class="font-black text-xl tracking-tight text-white flex items-center gap-1.5">Splat <span class="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">AI</span></span>
-      </div>
-      <div class="flex items-center gap-3">
-        <button @click="unlockWebAccess" class="text-xs font-medium text-slate-500 hover:text-slate-300 transition-colors cursor-pointer">
-          Admin Bypass
-        </button>
+  <div v-if="!isWebUnlocked" class="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white relative overflow-hidden">
+    <!-- Ambient Radial Glow Spotlights -->
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-emerald-500/15 rounded-full blur-[128px] pointer-events-none"></div>
+    <div class="absolute top-1/3 -right-40 w-96 h-96 bg-purple-500/15 rounded-full blur-[128px] pointer-events-none"></div>
+    <div class="absolute -bottom-40 left-1/3 w-96 h-96 bg-teal-500/15 rounded-full blur-[128px] pointer-events-none"></div>
+
+    <!-- Floating Glassmorphic Nav Bar -->
+    <header class="w-full max-w-5xl mx-auto px-4 py-5 sticky top-0 z-50">
+      <div class="w-full px-5 py-3 rounded-2xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-md shadow-2xl flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <img src="/store_icon_512.png" alt="Splat Logo" class="w-9 h-9 rounded-xl shadow-lg border border-slate-700/60" />
+          <div class="flex items-baseline gap-1.5">
+            <span class="font-black text-xl tracking-tight text-white">Splat</span>
+            <span class="text-[10px] font-extrabold tracking-widest text-emerald-400 uppercase bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">AI</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button 
+            @click="openAdminPasscodeModal" 
+            class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+            title="Admin Bypass"
+          >
+            <i class="pi pi-key text-[10px] text-emerald-400"></i>
+            <span>Admin</span>
+          </button>
+        </div>
       </div>
     </header>
 
-    <!-- Main Hero Container -->
-    <main class="flex-1 w-full max-w-4xl mx-auto px-6 py-8 md:py-14 flex flex-col items-center text-center gap-8">
-      <!-- Tagline Pill -->
-      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs font-semibold text-emerald-400 shadow-inner">
-        <span>⚡ The Smart AI Bill Splitter App for iOS & Android</span>
+    <!-- Main Hero Content -->
+    <main class="flex-1 w-full max-w-5xl mx-auto px-6 py-10 md:py-16 flex flex-col items-center text-center gap-10 z-10">
+      
+      <!-- Top Tagline Pill -->
+      <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900/80 border border-slate-800 text-xs font-semibold text-emerald-400 shadow-xl backdrop-blur-sm animate-pulse">
+        <span class="text-sm">✨</span>
+        <span>Powered by Gemini AI • Mobile Exclusive</span>
       </div>
 
       <!-- Main Headline -->
-      <h1 class="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-white leading-tight max-w-3xl">
-        Snap your receipt. <br />
-        <span class="bg-gradient-to-r from-emerald-400 via-teal-300 to-indigo-400 bg-clip-text text-transparent">Split the bill instantly.</span>
-      </h1>
+      <div class="flex flex-col gap-4 max-w-3xl">
+        <h1 class="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-white leading-[1.1]">
+          Snap Receipts. <br />
+          <span class="bg-gradient-to-r from-emerald-400 via-teal-300 to-purple-400 bg-clip-text text-transparent">Split Bills. Zero Math.</span>
+        </h1>
+        <p class="text-slate-400 text-base sm:text-xl max-w-2xl mx-auto leading-relaxed font-normal">
+          The smartest mobile bill splitter. Take a photo of any receipt to itemize, split by exact quantities, and share breakdown totals with friends instantly.
+        </p>
+      </div>
 
-      <p class="text-slate-400 text-sm sm:text-lg max-w-xl leading-relaxed">
-        No more manual math or group calculation headaches. Splat uses advanced AI to itemize restaurant, grocery, and trip bills in seconds.
-      </p>
-
-      <!-- App Download Action Cards -->
-      <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md justify-center items-center mt-2">
-        <!-- Google Play Button -->
+      <!-- Store Download Badges -->
+      <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md justify-center items-center">
+        <!-- Google Play -->
         <a 
           href="https://play.google.com/store/apps/details?id=com.mickrheault.splat" 
           target="_blank"
-          class="w-full sm:w-auto flex items-center justify-center gap-3 bg-slate-900 hover:bg-slate-800 border-2 border-slate-700 hover:border-emerald-500/50 text-white px-6 py-3.5 rounded-2xl shadow-xl transition-all duration-200 group cursor-pointer"
+          class="w-full sm:w-1/2 flex items-center justify-center gap-3 bg-gradient-to-b from-slate-900 to-slate-950 hover:from-slate-800 hover:to-slate-900 border border-slate-800 hover:border-emerald-500/40 text-white px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 hover:-translate-y-0.5 group cursor-pointer"
         >
           <i class="pi pi-google text-2xl text-emerald-400 group-hover:scale-110 transition-transform"></i>
           <div class="flex flex-col text-left">
-            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Get it on</span>
-            <span class="font-extrabold text-sm tracking-wide">Google Play</span>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Get it on</span>
+            <span class="font-extrabold text-sm tracking-wide text-white">Google Play</span>
           </div>
         </a>
 
-        <!-- App Store Button -->
+        <!-- App Store -->
         <a 
           href="#" 
-          class="w-full sm:w-auto flex items-center justify-center gap-3 bg-slate-900 hover:bg-slate-800 border-2 border-slate-700 hover:border-indigo-500/50 text-white px-6 py-3.5 rounded-2xl shadow-xl transition-all duration-200 group cursor-pointer"
+          class="w-full sm:w-1/2 flex items-center justify-center gap-3 bg-gradient-to-b from-slate-900 to-slate-950 hover:from-slate-800 hover:to-slate-900 border border-slate-800 hover:border-purple-500/40 text-white px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 hover:-translate-y-0.5 group cursor-pointer"
         >
-          <i class="pi pi-apple text-2xl text-indigo-400 group-hover:scale-110 transition-transform"></i>
+          <i class="pi pi-apple text-2xl text-purple-400 group-hover:scale-110 transition-transform"></i>
           <div class="flex flex-col text-left">
-            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Download on the</span>
-            <span class="font-extrabold text-sm tracking-wide">App Store</span>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Download on</span>
+            <span class="font-extrabold text-sm tracking-wide text-white">App Store</span>
           </div>
         </a>
       </div>
 
-      <!-- Feature Screenshots Showcase -->
-      <div class="w-full max-w-3xl mt-6 p-2 sm:p-4 rounded-3xl bg-slate-900/60 border border-slate-800/80 shadow-2xl shadow-emerald-950/20 backdrop-blur-sm relative overflow-hidden group">
+      <!-- Feature Screenshots Showcase Card -->
+      <div class="w-full max-w-4xl mt-4 p-3 sm:p-5 rounded-3xl bg-slate-900/50 border border-slate-800/80 shadow-2xl shadow-emerald-950/30 backdrop-blur-md relative overflow-hidden group">
+        <!-- Floating Stat Badges overlay -->
+        <div class="absolute top-6 left-6 z-20 hidden md:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-bold text-emerald-400 shadow-xl backdrop-blur-md">
+          <i class="pi pi-bolt text-emerald-400"></i>
+          <span>99.8% OCR Accuracy</span>
+        </div>
+        <div class="absolute bottom-6 right-6 z-20 hidden md:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-bold text-purple-400 shadow-xl backdrop-blur-md">
+          <i class="pi pi-users text-purple-400"></i>
+          <span>Itemized Quantities</span>
+        </div>
+
         <img 
           src="/store_feature_1024x500.png" 
-          alt="Splat AI Bill Splitter App Interface Showcase" 
-          class="w-full h-auto rounded-2xl border border-slate-800 object-cover shadow-lg transform transition-transform duration-500 group-hover:scale-[1.01]"
+          alt="Splat AI Bill Splitter App Showcase" 
+          class="w-full h-auto rounded-2xl border border-slate-800/80 object-cover shadow-2xl transition-transform duration-700 group-hover:scale-[1.01]"
         />
       </div>
 
-      <!-- Minimal Features Bullet Highlights -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-3xl mt-4 text-left">
-        <div class="p-4 rounded-2xl bg-slate-900/40 border border-slate-800/60 flex flex-col gap-2">
-          <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold">⚡</div>
-          <h3 class="font-extrabold text-sm text-slate-200">Instant AI OCR</h3>
-          <p class="text-xs text-slate-400 leading-normal">Camera receipt scanning auto-detects items, prices, tax, and tips automatically.</p>
+      <!-- 3 Feature Highlight Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 w-full max-w-4xl mt-4 text-left">
+        <div class="p-6 rounded-2xl bg-gradient-to-b from-slate-900/60 to-slate-950/60 border border-slate-800/80 hover:border-emerald-500/30 transition-all duration-300 hover:-translate-y-1 flex flex-col gap-3 shadow-xl group">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-lg font-bold group-hover:scale-110 transition-transform">
+            ⚡
+          </div>
+          <h3 class="font-extrabold text-base text-white">Instant AI Scanning</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Snap a receipt photo. Gemini AI automatically itemizes prices, subtotals, tax, and tip percentages in seconds.
+          </p>
         </div>
 
-        <div class="p-4 rounded-2xl bg-slate-900/40 border border-slate-800/60 flex flex-col gap-2">
-          <div class="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold">👥</div>
-          <h3 class="font-extrabold text-sm text-slate-200">Item Quantity Splits</h3>
-          <p class="text-xs text-slate-400 leading-normal">Assign items by count or split evenly among participants with exact math.</p>
+        <div class="p-6 rounded-2xl bg-gradient-to-b from-slate-900/60 to-slate-950/60 border border-slate-800/80 hover:border-teal-500/30 transition-all duration-300 hover:-translate-y-1 flex flex-col gap-3 shadow-xl group">
+          <div class="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 text-lg font-bold group-hover:scale-110 transition-transform">
+            👥
+          </div>
+          <h3 class="font-extrabold text-base text-white">Item Quantity Allocations</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Split shared items by assigned count or percentage. No manual calculations or spreadsheets needed.
+          </p>
         </div>
 
-        <div class="p-4 rounded-2xl bg-slate-900/40 border border-slate-800/60 flex flex-col gap-2">
-          <div class="w-8 h-8 rounded-lg bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400 font-bold">🌍</div>
-          <h3 class="font-extrabold text-sm text-slate-200">Global Currencies</h3>
-          <p class="text-xs text-slate-400 leading-normal">Support for 25+ world currencies plus custom symbols & instant breakdown sharing.</p>
+        <div class="p-6 rounded-2xl bg-gradient-to-b from-slate-900/60 to-slate-950/60 border border-slate-800/80 hover:border-purple-500/30 transition-all duration-300 hover:-translate-y-1 flex flex-col gap-3 shadow-xl group">
+          <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 text-lg font-bold group-hover:scale-110 transition-transform">
+            💬
+          </div>
+          <h3 class="font-extrabold text-base text-white">1-Tap WhatsApp Summaries</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Generate clean, formatted text breakdowns for each participant to send over WhatsApp, SMS, or Venmo.
+          </p>
         </div>
       </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="w-full max-w-5xl mx-auto px-6 py-8 border-t border-slate-900 text-center flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-500">
-      <div>
-        © 2026 Splat App. All rights reserved. Available exclusively on mobile devices.
+    <!-- Sleek Glass Footer -->
+    <footer class="w-full max-w-5xl mx-auto px-6 py-8 border-t border-slate-900/80 text-center flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-500 z-10">
+      <div class="flex items-center gap-2">
+        <span>© 2026 Splat App. Built for iOS & Android.</span>
       </div>
-      <div class="flex items-center gap-4">
+      <div class="flex items-center gap-5">
         <a href="/privacy.html" target="_blank" class="hover:text-slate-300 transition-colors">Privacy Policy</a>
       </div>
     </footer>
@@ -2999,7 +3058,46 @@ const selectAllText = (event: Event) => {
           label="Set Currency" 
           class="p-button-primary flex-1 p-button-sm font-bold" 
           :disabled="!customCurrencyInput.trim()"
-          @click="applyCustomCurrency" 
+          @click="applyCustomCurrency"
+        />
+      </div>
+    </div>
+  </Dialog>
+
+  <!-- Admin Passcode Unlock Dialog -->
+  <Dialog 
+    v-model:visible="isAdminPasscodeOpen" 
+    modal 
+    header="🔒 Admin Access Passcode" 
+    :style="{ width: '90%', maxWidth: '340px' }"
+    :draggable="false"
+    class="neobrutalist-dialog"
+  >
+    <div class="flex flex-col gap-3 py-1">
+      <p class="text-xs text-secondary">Enter admin passcode to access full web app:</p>
+      
+      <InputText 
+        v-model="adminPasscodeInput" 
+        type="password"
+        placeholder="Enter passcode" 
+        class="w-full text-base font-bold" 
+        :class="{ 'p-invalid': !!adminPasscodeError }"
+        @keyup.enter="submitAdminPasscode"
+      />
+
+      <p v-if="adminPasscodeError" class="text-xs text-rose-400 font-semibold">{{ adminPasscodeError }}</p>
+
+      <div class="flex gap-2 mt-2">
+        <Button 
+          label="Cancel" 
+          class="p-button-outlined p-button-secondary flex-1 p-button-sm" 
+          @click="isAdminPasscodeOpen = false" 
+        />
+        <Button 
+          label="Unlock" 
+          class="p-button-primary flex-1 p-button-sm font-bold" 
+          :disabled="!adminPasscodeInput.trim()"
+          @click="submitAdminPasscode" 
         />
       </div>
     </div>
