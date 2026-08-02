@@ -1267,128 +1267,170 @@ const selectAllText = (event: Event) => {
   <!-- 1. Web Advertising Landing Page (shown when web version is NOT unlocked and NOT running in native app) -->
   <div v-if="!isWebUnlocked" class="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white relative overflow-hidden">
     <!-- Ambient Radial Glow Spotlights -->
-    <div class="absolute -top-40 -left-40 w-96 h-96 bg-emerald-500/15 rounded-full blur-[128px] pointer-events-none"></div>
-    <div class="absolute top-1/3 -right-40 w-96 h-96 bg-purple-500/15 rounded-full blur-[128px] pointer-events-none"></div>
-    <div class="absolute -bottom-40 left-1/3 w-96 h-96 bg-teal-500/15 rounded-full blur-[128px] pointer-events-none"></div>
+    <div class="absolute -top-40 -left-40 w-[30rem] h-[30rem] bg-emerald-500/15 rounded-full blur-[140px] pointer-events-none"></div>
+    <div class="absolute top-1/3 -right-40 w-[30rem] h-[30rem] bg-purple-500/15 rounded-full blur-[140px] pointer-events-none"></div>
+    <div class="absolute -bottom-40 left-1/3 w-[30rem] h-[30rem] bg-teal-500/15 rounded-full blur-[140px] pointer-events-none"></div>
 
     <!-- Floating Glassmorphic Nav Bar -->
-    <header class="w-full max-w-5xl mx-auto px-4 py-5 sticky top-0 z-50">
-      <div class="w-full px-5 py-3 rounded-2xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-md shadow-2xl flex justify-between items-center">
+    <header class="w-full max-w-6xl mx-auto px-4 sm:px-6 py-5 sticky top-0 z-50">
+      <div class="w-full px-6 py-3.5 rounded-2xl bg-slate-900/75 border border-slate-800/80 backdrop-blur-md shadow-2xl flex justify-between items-center">
         <div class="flex items-center gap-3">
-          <img src="/store_icon_512.png" alt="Splat Logo" class="w-9 h-9 rounded-xl shadow-lg border border-slate-700/60" />
-          <div class="flex items-baseline gap-1.5">
-            <span class="font-black text-xl tracking-tight text-white">Splat</span>
-            <span class="text-[10px] font-extrabold tracking-widest text-emerald-400 uppercase bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">AI</span>
+          <img src="/store_icon_512.png" alt="Splat Logo" class="w-10 h-10 rounded-xl shadow-lg border border-slate-700/60" />
+          <div class="flex items-baseline gap-2">
+            <span class="font-black text-2xl tracking-tight text-white">Splat</span>
+            <span class="text-[10px] font-extrabold tracking-widest text-emerald-400 uppercase bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">AI</span>
           </div>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
           <button 
             @click="openAdminPasscodeModal" 
-            class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+            class="text-xs font-semibold px-4 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 transition-all flex items-center gap-2 cursor-pointer shadow-sm active:scale-95"
             title="Admin Bypass"
           >
-            <i class="pi pi-key text-[10px] text-emerald-400"></i>
-            <span>Admin</span>
+            <i class="pi pi-key text-xs text-emerald-400"></i>
+            <span>Admin Access</span>
           </button>
         </div>
       </div>
     </header>
 
-    <!-- Main Hero Content -->
-    <main class="flex-1 w-full max-w-5xl mx-auto px-6 py-10 md:py-16 flex flex-col items-center text-center gap-10 z-10">
+    <!-- Main Hero Section: Split Grid on Desktop (lg:grid lg:grid-cols-12) -->
+    <main class="flex-1 w-full max-w-6xl mx-auto px-6 py-10 lg:py-16 flex flex-col items-center gap-16 z-10">
       
-      <!-- Top Tagline Pill -->
-      <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900/80 border border-slate-800 text-xs font-semibold text-emerald-400 shadow-xl backdrop-blur-sm animate-pulse">
-        <span class="text-sm">✨</span>
-        <span>Powered by Gemini AI • Mobile Exclusive</span>
-      </div>
-
-      <!-- Main Headline -->
-      <div class="flex flex-col gap-4 max-w-3xl">
-        <h1 class="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight text-white leading-[1.1]">
-          Snap Receipts. <br />
-          <span class="bg-gradient-to-r from-emerald-400 via-teal-300 to-purple-400 bg-clip-text text-transparent">Split Bills. Zero Math.</span>
-        </h1>
-        <p class="text-slate-400 text-base sm:text-xl max-w-2xl mx-auto leading-relaxed font-normal">
-          The smartest mobile bill splitter. Take a photo of any receipt to itemize, split by exact quantities, and share breakdown totals with friends instantly.
-        </p>
-      </div>
-
-      <!-- Store Download Badges -->
-      <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md justify-center items-center">
-        <!-- Google Play -->
-        <a 
-          href="https://play.google.com/store/apps/details?id=com.mickrheault.splat" 
-          target="_blank"
-          class="w-full sm:w-1/2 flex items-center justify-center gap-3 bg-gradient-to-b from-slate-900 to-slate-950 hover:from-slate-800 hover:to-slate-900 border border-slate-800 hover:border-emerald-500/40 text-white px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 hover:-translate-y-0.5 group cursor-pointer"
-        >
-          <i class="pi pi-google text-2xl text-emerald-400 group-hover:scale-110 transition-transform"></i>
-          <div class="flex flex-col text-left">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Get it on</span>
-            <span class="font-extrabold text-sm tracking-wide text-white">Google Play</span>
+      <!-- Responsive Hero Grid -->
+      <div class="w-full grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center text-center lg:text-left">
+        
+        <!-- Hero Left Column: Copy & CTAs (col-span-7) -->
+        <div class="lg:col-span-7 flex flex-col items-center lg:items-start gap-6">
+          <!-- Tagline Pill -->
+          <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900/90 border border-slate-800 text-xs font-semibold text-emerald-400 shadow-xl backdrop-blur-sm">
+            <span class="text-sm">✨</span>
+            <span>Powered by Gemini AI • Mobile Exclusive</span>
           </div>
-        </a>
 
-        <!-- App Store -->
-        <a 
-          href="#" 
-          class="w-full sm:w-1/2 flex items-center justify-center gap-3 bg-gradient-to-b from-slate-900 to-slate-950 hover:from-slate-800 hover:to-slate-900 border border-slate-800 hover:border-purple-500/40 text-white px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 hover:-translate-y-0.5 group cursor-pointer"
-        >
-          <i class="pi pi-apple text-2xl text-purple-400 group-hover:scale-110 transition-transform"></i>
-          <div class="flex flex-col text-left">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Download on</span>
-            <span class="font-extrabold text-sm tracking-wide text-white">App Store</span>
+          <!-- Headline -->
+          <h1 class="text-4xl sm:text-6xl lg:text-6xl xl:text-7xl font-black tracking-tight text-white leading-[1.08]">
+            Snap Receipts. <br />
+            <span class="bg-gradient-to-r from-emerald-400 via-teal-300 to-purple-400 bg-clip-text text-transparent">Split Bills. Zero Math.</span>
+          </h1>
+
+          <!-- Value Prop Subtitle -->
+          <p class="text-slate-400 text-base sm:text-lg lg:text-xl max-w-2xl leading-relaxed font-normal">
+            The smartest mobile bill splitter. Take a photo of any receipt to itemize, split by exact quantities, and share breakdown totals with friends instantly.
+          </p>
+
+          <!-- Download Action Buttons -->
+          <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md lg:max-w-lg mt-2">
+            <!-- Google Play -->
+            <a 
+              href="https://play.google.com/store/apps/details?id=com.mickrheault.splat" 
+              target="_blank"
+              class="w-full sm:w-1/2 flex items-center justify-center gap-3 bg-gradient-to-b from-slate-900 to-slate-950 hover:from-slate-800 hover:to-slate-900 border border-slate-800 hover:border-emerald-500/50 text-white px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 hover:-translate-y-0.5 group cursor-pointer"
+            >
+              <i class="pi pi-google text-2xl text-emerald-400 group-hover:scale-110 transition-transform"></i>
+              <div class="flex flex-col text-left">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Get it on</span>
+                <span class="font-extrabold text-sm tracking-wide text-white">Google Play</span>
+              </div>
+            </a>
+
+            <!-- App Store -->
+            <a 
+              href="#" 
+              class="w-full sm:w-1/2 flex items-center justify-center gap-3 bg-gradient-to-b from-slate-900 to-slate-950 hover:from-slate-800 hover:to-slate-900 border border-slate-800 hover:border-purple-500/50 text-white px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 hover:-translate-y-0.5 group cursor-pointer"
+            >
+              <i class="pi pi-apple text-2xl text-purple-400 group-hover:scale-110 transition-transform"></i>
+              <div class="flex flex-col text-left">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Download on</span>
+                <span class="font-extrabold text-sm tracking-wide text-white">App Store</span>
+              </div>
+            </a>
           </div>
-        </a>
+
+          <!-- Micro Feature Highlights Row -->
+          <div class="flex flex-wrap justify-center lg:justify-start gap-3 pt-2 text-xs font-semibold text-slate-300">
+            <span class="flex items-center gap-1.5 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-800/60">
+              <i class="pi pi-check text-emerald-400 text-[10px]"></i> 99.8% AI OCR Accuracy
+            </span>
+            <span class="flex items-center gap-1.5 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-800/60">
+              <i class="pi pi-check text-emerald-400 text-[10px]"></i> 25+ Global Currencies
+            </span>
+            <span class="flex items-center gap-1.5 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-800/60">
+              <i class="pi pi-check text-emerald-400 text-[10px]"></i> Item Quantity Splits
+            </span>
+          </div>
+        </div>
+
+        <!-- Hero Right Column: Device Graphic Mockup Showcase (col-span-5) -->
+        <div class="lg:col-span-5 relative w-full flex justify-center">
+          <div class="w-full max-w-md lg:max-w-none p-3 sm:p-4 rounded-3xl bg-slate-900/50 border border-slate-800/80 shadow-2xl shadow-emerald-950/40 backdrop-blur-md relative overflow-hidden group transform lg:-rotate-1 lg:hover:rotate-0 transition-transform duration-500">
+            <!-- Floating Stat Badges overlay -->
+            <div class="absolute top-6 left-6 z-20 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-950/90 border border-slate-800 text-xs font-bold text-emerald-400 shadow-xl backdrop-blur-md">
+              <i class="pi pi-bolt text-emerald-400"></i>
+              <span>Instant Gemini OCR</span>
+            </div>
+            <div class="absolute bottom-6 right-6 z-20 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-950/90 border border-slate-800 text-xs font-bold text-purple-400 shadow-xl backdrop-blur-md">
+              <i class="pi pi-users text-purple-400"></i>
+              <span>Itemized Totals</span>
+            </div>
+
+            <img 
+              src="/store_feature_1024x500.png" 
+              alt="Splat AI Bill Splitter App Showcase" 
+              class="w-full h-auto rounded-2xl border border-slate-800/80 object-cover shadow-2xl transition-transform duration-700 group-hover:scale-[1.02]"
+            />
+          </div>
+        </div>
       </div>
 
-      <!-- Feature Screenshots Showcase Card -->
-      <div class="w-full max-w-4xl mt-4 p-3 sm:p-5 rounded-3xl bg-slate-900/50 border border-slate-800/80 shadow-2xl shadow-emerald-950/30 backdrop-blur-md relative overflow-hidden group">
-        <!-- Floating Stat Badges overlay -->
-        <div class="absolute top-6 left-6 z-20 hidden md:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-bold text-emerald-400 shadow-xl backdrop-blur-md">
-          <i class="pi pi-bolt text-emerald-400"></i>
-          <span>99.8% OCR Accuracy</span>
+      <!-- Social Proof Metrics Bar -->
+      <div class="w-full grid grid-cols-2 md:grid-cols-4 gap-4 p-6 rounded-2xl bg-slate-900/40 border border-slate-800/60 backdrop-blur-sm text-center">
+        <div class="flex flex-col gap-1">
+          <span class="text-2xl lg:text-3xl font-black text-white">100%</span>
+          <span class="text-xs text-slate-400 font-medium">Itemized Accuracy</span>
         </div>
-        <div class="absolute bottom-6 right-6 z-20 hidden md:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-bold text-purple-400 shadow-xl backdrop-blur-md">
-          <i class="pi pi-users text-purple-400"></i>
-          <span>Itemized Quantities</span>
+        <div class="flex flex-col gap-1">
+          <span class="text-2xl lg:text-3xl font-black text-emerald-400">25+</span>
+          <span class="text-xs text-slate-400 font-medium">World Currencies</span>
         </div>
-
-        <img 
-          src="/store_feature_1024x500.png" 
-          alt="Splat AI Bill Splitter App Showcase" 
-          class="w-full h-auto rounded-2xl border border-slate-800/80 object-cover shadow-2xl transition-transform duration-700 group-hover:scale-[1.01]"
-        />
+        <div class="flex flex-col gap-1">
+          <span class="text-2xl lg:text-3xl font-black text-teal-300">&lt;2 sec</span>
+          <span class="text-xs text-slate-400 font-medium">OCR Scan Speed</span>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-2xl lg:text-3xl font-black text-purple-400">0</span>
+          <span class="text-xs text-slate-400 font-medium">Spreadsheets Needed</span>
+        </div>
       </div>
 
-      <!-- 3 Feature Highlight Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 w-full max-w-4xl mt-4 text-left">
-        <div class="p-6 rounded-2xl bg-gradient-to-b from-slate-900/60 to-slate-950/60 border border-slate-800/80 hover:border-emerald-500/30 transition-all duration-300 hover:-translate-y-1 flex flex-col gap-3 shadow-xl group">
-          <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-lg font-bold group-hover:scale-110 transition-transform">
+      <!-- 3 Feature Highlight Cards (3 Columns on Desktop) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full text-left">
+        <div class="p-7 rounded-2xl bg-gradient-to-b from-slate-900/60 to-slate-950/60 border border-slate-800/80 hover:border-emerald-500/30 transition-all duration-300 hover:-translate-y-1 flex flex-col gap-3 shadow-xl group">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-xl font-bold group-hover:scale-110 transition-transform">
             ⚡
           </div>
-          <h3 class="font-extrabold text-base text-white">Instant AI Scanning</h3>
-          <p class="text-xs text-slate-400 leading-relaxed">
+          <h3 class="font-extrabold text-lg text-white">Instant AI Scanning</h3>
+          <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
             Snap a receipt photo. Gemini AI automatically itemizes prices, subtotals, tax, and tip percentages in seconds.
           </p>
         </div>
 
-        <div class="p-6 rounded-2xl bg-gradient-to-b from-slate-900/60 to-slate-950/60 border border-slate-800/80 hover:border-teal-500/30 transition-all duration-300 hover:-translate-y-1 flex flex-col gap-3 shadow-xl group">
-          <div class="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 text-lg font-bold group-hover:scale-110 transition-transform">
+        <div class="p-7 rounded-2xl bg-gradient-to-b from-slate-900/60 to-slate-950/60 border border-slate-800/80 hover:border-teal-500/30 transition-all duration-300 hover:-translate-y-1 flex flex-col gap-3 shadow-xl group">
+          <div class="w-12 h-12 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 text-xl font-bold group-hover:scale-110 transition-transform">
             👥
           </div>
-          <h3 class="font-extrabold text-base text-white">Item Quantity Allocations</h3>
-          <p class="text-xs text-slate-400 leading-relaxed">
+          <h3 class="font-extrabold text-lg text-white">Item Quantity Allocations</h3>
+          <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
             Split shared items by assigned count or percentage. No manual calculations or spreadsheets needed.
           </p>
         </div>
 
-        <div class="p-6 rounded-2xl bg-gradient-to-b from-slate-900/60 to-slate-950/60 border border-slate-800/80 hover:border-purple-500/30 transition-all duration-300 hover:-translate-y-1 flex flex-col gap-3 shadow-xl group">
-          <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 text-lg font-bold group-hover:scale-110 transition-transform">
+        <div class="p-7 rounded-2xl bg-gradient-to-b from-slate-900/60 to-slate-950/60 border border-slate-800/80 hover:border-purple-500/30 transition-all duration-300 hover:-translate-y-1 flex flex-col gap-3 shadow-xl group">
+          <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 text-xl font-bold group-hover:scale-110 transition-transform">
             💬
           </div>
-          <h3 class="font-extrabold text-base text-white">1-Tap WhatsApp Summaries</h3>
-          <p class="text-xs text-slate-400 leading-relaxed">
+          <h3 class="font-extrabold text-lg text-white">1-Tap WhatsApp Summaries</h3>
+          <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
             Generate clean, formatted text breakdowns for each participant to send over WhatsApp, SMS, or Venmo.
           </p>
         </div>
@@ -1396,7 +1438,7 @@ const selectAllText = (event: Event) => {
     </main>
 
     <!-- Sleek Glass Footer -->
-    <footer class="w-full max-w-5xl mx-auto px-6 py-8 border-t border-slate-900/80 text-center flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-500 z-10">
+    <footer class="w-full max-w-6xl mx-auto px-6 py-8 border-t border-slate-900/80 text-center flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-500 z-10">
       <div class="flex items-center gap-2">
         <span>© 2026 Splat App. Built for iOS & Android.</span>
       </div>
