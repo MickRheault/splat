@@ -299,7 +299,49 @@ const loadSavedNames = async () => {
   }
 }
 
+const isWebUnlocked = ref(false)
+
+const checkWebAccess = () => {
+  if (Capacitor.isNativePlatform()) {
+    isWebUnlocked.value = true
+    return
+  }
+  const params = new URLSearchParams(window.location.search)
+  if (
+    params.get('dev') === 'true' || 
+    params.get('admin') === 'true' || 
+    params.get('access') === 'true' || 
+    params.get('unlock') === 'true'
+  ) {
+    localStorage.setItem('splat_web_unlocked', 'true')
+    isWebUnlocked.value = true
+    return
+  }
+  if (localStorage.getItem('splat_web_unlocked') === 'true') {
+    isWebUnlocked.value = true
+    return
+  }
+  isWebUnlocked.value = false
+}
+
+const unlockWebAccess = () => {
+  localStorage.setItem('splat_web_unlocked', 'true')
+  isWebUnlocked.value = true
+}
+
+const lockWebAccess = () => {
+  localStorage.removeItem('splat_web_unlocked')
+  const url = new URL(window.location.href)
+  url.searchParams.delete('dev')
+  url.searchParams.delete('admin')
+  url.searchParams.delete('access')
+  url.searchParams.delete('unlock')
+  window.history.replaceState({}, '', url.toString())
+  isWebUnlocked.value = false
+}
+
 onMounted(async () => {
+  checkWebAccess()
   const mountStart = performance.now();
   const getElapsed = () => {
     const base = (window as any).__bootstrapStart || mountStart;
@@ -1203,8 +1245,112 @@ const selectAllText = (event: Event) => {
 </script>
 
 <template>
-  <!-- Main Header Stepper -->
-  <header class="app-header">
+  <!-- 1. Web Advertising Landing Page (shown when web version is NOT unlocked and NOT running in native app) -->
+  <div v-if="!isWebUnlocked" class="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
+    <!-- Landing Header -->
+    <header class="w-full max-w-5xl mx-auto px-6 py-6 flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <img src="/store_icon_512.png" alt="Splat" class="w-10 h-10 rounded-xl shadow-lg border border-slate-800" />
+        <span class="font-black text-xl tracking-tight text-white flex items-center gap-1.5">Splat <span class="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">AI</span></span>
+      </div>
+      <div class="flex items-center gap-3">
+        <button @click="unlockWebAccess" class="text-xs font-medium text-slate-500 hover:text-slate-300 transition-colors cursor-pointer">
+          Admin Bypass
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Hero Container -->
+    <main class="flex-1 w-full max-w-4xl mx-auto px-6 py-8 md:py-14 flex flex-col items-center text-center gap-8">
+      <!-- Tagline Pill -->
+      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs font-semibold text-emerald-400 shadow-inner">
+        <span>⚡ The Smart AI Bill Splitter App for iOS & Android</span>
+      </div>
+
+      <!-- Main Headline -->
+      <h1 class="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-white leading-tight max-w-3xl">
+        Snap your receipt. <br />
+        <span class="bg-gradient-to-r from-emerald-400 via-teal-300 to-indigo-400 bg-clip-text text-transparent">Split the bill instantly.</span>
+      </h1>
+
+      <p class="text-slate-400 text-sm sm:text-lg max-w-xl leading-relaxed">
+        No more manual math or group calculation headaches. Splat uses advanced AI to itemize restaurant, grocery, and trip bills in seconds.
+      </p>
+
+      <!-- App Download Action Cards -->
+      <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md justify-center items-center mt-2">
+        <!-- Google Play Button -->
+        <a 
+          href="https://play.google.com/store/apps/details?id=com.mickrheault.splat" 
+          target="_blank"
+          class="w-full sm:w-auto flex items-center justify-center gap-3 bg-slate-900 hover:bg-slate-800 border-2 border-slate-700 hover:border-emerald-500/50 text-white px-6 py-3.5 rounded-2xl shadow-xl transition-all duration-200 group cursor-pointer"
+        >
+          <i class="pi pi-google text-2xl text-emerald-400 group-hover:scale-110 transition-transform"></i>
+          <div class="flex flex-col text-left">
+            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Get it on</span>
+            <span class="font-extrabold text-sm tracking-wide">Google Play</span>
+          </div>
+        </a>
+
+        <!-- App Store Button -->
+        <a 
+          href="#" 
+          class="w-full sm:w-auto flex items-center justify-center gap-3 bg-slate-900 hover:bg-slate-800 border-2 border-slate-700 hover:border-indigo-500/50 text-white px-6 py-3.5 rounded-2xl shadow-xl transition-all duration-200 group cursor-pointer"
+        >
+          <i class="pi pi-apple text-2xl text-indigo-400 group-hover:scale-110 transition-transform"></i>
+          <div class="flex flex-col text-left">
+            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Download on the</span>
+            <span class="font-extrabold text-sm tracking-wide">App Store</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- Feature Screenshots Showcase -->
+      <div class="w-full max-w-3xl mt-6 p-2 sm:p-4 rounded-3xl bg-slate-900/60 border border-slate-800/80 shadow-2xl shadow-emerald-950/20 backdrop-blur-sm relative overflow-hidden group">
+        <img 
+          src="/store_feature_1024x500.png" 
+          alt="Splat AI Bill Splitter App Interface Showcase" 
+          class="w-full h-auto rounded-2xl border border-slate-800 object-cover shadow-lg transform transition-transform duration-500 group-hover:scale-[1.01]"
+        />
+      </div>
+
+      <!-- Minimal Features Bullet Highlights -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-3xl mt-4 text-left">
+        <div class="p-4 rounded-2xl bg-slate-900/40 border border-slate-800/60 flex flex-col gap-2">
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold">⚡</div>
+          <h3 class="font-extrabold text-sm text-slate-200">Instant AI OCR</h3>
+          <p class="text-xs text-slate-400 leading-normal">Camera receipt scanning auto-detects items, prices, tax, and tips automatically.</p>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-slate-900/40 border border-slate-800/60 flex flex-col gap-2">
+          <div class="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold">👥</div>
+          <h3 class="font-extrabold text-sm text-slate-200">Item Quantity Splits</h3>
+          <p class="text-xs text-slate-400 leading-normal">Assign items by count or split evenly among participants with exact math.</p>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-slate-900/40 border border-slate-800/60 flex flex-col gap-2">
+          <div class="w-8 h-8 rounded-lg bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400 font-bold">🌍</div>
+          <h3 class="font-extrabold text-sm text-slate-200">Global Currencies</h3>
+          <p class="text-xs text-slate-400 leading-normal">Support for 25+ world currencies plus custom symbols & instant breakdown sharing.</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full max-w-5xl mx-auto px-6 py-8 border-t border-slate-900 text-center flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-500">
+      <div>
+        © 2026 Splat App. All rights reserved. Available exclusively on mobile devices.
+      </div>
+      <div class="flex items-center gap-4">
+        <a href="/privacy.html" target="_blank" class="hover:text-slate-300 transition-colors">Privacy Policy</a>
+      </div>
+    </footer>
+  </div>
+
+  <!-- 2. Full Splat Web App Interface (shown when unlocked or in native mobile app) -->
+  <div v-else>
+    <!-- Main Header Stepper -->
+    <header class="app-header">
     <div class="brand-logo-container" v-if="store.step === 'capture'">
       <img src="/splat_logo.png?v=2" alt="SPLAT Logo" class="brand-logo" />
     </div>
@@ -2578,6 +2724,14 @@ const selectAllText = (event: Event) => {
             @click="store.showPaywall = true; isDevMenuOpen = false" 
           />
 
+          <Button 
+            v-if="!Capacitor.isNativePlatform()"
+            label="Lock Web (Preview Landing Page)" 
+            icon="pi pi-lock" 
+            class="p-button-outlined p-button-danger p-button-sm w-full" 
+            @click="lockWebAccess(); isDevMenuOpen = false" 
+          />
+
           <!-- Client-Side Simulation Mode -->
           <div class="flex flex-col gap-1.5 border-t border-slate-800 pt-3">
             <label class="text-[10px] font-semibold text-secondary uppercase tracking-wider">Simulate Scan Limits</label>
@@ -2850,4 +3004,5 @@ const selectAllText = (event: Event) => {
       </div>
     </div>
   </Dialog>
+  </div>
 </template>
