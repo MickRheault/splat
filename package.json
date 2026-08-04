@@ -1,13 +1,14 @@
 {
   "name": "splat",
   "private": true,
-  "version": "0.0.167",
+  "version": "0.0.169",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "benchmark:ocr": "vitest run tests/ocr_benchmark/ocr_benchmark.test.ts",
     "screenshot": "node screenshot_test.js"
   },
   "dependencies": {
