@@ -1684,10 +1684,6 @@ const selectAllText = (event: Event) => {
               </div>
               <div class="flex-1 min-w-0 pr-2">
                 <h5 class="font-bold text-sm text-slate-800 dark:text-slate-100 truncate text-left m-0">{{ split.billName || 'Untitled Bill' }}</h5>
-                <!-- Participant list -->
-                <p class="text-[10px] text-slate-400 dark:text-slate-400 truncate text-left mt-0.5 m-0 font-medium">
-                  {{ split.participants ? split.participants.map((p: any) => p.name).join(', ') : `${split.participantsCount} people` }}
-                </p>
                 <div class="flex items-center gap-1.5 text-[9px] text-slate-500 mt-1 font-semibold">
                   <span>{{ formatDate(split.timestamp) }}</span>
                 </div>
