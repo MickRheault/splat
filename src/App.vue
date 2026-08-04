@@ -230,10 +230,7 @@ const isDevMenuOpen = ref(false)
 const isPerformingDevAction = ref(false)
 const localDeviceId = ref('')
 
-const isDevMenuEnabled = import.meta.env.VITE_ENABLE_DEV_MENU === 'true' || import.meta.env.DEV
-
 const handleVersionTap = async () => {
-  if (!isDevMenuEnabled) return
   versionTapCount.value++
   if (versionTapCount.value >= 5) {
     versionTapCount.value = 0
@@ -2706,7 +2703,6 @@ const selectAllText = (event: Event) => {
 
     <!-- Developer Menu Dialog -->
     <Dialog 
-      v-if="isDevMenuEnabled"
       v-model:visible="isDevMenuOpen" 
       modal 
       header="🛠️ Developer Options" 
