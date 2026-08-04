@@ -1594,8 +1594,8 @@ const selectAllText = (event: Event) => {
                 <i :class="getCategoryIcon(split.category || 'food_drink')"></i>
               </div>
               <div class="flex-1 min-w-0 pr-2">
-                <!-- Clear, high-contrast Bill Title -->
-                <h5 class="font-bold text-base text-slate-900 dark:text-slate-100 truncate text-left m-0">{{ split.billName || 'Untitled Bill' }}</h5>
+                <!-- Clear, white Bill Title -->
+                <h5 class="font-bold text-base text-white truncate text-left m-0">{{ split.billName || 'Untitled Bill' }}</h5>
                 <div class="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5 font-semibold">
                   <span>{{ formatDate(split.timestamp) }}</span>
                 </div>
@@ -2004,7 +2004,7 @@ const selectAllText = (event: Event) => {
       </div>
 
       <!-- Quick totals visual reference at bottom of allocation -->
-      <div v-if="!isBulkMode" class="bill-card bg-slate-50 dark:bg-slate-800/40 mt-2">
+      <div v-if="!isBulkMode" class="bill-card mt-2">
         <h4 class="font-bold text-xs uppercase tracking-wider text-secondary">Split Preview</h4>
         <div class="flex flex-col gap-1 text-sm mt-1">
           <div 
@@ -2068,11 +2068,9 @@ const selectAllText = (event: Event) => {
 
         <div class="flex justify-between items-center mb-4 border-b border-dashed border-slate-200 dark:border-slate-700 pb-3 text-xs">
           <!-- Category Indicator -->
-          <div class="flex items-center gap-1.5 font-bold">
-            <div class="avatar-badge" style="width: 28px; height: 28px; font-size: 11px;">
-              <i :class="getCategoryIcon(store.category)"></i>
-            </div>
-            <span class="capitalize text-slate-700 dark:text-slate-300">
+          <div class="flex items-center gap-2 font-bold text-sm">
+            <i :class="getCategoryIcon(store.category)" class="text-base text-slate-300"></i>
+            <span class="capitalize text-white font-extrabold">
               {{ store.category.replace('_', ' & ') }}
             </span>
           </div>
