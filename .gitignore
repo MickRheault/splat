@@ -25,6 +25,5 @@ dist-ssr
 *.njsproj
 *.sln
 # Visual testing/previews
-screenshots/
-.vercel
-coverage/
+# Capgo OTA update zip bundles
+public/updates/*.zip
