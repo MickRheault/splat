@@ -161,12 +161,14 @@ Follow these rules strictly:
 5. Extract the tip value (if specified on the receipt).
 6. Validate if the image is a valid receipt. If it's a photo of something else (like a dog, a car, landscape, blank screen, or arbitrary text), return a JSON with error: "This image does not appear to be a valid receipt."
 7. Categorize the bill type. Output exactly one of: 'food_drink' (restaurants/bars), 'groceries' (supermarkets), 'transport_fuel' (fuel/taxi/tolls), 'lodging' (hotels/hostels/Airbnb), 'tickets_entertainment' (movies/gigs/parks), 'shopping' (stores), 'activities' (tours/rental/sports), or 'general' (utilities/others).
+8. Detect the currency symbol or code used on the receipt (e.g. '฿' for Thai Baht / THB / บาท, '$', 'CA$', 'A$', '€', '£', '¥', '₩', '₹', 'CHF', 'S$', 'R$', 'kr', '₫', 'AED', etc.). If Thai Baht ('฿', 'THB', 'Baht', 'บาท') is present or detected on the receipt, set currencySymbol to '฿'. If unspecified or unclear, return null.
 
 Return format must be EXACTLY this JSON structure:
 {
   "restaurant": "Restaurant Name",
   "date": "YYYY-MM-DD",
   "category": "food_drink",
+  "currencySymbol": "฿",
   "items": [
     {"name": "Item Name", "price": 10.50, "quantity": 3}
   ],
