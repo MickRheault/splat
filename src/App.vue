@@ -1551,7 +1551,7 @@ const selectAllText = (event: Event) => {
         <p v-else-if="store.usageInfo.passType === 'dev_unlimited'" class="text-xs text-secondary font-bold italic">
           🛠️ Dev Mode (Bypassed / Unlimited)
         </p>
-        <div v-else class="flex flex-col items-center gap-1">
+        <div v-else class="flex flex-col items-center gap-1.5">
           <p class="text-xs text-secondary font-semibold">
             Free scans left this month: 
             <span class="text-primary font-black">{{ store.usageInfo.freeScansRemaining }} / {{ store.usageInfo.freeScansLimit }}</span>
@@ -1562,6 +1562,12 @@ const selectAllText = (event: Event) => {
               :style="{ width: `${(store.usageInfo.freeScansRemaining / store.usageInfo.freeScansLimit) * 100}%` }"
             ></div>
           </div>
+          <button 
+            @click="store.showPaywall = true"
+            class="mt-1 text-xs bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 font-bold px-3 py-1 rounded-full transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+          >
+            <i class="pi pi-sparkles text-[10px]"></i> Upgrade / Get Unlimited
+          </button>
         </div>
       </div>
 
