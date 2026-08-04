@@ -1,0 +1,85 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for splat/ios/App/App/public/assets/web-ddtrFXEU.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../../../../../prettify.css" />
+    <link rel="stylesheet" href="../../../../../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../../../../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../../../../../index.html">All files</a> / <a href="index.html">splat/ios/App/App/public/assets</a> web-ddtrFXEU.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >import{n as e,t}from"./index-D0zPNeLE.js";var n={status:`success`,version:``,downloaded:`1970-01-01T00:00:00.000Z`,id:`builtin`,checksum:``},r=class extends e{async setStatsUrl(e){console.warn(`Cannot setStatsUrl in web`,e)}async setUpdateUrl(e){console.warn(`Cannot setUpdateUrl in web`,e)}async setChannelUrl(e){console.warn(`Cannot setChannelUrl in web`,e)}async download(e){return console.warn(`Cannot download version in web`,e),n}async next(e){return console.warn(`Cannot set next version in web`,e),n}async isAutoUpdateEnabled(){return console.warn(`Cannot get isAutoUpdateEnabled in web`),{enabled:!1}}async set(e){console.warn(`Cannot set active bundle in web`,e)}async startPreviewSession(e){console.warn(`Cannot start preview session in web`,e)}async listPreviews(){return console.warn(`Cannot list previews in web`),{previews:[],currentBundle:n}}async setPreview(e){console.warn(`Cannot set preview in web`,e)}async resetPreview(){console.warn(`Cannot reset preview in web`)}async deletePreview(e){return console.warn(`Cannot delete preview in web`,e),{removed:!1,deleted:!1}}async checkPreviewUpdate(e){throw console.warn(`Cannot check preview update in web`,e),this.unimplemented(`Preview updates are not available on web platform`)}async updatePreview(e){throw console.warn(`Cannot update preview in web`,e),this.unimplemented(`Preview updates are not available on web platform`)}async getDeviceId(){return console.warn(`Cannot get ID in web`),{deviceId:`default`}}async getBuiltinVersion(){return console.warn(`Cannot get version in web`),{version:`default`}}async getPluginVersion(){return console.warn(`Cannot get plugin version in web`),{version:`default`}}async delete(e){console.warn(`Cannot delete bundle in web`,e)}async setBundleError(e){return console.warn(`Cannot setBundleError in web`,e),n}async list(){return console.warn(`Cannot list bundles in web`),{bundles:[]}}async reset(e){console.warn(`Cannot reset version in web`,e)}async current(){return console.warn(`Cannot get current bundle in web`),{bundle:n,native:`0.0.0`}}async reload(){console.warn(`Cannot reload current bundle in web`)}async getLatest(){return console.warn(`Cannot getLatest current bundle in web`),{version:`0.0.0`,message:`Cannot getLatest current bundle in web`}}async triggerUpdateCheck(){return console.warn(`Cannot triggerUpdateCheck in web`),{status:`unavailable`,queued:!1}}async getMissingBundleFiles(e){console.warn(`Cannot inspect missing bundle files in web`,{manifestLength:e.manifest?.length??0});let t=e.manifest??[];return{missing:t,total:t.length,missingCount:t.length,reusableCount:0}}async getBundleDownloadSize(e){return console.warn(`Cannot estimate bundle download size in web`,{manifestLength:e.manifest?.length??0}),{totalSize:0,knownFiles:0,unknownFiles:e.manifest?.length??0,files:(e.manifest??[]).map(e=&gt;({file_name:e.file_name,file_hash:e.file_hash,download_url:e.download_url,error:`unavailable`}))}}async setChannel(e){return console.warn(`Cannot setChannel in web`,e),{status:`error`,error:`Cannot setChannel in web`}}async unsetChannel(e){console.warn(`Cannot unsetChannel in web`,e)}async setCustomId(e){console.warn(`Cannot setCustomId in web`,e)}async getChannel(){return console.warn(`Cannot getChannel in web`),{status:`error`,error:`Cannot getChannel in web`}}async listChannels(){throw console.warn(`Cannot listChannels in web`),{message:`Cannot listChannels in web`,error:`platform_not_supported`}}async notifyAppReady(){return{bundle:n}}async setMultiDelay(e){console.warn(`Cannot setMultiDelay in web`,e?.delayConditions)}async cancelDelay(){console.warn(`Cannot cancelDelay in web`)}async isAutoUpdateAvailable(){return console.warn(`Cannot isAutoUpdateAvailable in web`),{available:!1}}async getCurrentBundle(){return console.warn(`Cannot get current bundle in web`),n}async getNextBundle(){return Promise.resolve(null)}async getFailedUpdate(){return console.warn(`Cannot getFailedUpdate in web`),null}async setShakeMenu(e){throw this.unimplemented(`Shake menu not available on web platform`)}async isShakeMenuEnabled(){return Promise.resolve({enabled:!1,gesture:`shake`})}async setShakeChannelSelector(e){throw this.unimplemented(`Shake channel selector not available on web platform`)}async isShakeChannelSelectorEnabled(){return Promise.resolve({enabled:!1})}async getAppId(){return console.warn(`Cannot getAppId in web`),{appId:`default`}}async setAppId(e){console.warn(`Cannot setAppId in web`,e)}async getAppUpdateInfo(e){return console.warn(`getAppUpdateInfo is not available on web platform`),{currentVersionName:`0.0.0`,currentVersionCode:`0`,updateAvailability:t.UNKNOWN}}async openAppStore(e){throw this.unimplemented(`openAppStore is not available on web platform`)}async performImmediateUpdate(){throw this.unimplemented(`performImmediateUpdate is only available on Android`)}async startFlexibleUpdate(){throw this.unimplemented(`startFlexibleUpdate is only available on Android`)}async completeFlexibleUpdate(){throw this.unimplemented(`completeFlexibleUpdate is only available on Android`)}};export{r as CapacitorUpdaterWeb};<span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ></span></span></span></pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-07-09T14:53:57.870Z
+            </div>
+        <script src="../../../../../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../../../../../sorter.js"></script>
+        <script src="../../../../../../block-navigation.js"></script>
+    </body>
+</html>
+    
