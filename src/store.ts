@@ -307,11 +307,13 @@ Follow these rules strictly:
    Example: [{"name": "Tax", "value": 3.50}, {"name": "Service Charge", "value": 5.00}]
 5. Extract the tip value (if specified on the receipt).
 6. Validate if the image is a valid receipt. If it's a photo of something else (like a dog, a car, landscape, blank screen, or arbitrary text), return a JSON with error: "This image does not appear to be a valid receipt."
+7. Detect the currency symbol or code used on the receipt (e.g. '฿' for Thai Baht / THB / บาท, '$', 'CA$', 'A$', '€', '£', '¥', '₩', '₹', 'CHF', 'S$', 'R$', 'kr', '₫', 'AED', etc.). If Thai Baht ('฿', 'THB', 'Baht', 'บาท') is present or detected on the receipt, set currencySymbol to '฿'. If unspecified or unclear, return null.
 
 Return format must be EXACTLY this JSON structure:
 {
   "restaurant": "Restaurant Name",
   "date": "YYYY-MM-DD",
+  "currencySymbol": "฿",
   "items": [
     {"name": "Item Name", "price": 10.50, "quantity": 3}
   ],
@@ -412,7 +414,11 @@ Return format must be EXACTLY this JSON structure:
       const parsedRestaurant = result.restaurant ? result.restaurant.trim() : 'Restaurant Split'
       this.billName = `${parsedDate} - ${parsedRestaurant}`
  
-      this.currencySymbol = result.currency || '$'
+      if (result.currencySymbol) {
+        this.currencySymbol = result.currencySymbol
+      } else if (result.currency) {
+        this.currencySymbol = result.currency
+      }
       this.decrementSimulatedScan()
       this.step = 'edit'
     } catch (e: any) {
