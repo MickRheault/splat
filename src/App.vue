@@ -1546,7 +1546,7 @@ const selectAllText = (event: Event) => {
           <i class="pi pi-bolt"></i> 14-Day Pass Active <span v-if="store.usageInfo.expirationDate">&nbsp;(Until {{ formatPassDate(store.usageInfo.expirationDate) }})</span><span v-else>&nbsp;(Unlimited Scans)</span>
         </p>
         <p v-else-if="store.usageInfo.passType === 'yearly'" class="text-xs text-emerald-400 font-extrabold flex justify-center items-center gap-1.5">
-          <i class="pi pi-star-fill"></i> Yearly Pro Active <span v-if="store.usageInfo.expirationDate">&nbsp;(Until {{ formatPassDate(store.usageInfo.expirationDate) }})</span>
+          <i class="pi pi-star-fill"></i> Yearly Pro Active
         </p>
         <p v-else-if="store.usageInfo.passType === 'dev_unlimited'" class="text-xs text-secondary font-bold italic">
           🛠️ Dev Mode (Bypassed / Unlimited)
