@@ -329,11 +329,7 @@ const checkWebAccess = () => {
   isWebUnlocked.value = false
 }
 
-const openAdminPasscodeModal = () => {
-  adminPasscodeInput.value = ''
-  adminPasscodeError.value = ''
-  isAdminPasscodeOpen.value = true
-}
+// Unlocked via URL parameter (e.g. ?admin=splat-admin)
 
 const submitAdminPasscode = () => {
   const input = adminPasscodeInput.value.trim()
@@ -1276,20 +1272,7 @@ const selectAllText = (event: Event) => {
       <div class="w-full px-6 py-3.5 rounded-2xl bg-slate-900/75 border border-slate-800/80 backdrop-blur-md shadow-2xl flex justify-between items-center">
         <div class="flex items-center gap-3">
           <img src="/store_icon_512.png" alt="Splat Logo" class="w-10 h-10 rounded-xl shadow-lg border border-slate-700/60" />
-          <div class="flex items-baseline gap-2">
-            <span class="font-black text-2xl tracking-tight text-white">Splat</span>
-            <span class="text-[10px] font-extrabold tracking-widest text-emerald-400 uppercase bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">AI</span>
-          </div>
-        </div>
-        <div class="flex items-center gap-3">
-          <button 
-            @click="openAdminPasscodeModal" 
-            class="text-xs font-semibold px-4 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 transition-all flex items-center gap-2 cursor-pointer shadow-sm active:scale-95"
-            title="Admin Bypass"
-          >
-            <i class="pi pi-key text-xs text-emerald-400"></i>
-            <span>Admin Access</span>
-          </button>
+          <span class="font-black text-2xl tracking-tight text-white">Splat</span>
         </div>
       </div>
     </header>
@@ -1302,12 +1285,6 @@ const selectAllText = (event: Event) => {
         
         <!-- Hero Left Column: Copy & CTAs (col-span-7) -->
         <div class="lg:col-span-7 flex flex-col items-center lg:items-start gap-6">
-          <!-- Tagline Pill -->
-          <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900/90 border border-slate-800 text-xs font-semibold text-emerald-400 shadow-xl backdrop-blur-sm">
-            <span class="text-sm">✨</span>
-            <span>Powered by Gemini AI • Mobile Exclusive</span>
-          </div>
-
           <!-- Headline -->
           <h1 class="text-4xl sm:text-6xl lg:text-6xl xl:text-7xl font-black tracking-tight text-white leading-[1.08]">
             Snap Receipts. <br />
@@ -1316,7 +1293,7 @@ const selectAllText = (event: Event) => {
 
           <!-- Value Prop Subtitle -->
           <p class="text-slate-400 text-base sm:text-lg lg:text-xl max-w-2xl leading-relaxed font-normal">
-            The smartest mobile bill splitter. Take a photo of any receipt to itemize, split by exact quantities, and share breakdown totals with friends instantly.
+            The mobile bill splitter. Take a photo of any receipt to itemize, split by exact quantities, and share breakdown totals with friends instantly.
           </p>
 
           <!-- Download Action Buttons -->
@@ -1346,19 +1323,6 @@ const selectAllText = (event: Event) => {
               </div>
             </a>
           </div>
-
-          <!-- Micro Feature Highlights Row -->
-          <div class="flex flex-wrap justify-center lg:justify-start gap-3 pt-2 text-xs font-semibold text-slate-300">
-            <span class="flex items-center gap-1.5 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-800/60">
-              <i class="pi pi-check text-emerald-400 text-[10px]"></i> 99.8% AI OCR Accuracy
-            </span>
-            <span class="flex items-center gap-1.5 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-800/60">
-              <i class="pi pi-check text-emerald-400 text-[10px]"></i> 25+ Global Currencies
-            </span>
-            <span class="flex items-center gap-1.5 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-800/60">
-              <i class="pi pi-check text-emerald-400 text-[10px]"></i> Item Quantity Splits
-            </span>
-          </div>
         </div>
 
         <!-- Hero Right Column: Device Graphic Mockup Showcase (col-span-5) -->
@@ -1367,7 +1331,7 @@ const selectAllText = (event: Event) => {
             <!-- Floating Stat Badges overlay -->
             <div class="absolute top-6 left-6 z-20 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-950/90 border border-slate-800 text-xs font-bold text-emerald-400 shadow-xl backdrop-blur-md">
               <i class="pi pi-bolt text-emerald-400"></i>
-              <span>Instant Gemini OCR</span>
+              <span>Instant OCR</span>
             </div>
             <div class="absolute bottom-6 right-6 z-20 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-950/90 border border-slate-800 text-xs font-bold text-purple-400 shadow-xl backdrop-blur-md">
               <i class="pi pi-users text-purple-400"></i>
@@ -1376,63 +1340,10 @@ const selectAllText = (event: Event) => {
 
             <img 
               src="/store_feature_1024x500.png" 
-              alt="Splat AI Bill Splitter App Showcase" 
+              alt="Splat Bill Splitter App Showcase" 
               class="w-full h-auto rounded-2xl border border-slate-800/80 object-cover shadow-2xl transition-transform duration-700 group-hover:scale-[1.02]"
             />
           </div>
-        </div>
-      </div>
-
-      <!-- Social Proof Metrics Bar -->
-      <div class="w-full grid grid-cols-2 md:grid-cols-4 gap-4 p-6 rounded-2xl bg-slate-900/40 border border-slate-800/60 backdrop-blur-sm text-center">
-        <div class="flex flex-col gap-1">
-          <span class="text-2xl lg:text-3xl font-black text-white">100%</span>
-          <span class="text-xs text-slate-400 font-medium">Itemized Accuracy</span>
-        </div>
-        <div class="flex flex-col gap-1">
-          <span class="text-2xl lg:text-3xl font-black text-emerald-400">25+</span>
-          <span class="text-xs text-slate-400 font-medium">World Currencies</span>
-        </div>
-        <div class="flex flex-col gap-1">
-          <span class="text-2xl lg:text-3xl font-black text-teal-300">&lt;2 sec</span>
-          <span class="text-xs text-slate-400 font-medium">OCR Scan Speed</span>
-        </div>
-        <div class="flex flex-col gap-1">
-          <span class="text-2xl lg:text-3xl font-black text-purple-400">0</span>
-          <span class="text-xs text-slate-400 font-medium">Spreadsheets Needed</span>
-        </div>
-      </div>
-
-      <!-- 3 Feature Highlight Cards (3 Columns on Desktop) -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full text-left">
-        <div class="p-7 rounded-2xl bg-gradient-to-b from-slate-900/60 to-slate-950/60 border border-slate-800/80 hover:border-emerald-500/30 transition-all duration-300 hover:-translate-y-1 flex flex-col gap-3 shadow-xl group">
-          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-xl font-bold group-hover:scale-110 transition-transform">
-            ⚡
-          </div>
-          <h3 class="font-extrabold text-lg text-white">Instant AI Scanning</h3>
-          <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
-            Snap a receipt photo. Gemini AI automatically itemizes prices, subtotals, tax, and tip percentages in seconds.
-          </p>
-        </div>
-
-        <div class="p-7 rounded-2xl bg-gradient-to-b from-slate-900/60 to-slate-950/60 border border-slate-800/80 hover:border-teal-500/30 transition-all duration-300 hover:-translate-y-1 flex flex-col gap-3 shadow-xl group">
-          <div class="w-12 h-12 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 text-xl font-bold group-hover:scale-110 transition-transform">
-            👥
-          </div>
-          <h3 class="font-extrabold text-lg text-white">Item Quantity Allocations</h3>
-          <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
-            Split shared items by assigned count or percentage. No manual calculations or spreadsheets needed.
-          </p>
-        </div>
-
-        <div class="p-7 rounded-2xl bg-gradient-to-b from-slate-900/60 to-slate-950/60 border border-slate-800/80 hover:border-purple-500/30 transition-all duration-300 hover:-translate-y-1 flex flex-col gap-3 shadow-xl group">
-          <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 text-xl font-bold group-hover:scale-110 transition-transform">
-            💬
-          </div>
-          <h3 class="font-extrabold text-lg text-white">1-Tap WhatsApp Summaries</h3>
-          <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
-            Generate clean, formatted text breakdowns for each participant to send over WhatsApp, SMS, or Venmo.
-          </p>
         </div>
       </div>
     </main>
