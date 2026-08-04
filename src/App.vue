@@ -1590,19 +1590,20 @@ const selectAllText = (event: Event) => {
               class="history-card flex items-center"
               @click="loadSavedSplit(split)"
             >
-              <div class="shrink-0 mr-3 flex items-center justify-center text-slate-700 dark:text-slate-200" style="width: 32px; height: 32px; font-size: 18px;">
+              <div class="shrink-0 mr-3 flex items-center justify-center text-slate-600 dark:text-slate-400" style="width: 32px; height: 32px; font-size: 16px;">
                 <i :class="getCategoryIcon(split.category || 'food_drink')"></i>
               </div>
               <div class="flex-1 min-w-0 pr-2">
-                <h5 class="font-extrabold text-sm text-slate-900 dark:text-slate-50 truncate text-left m-0">{{ split.billName || 'Untitled Bill' }}</h5>
-                <div class="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 mt-1 font-bold">
+                <!-- Clear, high-contrast Bill Title -->
+                <h5 class="font-bold text-base text-slate-900 dark:text-slate-100 truncate text-left m-0">{{ split.billName || 'Untitled Bill' }}</h5>
+                <div class="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5 font-semibold">
                   <span>{{ formatDate(split.timestamp) }}</span>
                 </div>
               </div>
               
               <div class="flex items-center gap-1.5 shrink-0">
-                <span class="font-extrabold text-primary text-base font-black">{{ split.currencySymbol || '$' }}{{ split.totalBill.toFixed(2) }}</span>
-                <i class="pi pi-chevron-right text-xs text-slate-600 dark:text-slate-300"></i>
+                <span class="font-bold text-primary text-sm font-black">{{ split.currencySymbol || '$' }}{{ split.totalBill.toFixed(2) }}</span>
+                <i class="pi pi-chevron-right text-xs text-slate-500"></i>
               </div>
             </div>
           </TransitionGroup>
