@@ -2840,11 +2840,11 @@ const selectAllText = (event: Event) => {
               :key="item.id"
               class="flex justify-between items-center text-xs py-0.5"
             >
-              <span class="text-slate-300 truncate max-w-[75%] font-medium">
+              <span class="text-white truncate max-w-[75%] font-bold">
                 <span v-if="item.quantity > 1" class="font-black text-primary mr-1">{{ item.quantity }}x</span>
                 {{ item.name }}
               </span>
-              <span class="font-bold text-slate-200">
+              <span class="font-bold text-white">
                 {{ selectedHistorySplit.currencySymbol || '$' }}{{ item.price.toFixed(2) }}
               </span>
             </div>
@@ -2861,7 +2861,7 @@ const selectAllText = (event: Event) => {
               class="flex flex-col gap-1 border-2 border-slate-800 rounded-xl p-2.5 bg-slate-900/30"
             >
               <div class="flex justify-between items-center text-xs font-bold">
-                <span class="text-slate-100">{{ p.name }}</span>
+                <span class="text-white font-extrabold">{{ p.name }}</span>
                 <span class="text-primary font-black">{{ selectedHistorySplit.currencySymbol || '$' }}{{ p.total.toFixed(2) }}</span>
               </div>
               <!-- Mini items list for each participant -->
@@ -2869,7 +2869,7 @@ const selectAllText = (event: Event) => {
                 <span 
                   v-for="itm in p.items" 
                   :key="itm.name"
-                  class="text-[9px] text-slate-400 bg-slate-950/60 border border-slate-800 px-1.5 py-0.5 rounded-lg font-medium"
+                  class="text-[9px] text-white bg-slate-950/80 border border-slate-700 px-1.5 py-0.5 rounded-lg font-bold"
                 >
                   {{ itm.name }}
                 </span>
