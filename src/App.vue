@@ -1261,7 +1261,7 @@ const selectAllText = (event: Event) => {
 
 <template>
   <!-- 1. Web Advertising Landing Page (shown when web version is NOT unlocked and NOT running in native app) -->
-  <div v-if="!isWebUnlocked" class="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white relative overflow-hidden">
+  <div v-if="!isWebUnlocked" class="web-landing-page min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white relative overflow-hidden">
     <!-- Ambient Radial Glow Spotlights -->
     <div class="absolute -top-40 -left-40 w-[30rem] h-[30rem] bg-emerald-500/15 rounded-full blur-[140px] pointer-events-none"></div>
     <div class="absolute top-1/3 -right-40 w-[30rem] h-[30rem] bg-purple-500/15 rounded-full blur-[140px] pointer-events-none"></div>
