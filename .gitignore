@@ -25,5 +25,4 @@ dist-ssr
 *.njsproj
 *.sln
 # Visual testing/previews
-# Capgo OTA update zip bundles
-public/updates/*.zip
+# Capgo OTA update zip bundles tracked per release
