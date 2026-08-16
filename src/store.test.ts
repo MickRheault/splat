@@ -1153,5 +1153,58 @@ describe('Splat Core Store & Math Logic', () => {
       })
     })
   })
+
+  describe('Bug Fixes M-02 & M-03 Regression Tests', () => {
+    test('M-02: billBreakdown and calculateSplitBreakdown fallback blank participant names to Person N', () => {
+      store.reset()
+      store.participants = [
+        { id: 'p1', name: 'Maya' },
+        { id: 'p2', name: 'Jordan' },
+        { id: 'p3', name: '   ' }
+      ]
+      store.addItem('Shared pizza', 24.50, 1)
+      store.items[0].assignedTo = ['p1', 'p2', 'p3']
+
+      const breakdown = billBreakdown.value
+      expect(breakdown).toHaveLength(3)
+      expect(breakdown[0].name).toBe('Maya')
+      expect(breakdown[1].name).toBe('Jordan')
+      expect(breakdown[2].name).toBe('Person 3')
+
+      const statelessBreakdown = calculateSplitBreakdown({
+        participants: [
+          { id: 'p1', name: 'Maya' },
+          { id: 'p2', name: '' }
+        ],
+        items: [
+          { id: 'item1', name: 'Pizza', price: 20, quantity: 1, assignedTo: ['p1', 'p2'] }
+        ]
+      })
+      expect(statelessBreakdown[0].name).toBe('Maya')
+      expect(statelessBreakdown[1].name).toBe('Person 2')
+    })
+
+    test('M-03: clearing all participants from an item leaves participant subtotals and split preview at 0.00', () => {
+      store.reset()
+      store.participants = [
+        { id: 'p1', name: 'Maya' },
+        { id: 'p2', name: 'Jordan' }
+      ]
+      store.addItem('Shared pizza', 24.50, 1)
+      expect(store.items[0].assignedTo).toEqual(['p1', 'p2'])
+
+      // Clear all assignments
+      store.clearAllFromItem(store.items[0].id)
+      expect(store.items[0].assignedTo).toEqual([])
+
+      const breakdown = billBreakdown.value
+      expect(breakdown[0].subtotal).toBe(0)
+      expect(breakdown[0].total).toBe(0)
+      expect(breakdown[1].subtotal).toBe(0)
+      expect(breakdown[1].total).toBe(0)
+      expect(breakdown[0].items).toHaveLength(0)
+      expect(breakdown[1].items).toHaveLength(0)
+    })
+  })
 })
 
