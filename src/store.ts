@@ -834,20 +834,22 @@ export const billBreakdown = computed(() => {
         }
       })
     } else {
-      const assignees = item.assignedTo.length > 0 ? item.assignedTo : activeParticipants.map(p => p.id)
-      const share = price / assignees.length
-      assignees.forEach(pId => {
-        if (subtotals[pId] !== undefined) {
-          subtotals[pId] += share
-        }
-      })
+      const assignees = item.assignedTo || []
+      if (assignees.length > 0) {
+        const share = price / assignees.length
+        assignees.forEach(pId => {
+          if (subtotals[pId] !== undefined) {
+            subtotals[pId] += share
+          }
+        })
+      }
     }
   })
 
   let calculatedGrandTotal = 0
-  const list = activeParticipants.map(p => {
+  const list = activeParticipants.map((p, idx) => {
     const individualSubtotal = subtotals[p.id]
-    const ratio = subtotalVal > 0 ? individualSubtotal / subtotalVal : 1 / activeParticipants.length
+    const ratio = subtotalVal > 0 ? individualSubtotal / subtotalVal : 0
     
     const taxShare = taxVal * ratio
     const tipShare = tipVal * ratio
@@ -875,8 +877,8 @@ export const billBreakdown = computed(() => {
           })
         }
       } else {
-        const assignees = item.assignedTo.length > 0 ? item.assignedTo : activeParticipants.map(pr => pr.id)
-        if (assignees.includes(p.id)) {
+        const assignees = item.assignedTo || []
+        if (assignees.includes(p.id) && assignees.length > 0) {
           participantItems.push({
             name: item.name,
             sharePrice: Math.round((price / assignees.length) * 100) / 100
@@ -885,9 +887,11 @@ export const billBreakdown = computed(() => {
       }
     })
 
+    const displayName = (p.name && p.name.trim()) ? p.name.trim() : `Person ${idx + 1}`
+
     return {
       id: p.id,
-      name: p.name,
+      name: displayName,
       subtotal: subtotalRounded,
       tax: taxRounded,
       tip: tipRounded,
@@ -896,9 +900,12 @@ export const billBreakdown = computed(() => {
     }
   })
 
-  // Penny rounding error correction
+  // Penny rounding error & negative clamping remainder correction
+  const totalAllocated = Object.values(subtotals).reduce((sum, s) => sum + s, 0)
+  const isFullyAllocated = totalAllocated > 0 && Math.abs(totalAllocated - subtotalVal) < 0.01
   const roundingError = Math.round((totalVal - calculatedGrandTotal) * 100) / 100
-  if (roundingError !== 0 && list.length > 0) {
+
+  if (isFullyAllocated && roundingError !== 0 && list.length > 0) {
     let maxIdx = 0
     let maxSub = -1
     list.forEach((p, idx) => {
@@ -907,7 +914,9 @@ export const billBreakdown = computed(() => {
         maxIdx = idx
       }
     })
-    list[maxIdx].total = Math.round((list[maxIdx].total + roundingError) * 100) / 100
+    if (maxSub > 0) {
+      list[maxIdx].total = Math.round((list[maxIdx].total + roundingError) * 100) / 100
+    }
   }
 
   return list
@@ -992,20 +1001,22 @@ export function calculateSplitBreakdown(split: any) {
         }
       })
     } else {
-      const assignees = item.assignedTo.length > 0 ? item.assignedTo : activeParticipants.map((p: any) => p.id)
-      const share = price / assignees.length
-      assignees.forEach((pId: string) => {
-        if (subtotals[pId] !== undefined) {
-          subtotals[pId] += share
-        }
-      })
+      const assignees = item.assignedTo || []
+      if (assignees.length > 0) {
+        const share = price / assignees.length
+        assignees.forEach((pId: string) => {
+          if (subtotals[pId] !== undefined) {
+            subtotals[pId] += share
+          }
+        })
+      }
     }
   })
 
   let calculatedGrandTotal = 0
-  const list = activeParticipants.map((p: any) => {
+  const list = activeParticipants.map((p: any, idx: number) => {
     const individualSubtotal = subtotals[p.id]
-    const ratio = itemsSubtotalVal > 0 ? individualSubtotal / itemsSubtotalVal : 1 / activeParticipants.length
+    const ratio = itemsSubtotalVal > 0 ? individualSubtotal / itemsSubtotalVal : 0
     
     const taxShare = totalAdjustmentsVal * ratio
     const tipShare = tipAmountVal * ratio
@@ -1033,8 +1044,8 @@ export function calculateSplitBreakdown(split: any) {
           })
         }
       } else {
-        const assignees = item.assignedTo.length > 0 ? item.assignedTo : activeParticipants.map((pr: any) => pr.id)
-        if (assignees.includes(p.id)) {
+        const assignees = item.assignedTo || []
+        if (assignees.includes(p.id) && assignees.length > 0) {
           participantItems.push({
             name: item.name,
             sharePrice: Math.round((price / assignees.length) * 100) / 100
@@ -1043,9 +1054,11 @@ export function calculateSplitBreakdown(split: any) {
       }
     })
 
+    const displayName = (p.name && p.name.trim()) ? p.name.trim() : `Person ${idx + 1}`
+
     return {
       id: p.id,
-      name: p.name,
+      name: displayName,
       subtotal: subtotalRounded,
       tax: taxRounded,
       tip: tipRounded,
@@ -1054,9 +1067,12 @@ export function calculateSplitBreakdown(split: any) {
     }
   })
 
-  // Penny rounding error correction
+  // Penny rounding error & negative clamping remainder correction
+  const totalAllocated = Object.values(subtotals).reduce((sum, s) => sum + s, 0)
+  const isFullyAllocated = totalAllocated > 0 && Math.abs(totalAllocated - itemsSubtotalVal) < 0.01
   const roundingError = Math.round((totalBillVal - calculatedGrandTotal) * 100) / 100
-  if (roundingError !== 0 && list.length > 0) {
+
+  if (isFullyAllocated && roundingError !== 0 && list.length > 0) {
     let maxIdx = 0
     let maxSub = -1
     list.forEach((p: any, idx: number) => {
@@ -1065,7 +1081,9 @@ export function calculateSplitBreakdown(split: any) {
         maxIdx = idx
       }
     })
-    list[maxIdx].total = Math.round((list[maxIdx].total + roundingError) * 100) / 100
+    if (maxSub > 0) {
+      list[maxIdx].total = Math.round((list[maxIdx].total + roundingError) * 100) / 100
+    }
   }
 
   return list

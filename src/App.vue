@@ -460,10 +460,31 @@ onMounted(async () => {
   }
 })
 
-const onParticipantNameChanged = async (name: string) => {
+const ensureValidParticipantNames = () => {
+  store.participants.forEach((p, idx) => {
+    if (!p.name || !p.name.trim()) {
+      p.name = `Person ${idx + 1}`
+    }
+  })
+}
+
+const onParticipantBlur = (p: { id: string; name: string }, index: number) => {
+  if (!p.name || !p.name.trim()) {
+    p.name = `Person ${index + 1}`
+    store.saveToLocalStorage()
+  }
+}
+
+const onParticipantNameChanged = async (name: string, index?: number) => {
+  if (index !== undefined && store.participants[index]) {
+    const p = store.participants[index]
+    if (!p.name || !p.name.trim()) {
+      p.name = `Person ${index + 1}`
+    }
+  }
   await store.saveToLocalStorage()
   
-  const trimmed = name.trim()
+  const trimmed = name?.trim()
   if (!trimmed) return
   if (/^Person\s*\d+$/i.test(trimmed)) return // Ignore default Person 1, etc.
   
@@ -936,6 +957,8 @@ const isStepSelectable = (targetStep: 'edit' | 'participants' | 'allocate' | 'sh
 const navigateToStep = (targetStep: 'edit' | 'participants' | 'allocate' | 'share') => {
   if (!isStepSelectable(targetStep)) return
 
+  ensureValidParticipantNames()
+
   if (targetStep === 'allocate' || targetStep === 'share') {
     // Automatically assign everyone to unallocated single-quantity items
     store.autoAssignUnallocatedItems()
@@ -963,6 +986,8 @@ const canGoNext = computed(() => {
 // Move step forward
 const goNext = () => {
   if (!canGoNext.value) return
+
+  ensureValidParticipantNames()
 
   if (store.step === 'capture') {
     store.step = 'edit'
@@ -1865,7 +1890,7 @@ const selectAllText = (event: Event) => {
         <!-- Added Participants List -->
         <div class="flex flex-col gap-2 mt-2 max-h-[250px] overflow-y-auto">
           <div 
-            v-for="p in store.participants" 
+            v-for="(p, pIdx) in store.participants" 
             :key="p.id" 
             class="participant-badge-row"
           >
@@ -1875,13 +1900,15 @@ const selectAllText = (event: Event) => {
                 title="Quick Pick Name"
                 @click="openQuickPicker(p.id)"
               >
-                {{ getInitials(p.name) }}
+                {{ getInitials(p.name || `Person ${pIdx + 1}`) }}
               </div>
               <input 
                 v-model="p.name" 
                 type="text" 
                 class="participant-name-input"
-                @change="onParticipantNameChanged(p.name)"
+                :placeholder="`Person ${pIdx + 1}`"
+                @blur="onParticipantBlur(p, pIdx)"
+                @change="onParticipantNameChanged(p.name, pIdx)"
                 @focus="selectAllText"
               />
             </div>
@@ -1959,9 +1986,9 @@ const selectAllText = (event: Event) => {
                 </template>
 
                 <template v-else>
-                  <!-- Case 1: Everyone or empty (which defaults to everyone) -->
+                  <!-- Case 1: Everyone -->
                   <span 
-                    v-if="item.assignedTo.length === store.participants.length || item.assignedTo.length === 0" 
+                    v-if="store.participants.length > 0 && item.assignedTo.length === store.participants.length" 
                     class="avatar-badge everyone"
                   >
                     Everyone
@@ -1982,7 +2009,7 @@ const selectAllText = (event: Event) => {
                   </template>
                   
                   <!-- Case 3: Minority assigned (<50%) (List assigned participants in cyan) -->
-                  <template v-else>
+                  <template v-else-if="item.assignedTo.length > 0">
                     <!-- Included (Assigned) Participants -->
                     <span 
                       v-for="pId in item.assignedTo" 
