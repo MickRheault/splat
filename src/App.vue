@@ -2751,7 +2751,13 @@ const selectAllText = (event: Event) => {
         />
 
         <p class="text-[10px] text-slate-500 text-center leading-normal">
-          By upgrading, you agree to our Terms and Privacy Policy. Secure payment processed by Google Play / App Store.
+          By upgrading, you agree to our 
+          <a 
+            href="https://splat-bills.vercel.app/privacy.html" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            class="underline text-slate-400 hover:text-slate-200"
+          >Terms and Privacy Policy</a>. Secure payment processed by Google Play / App Store.
         </p>
       </div>
     </Dialog>
