@@ -1725,8 +1725,10 @@ const selectAllText = (event: Event) => {
             <InputNumber 
               v-model="item.price" 
               mode="decimal" 
+              :min="0"
               :minFractionDigits="2" 
               :maxFractionDigits="2" 
+              inputMode="decimal"
               placeholder="0.00" 
               class="item-price-input" 
               @focus="selectAllText"
@@ -1819,6 +1821,7 @@ const selectAllText = (event: Event) => {
                  mode="decimal" 
                  :minFractionDigits="2" 
                  :maxFractionDigits="2" 
+                 inputMode="decimal"
                  placeholder="0.00" 
                  class="item-price-input" 
                  @focus="selectAllText"
@@ -1832,7 +1835,7 @@ const selectAllText = (event: Event) => {
             
             <!-- Empty state if no adjustments are configured -->
             <div v-if="store.adjustments.length === 0" class="text-center py-2 border-2 border-dashed border-slate-700 rounded-lg">
-              <span class="text-xs text-secondary italic">No fees or taxes. Click Add Line to add any.</span>
+              <span class="text-xs text-secondary italic">No fees or taxes. Tap Add Line to add any.</span>
             </div>
           </div>
         </div>
@@ -2092,12 +2095,18 @@ const selectAllText = (event: Event) => {
     <div v-else-if="store.step === 'share'" class="step-view">
       <div class="text-center">
         <h2 class="text-2xl font-black text-indigo-500">All Splatted! 💸</h2>
-        <p class="text-secondary text-sm">Tap a person to see their breakdown.</p>
+        <p v-if="store.billName" class="text-sm font-bold text-slate-200 mt-0.5">{{ store.billName }}</p>
+        <p class="text-secondary text-xs mt-0.5">Tap a person to see their breakdown.</p>
       </div>
 
       <!-- Compact person cards -->
       <div class="bill-card">
-        <h3 class="font-bold border-b border-slate-200 dark:border-slate-700 pb-2 mb-2">Final Splits</h3>
+        <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-2 mb-2">
+          <h3 class="font-bold">Final Splits</h3>
+          <span v-if="store.billName" class="text-secondary font-medium text-xs truncate max-w-[160px]" :title="store.billName">
+            {{ store.billName }}
+          </span>
+        </div>
 
         <div class="flex justify-between items-center mb-4 border-b border-dashed border-slate-200 dark:border-slate-700 pb-3 text-xs">
           <!-- Category Indicator -->
@@ -2491,8 +2500,10 @@ const selectAllText = (event: Event) => {
           <InputNumber 
             v-model="editingItemPrice" 
             mode="decimal" 
+            :min="0"
             :minFractionDigits="2" 
             :maxFractionDigits="2" 
+            inputMode="decimal"
             class="w-full p-inputtext-sm" 
           />
         </div>
