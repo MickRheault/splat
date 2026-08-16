@@ -2646,7 +2646,12 @@ const selectAllText = (event: Event) => {
     >
       <div class="flex flex-col gap-3.5">
         <p class="text-xs text-secondary text-center leading-relaxed">
-          You've used all your free scans for this month. Upgrade to continue splitting bills instantly!
+          <template v-if="store.usageInfo && !store.usageInfo.passType && store.usageInfo.freeScansRemaining <= 0">
+            You've used all your free scans for this month. Upgrade to continue splitting bills instantly!
+          </template>
+          <template v-else>
+            Upgrade to Splat Pro for unlimited AI receipt scans, custom splits, and all premium features!
+          </template>
         </p>
 
         <!-- Concise Pro Features List -->
