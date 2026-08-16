@@ -1205,6 +1205,37 @@ describe('Splat Core Store & Math Logic', () => {
       expect(breakdown[0].items).toHaveLength(0)
       expect(breakdown[1].items).toHaveLength(0)
     })
+
+    test('M-06: rounding adjustment is tracked on participant breakdown and reconciles lines to total owed', () => {
+      store.reset()
+      store.participants = [
+        { id: 'p1', name: 'Maya' },
+        { id: 'p2', name: 'Jordan' },
+        { id: 'p3', name: 'Person 3' }
+      ]
+      store.addItem('Shared pizza', 24.50, 1)
+      store.tipInput = 18
+      store.tipType = 'percentage'
+
+      const breakdown = billBreakdown.value
+      expect(breakdown).toHaveLength(3)
+      
+      // Total bill = 24.50 + 4.41 = 28.91
+      // Sum of 3 participant totals must equal 28.91
+      const totalSum = breakdown.reduce((sum, p) => sum + p.total, 0)
+      expect(Math.round(totalSum * 100) / 100).toBe(28.91)
+
+      // Maya receives -0.01 rounding correction
+      const maya = breakdown[0]
+      expect(maya.subtotal).toBe(8.17)
+      expect(maya.tip).toBe(1.47)
+      expect(maya.rounding).toBe(-0.01)
+      expect(maya.total).toBe(9.63)
+      expect(Math.round((maya.subtotal + maya.tax + maya.tip + maya.rounding) * 100) / 100).toBe(maya.total)
+
+      // Summary text includes Rounding line
+      expect(shareTextSummary.value).toContain('Rounding: -$0.01')
+    })
   })
 })
 
