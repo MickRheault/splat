@@ -139,6 +139,10 @@ const personShareText = computed(() => {
   }
   if (p.tax !== 0) text += `  ↳ Adjustments/Fees: ${currency}${p.tax.toFixed(2)}\n`
   if (p.tip > 0) text += `  ↳ Tip: ${currency}${p.tip.toFixed(2)}\n`
+  if (p.rounding && p.rounding !== 0) {
+    const sign = p.rounding > 0 ? '+' : '-'
+    text += `  ↳ Rounding: ${sign}${currency}${Math.abs(p.rounding).toFixed(2)}\n`
+  }
   text += `\nSplit using Splat!`
   return text
 })
@@ -2268,6 +2272,10 @@ const selectAllText = (event: Event) => {
             <div v-if="selectedBreakdownPerson.tip > 0" class="flex justify-between text-sm text-secondary">
               <span>Tip</span>
               <span>{{ store.currencySymbol }}{{ selectedBreakdownPerson.tip.toFixed(2) }}</span>
+            </div>
+            <div v-if="selectedBreakdownPerson.rounding && selectedBreakdownPerson.rounding !== 0" class="flex justify-between text-sm text-secondary">
+              <span>Rounding adjustment</span>
+              <span>{{ selectedBreakdownPerson.rounding > 0 ? '+' : '-' }}{{ store.currencySymbol }}{{ Math.abs(selectedBreakdownPerson.rounding).toFixed(2) }}</span>
             </div>
           </div>
 

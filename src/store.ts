@@ -895,6 +895,7 @@ export const billBreakdown = computed(() => {
       subtotal: subtotalRounded,
       tax: taxRounded,
       tip: tipRounded,
+      rounding: 0,
       total: totalRounded,
       items: participantItems
     }
@@ -916,6 +917,7 @@ export const billBreakdown = computed(() => {
     })
     if (maxSub > 0) {
       list[maxIdx].total = Math.round((list[maxIdx].total + roundingError) * 100) / 100
+      list[maxIdx].rounding = roundingError
     }
   }
 
@@ -938,6 +940,10 @@ export const shareTextSummary = computed(() => {
     }
     if (p.tax !== 0) text += `   ↳ Adjustments/Fees: ${currency}${p.tax.toFixed(2)}\n`
     if (p.tip > 0) text += `   ↳ Tip: ${currency}${p.tip.toFixed(2)}\n`
+    if (p.rounding && p.rounding !== 0) {
+      const sign = p.rounding > 0 ? '+' : '-'
+      text += `   ↳ Rounding: ${sign}${currency}${Math.abs(p.rounding).toFixed(2)}\n`
+    }
     text += `\n`
   })
   
@@ -1062,6 +1068,7 @@ export function calculateSplitBreakdown(split: any) {
       subtotal: subtotalRounded,
       tax: taxRounded,
       tip: tipRounded,
+      rounding: 0,
       total: totalRounded,
       items: participantItems
     }
@@ -1083,6 +1090,7 @@ export function calculateSplitBreakdown(split: any) {
     })
     if (maxSub > 0) {
       list[maxIdx].total = Math.round((list[maxIdx].total + roundingError) * 100) / 100
+      list[maxIdx].rounding = roundingError
     }
   }
 
