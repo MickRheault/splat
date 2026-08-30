@@ -99,13 +99,9 @@ export default async function handler(req: any, res: any) {
           return;
         }
 
-        // Increment rate limit count (4 per 60 seconds)
+        // Increment rate limit count immediately (4 per 60 seconds) to prevent flood abuse
         await kv.incr(rateLimitKey);
         await kv.expire(rateLimitKey, 60);
-        // Increment free scan count
-        await kv.incr(freeScansKey);
-        // Set TTL on free scan key for 35 days so it auto-deletes later
-        await kv.expire(freeScansKey, 35 * 24 * 60 * 60);
       } else {
         // Active pass exists! Enforce weekly fair-use limit of 50 scans
         const weekKey = getWeekKey(deviceId);
@@ -122,10 +118,6 @@ export default async function handler(req: any, res: any) {
         // Increment rate limit count (4 per 60 seconds)
         await kv.incr(rateLimitKey);
         await kv.expire(rateLimitKey, 60);
-        // Increment weekly usage count
-        await kv.incr(weekKey);
-        // Set TTL on week key for 8 days
-        await kv.expire(weekKey, 8 * 24 * 60 * 60);
       }
     }
 
@@ -207,6 +199,46 @@ Return format must be EXACTLY this JSON structure:
     }
 
     const result = await response.json();
+
+    // Verify valid response content from Gemini before deducting user quota
+    const parsedText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+    let parsedJson: any = null;
+    if (parsedText) {
+      try {
+        parsedJson = JSON.parse(parsedText);
+      } catch (e) {
+        // Non-JSON response
+      }
+    }
+
+    // Only increment user scan usage if parsing succeeded without an explicit error payload
+    if (hasKV && deviceId && kv && parsedJson && !parsedJson.error) {
+      const passKey = `pass:${deviceId}`;
+      const passType = await kv.get(passKey);
+
+      if (!passType) {
+        // Increment IP scan count
+        const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.headers['x-real-ip'] || 'unknown';
+        if (ip !== 'unknown') {
+          const today = new Date().toISOString().slice(0, 10);
+          const ipKey = `ipfree:${ip}:${today}`;
+          await kv.incr(ipKey);
+          await kv.expire(ipKey, 24 * 60 * 60);
+        }
+
+        // Increment free scan count
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        const freeScansKey = `free:${deviceId}:${currentMonth}`;
+        await kv.incr(freeScansKey);
+        await kv.expire(freeScansKey, 35 * 24 * 60 * 60);
+      } else {
+        // Increment weekly usage count for active pass
+        const weekKey = getWeekKey(deviceId);
+        await kv.incr(weekKey);
+        await kv.expire(weekKey, 8 * 24 * 60 * 60);
+      }
+    }
+
     res.status(200).json(result);
   } catch (e: any) {
     res.status(500).json({ error: e.message || 'Internal Server Error' });
