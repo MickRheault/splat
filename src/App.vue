@@ -310,6 +310,25 @@ const isAdminPasscodeOpen = ref(false)
 const adminPasscodeInput = ref('')
 const adminPasscodeError = ref('')
 
+const cleanUrlAccessParams = () => {
+  try {
+    const url = new URL(window.location.href)
+    const accessKeys = ['key', 'passcode', 'access', 'admin', 'dev', 'unlock']
+    let modified = false
+    accessKeys.forEach(k => {
+      if (url.searchParams.has(k)) {
+        url.searchParams.delete(k)
+        modified = true
+      }
+    })
+    if (modified) {
+      window.history.replaceState({}, '', url.toString())
+    }
+  } catch (e) {
+    // Ignore URL rewrite errors in non-standard environments
+  }
+}
+
 const checkWebAccess = () => {
   if (Capacitor.isNativePlatform()) {
     isWebUnlocked.value = true
@@ -319,11 +338,13 @@ const checkWebAccess = () => {
   const keyParam = params.get('key') || params.get('passcode') || params.get('access') || params.get('admin') || params.get('dev')
   
   if (keyParam) {
-    if (keyParam === WEB_ADMIN_KEY || keyParam === 'true' || keyParam === 'dev') {
+    if (keyParam === WEB_ADMIN_KEY) {
       localStorage.setItem('splat_web_unlocked', 'true')
+      cleanUrlAccessParams()
       isWebUnlocked.value = true
       return
     }
+    cleanUrlAccessParams()
   }
   
   if (localStorage.getItem('splat_web_unlocked') === 'true') {
@@ -333,12 +354,13 @@ const checkWebAccess = () => {
   isWebUnlocked.value = false
 }
 
-// Unlocked via URL parameter (e.g. ?admin=1985admin1985)
+// Unlocked via URL parameter (e.g. ?key=1985admin1985)
 
 const submitAdminPasscode = () => {
   const input = adminPasscodeInput.value.trim()
-  if (input === WEB_ADMIN_KEY || input === '1985admin1985' || input === 'dev') {
+  if (input === WEB_ADMIN_KEY) {
     localStorage.setItem('splat_web_unlocked', 'true')
+    cleanUrlAccessParams()
     isWebUnlocked.value = true
     isAdminPasscodeOpen.value = false
   } else {
@@ -348,14 +370,7 @@ const submitAdminPasscode = () => {
 
 const lockWebAccess = () => {
   localStorage.removeItem('splat_web_unlocked')
-  const url = new URL(window.location.href)
-  url.searchParams.delete('dev')
-  url.searchParams.delete('admin')
-  url.searchParams.delete('access')
-  url.searchParams.delete('unlock')
-  url.searchParams.delete('key')
-  url.searchParams.delete('passcode')
-  window.history.replaceState({}, '', url.toString())
+  cleanUrlAccessParams()
   isWebUnlocked.value = false
 }
 
