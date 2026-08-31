@@ -960,6 +960,50 @@ describe('Splat Core Store & Math Logic', () => {
       fetchSpy.mockRestore()
       vi.unstubAllEnvs()
     })
+
+    test('should auto-reconcile inverted adjustment/rounding sign to match expected receipt total', async () => {
+      vi.stubEnv('DEV', true)
+      vi.stubEnv('MODE', 'development')
+
+      store.apiKey = 'key'
+      // Simulating Andre table 15 receipt: subtotal 10940 + tax 765.80 + rounding parsed as -0.20 instead of +0.20, total: 11706
+      const mockResponse = {
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                restaurant: 'ANDRE',
+                total: 11706.00,
+                currencySymbol: '฿',
+                items: [
+                  { name: 'Rossini', price: 1880, quantity: 2 },
+                  { name: 'Other items', price: 9060, quantity: 1 }
+                ],
+                adjustments: [
+                  { name: 'VAT (7%)', value: 765.80 },
+                  { name: 'Rounding', value: -0.20 } // Inverted sign
+                ],
+                tip: 0
+              })
+            }]
+          }
+        }]
+      }
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+        Promise.resolve(new Response(JSON.stringify(mockResponse), { status: 200 }))
+      )
+
+      await store.parseWithGemini('data:image/png;base64,abcdef')
+
+      expect(store.expectedTotal).toBe(11706.00)
+      // Rounding sign should be auto-corrected from -0.20 to +0.20
+      const roundingAdj = store.adjustments.find(a => a.name === 'Rounding')
+      expect(roundingAdj?.value).toBe(0.20)
+      expect(totalBill.value).toBe(11706.00)
+
+      fetchSpy.mockRestore()
+      vi.unstubAllEnvs()
+    })
   })
 
   describe('History Database Error Handling', () => {
