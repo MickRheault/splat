@@ -162,6 +162,8 @@ export const store = reactive({
   isParsing: false,
   isModified: false,
   apiKey: import.meta.env.VITE_GEMINI_API_KEY || '',
+  pendingScanImage: null as string | null,
+  pendingScanTimestamp: null as number | null,
   ocrError: null as string | null,
   showPaywall: false,
   usageInfo: {
@@ -192,6 +194,48 @@ export const store = reactive({
     this.saveToLocalStorage(false)
   },
 
+  async setPendingScan(imageSrc: string) {
+    this.pendingScanImage = imageSrc
+    this.pendingScanTimestamp = Date.now()
+    try {
+      await setStorageItem('splat_pending_scan', JSON.stringify({
+        image: imageSrc,
+        timestamp: this.pendingScanTimestamp
+      }))
+    } catch (e) {
+      console.warn('Failed to save pending scan to storage', e)
+    }
+  },
+
+  async clearPendingScan() {
+    this.pendingScanImage = null
+    this.pendingScanTimestamp = null
+    try {
+      await removeStorageItem('splat_pending_scan')
+    } catch (e) {
+      console.warn('Failed to clear pending scan from storage', e)
+    }
+  },
+
+  async checkPendingScan(): Promise<boolean> {
+    try {
+      const raw = await getStorageItem('splat_pending_scan')
+      if (!raw) return false
+      const data = JSON.parse(raw)
+      const tenMinutes = 10 * 60 * 1000
+      if (data && data.image && data.timestamp && (Date.now() - data.timestamp) < tenMinutes) {
+        this.pendingScanImage = data.image
+        this.pendingScanTimestamp = data.timestamp
+        return true
+      }
+      // Expired pending scan
+      await this.clearPendingScan()
+    } catch (e) {
+      console.warn('Failed to check pending scan', e)
+    }
+    return false
+  },
+
   simulateOCR(imageSrc: string) {
     if (this.usageInfo && !this.usageInfo.passType && this.usageInfo.freeScansRemaining <= 0) {
       this.showPaywall = true
@@ -203,6 +247,7 @@ export const store = reactive({
     this.reset()
     this.isParsing = true
     this.receiptImage = imageSrc
+    this.setPendingScan(imageSrc)
     this.saveToLocalStorage()
 
     const isTest = import.meta.env.MODE === 'test'
@@ -246,6 +291,7 @@ export const store = reactive({
         
         this.isParsing = false
         this.decrementSimulatedScan()
+        this.clearPendingScan()
         this.step = 'edit'
         this.saveToLocalStorage()
       }, 1500)
@@ -448,6 +494,7 @@ Return format must be EXACTLY this JSON structure:
         this.currencySymbol = result.currency
       }
       this.decrementSimulatedScan()
+      await this.clearPendingScan()
       this.step = 'edit'
     } catch (e: any) {
       console.error(e)
