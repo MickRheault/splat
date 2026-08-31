@@ -1019,6 +1019,37 @@ describe('Splat Core Store & Math Logic', () => {
     })
   })
 
+  describe('Pending Scan Persistence & Recovery (Issue #43)', () => {
+    test('should store pending scan and recover if within 10 minutes', async () => {
+      await store.setPendingScan('data:image/png;base64,pending123')
+      expect(store.pendingScanImage).toBe('data:image/png;base64,pending123')
+      expect(store.pendingScanTimestamp).toBeDefined()
+
+      const hasPending = await store.checkPendingScan()
+      expect(hasPending).toBe(true)
+      expect(store.pendingScanImage).toBe('data:image/png;base64,pending123')
+
+      await store.clearPendingScan()
+      expect(store.pendingScanImage).toBeNull()
+      expect(store.pendingScanTimestamp).toBeNull()
+
+      const hasPendingAfterClear = await store.checkPendingScan()
+      expect(hasPendingAfterClear).toBe(false)
+    })
+
+    test('should discard expired pending scan older than 10 minutes', async () => {
+      const oldTimestamp = Date.now() - (11 * 60 * 1000) // 11 mins ago
+      localStorage.setItem('splat_pending_scan', JSON.stringify({
+        image: 'data:image/png;base64,oldscan',
+        timestamp: oldTimestamp
+      }))
+
+      const hasPending = await store.checkPendingScan()
+      expect(hasPending).toBe(false)
+      expect(store.pendingScanImage).toBeNull()
+    })
+  })
+
   describe('Image Compressor & Usage Limits Edge Cases', () => {
 
     test('should block parseWithGemini and simulateOCR when scans are exhausted', async () => {
