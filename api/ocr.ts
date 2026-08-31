@@ -148,12 +148,14 @@ Follow these rules strictly:
 1. Extract the merchant/restaurant name and target date if present.
 2. Extract all individual line items (name, total price, quantity count). If an item has a quantity/count specified (e.g. '3 - Beer : 15$'), return the quantity as 3, and the price as the total line price ($15.00). If no quantity is specified, default to 1.
 3. Do NOT include tax, service charges, VAT, or card fees in the items list.
-4. Extract tax, service charge, card fee, or roundings as individual entries in an adjustments array:
-   Example: [{"name": "Tax", "value": 3.50}, {"name": "Service Charge", "value": 5.00}]
+4. Extract tax, service charge, card fee, discounts, or roundings as individual entries in an adjustments array.
+   - For roundings/discounts: if it reduces total, value must be negative (e.g. -0.20); if it increases total, value must be positive (e.g. 0.20).
+   - Example: [{"name": "Tax", "value": 3.50}, {"name": "Rounding", "value": 0.20}]
 5. Extract the tip value (if specified on the receipt).
-6. Validate if the image is a valid receipt. If it's a photo of something else (like a dog, a car, landscape, blank screen, or arbitrary text), return a JSON with error: "This image does not appear to be a valid receipt."
-7. Categorize the bill type. Output exactly one of: 'food_drink' (restaurants/bars), 'groceries' (supermarkets), 'transport_fuel' (fuel/taxi/tolls), 'lodging' (hotels/hostels/Airbnb), 'tickets_entertainment' (movies/gigs/parks), 'shopping' (stores), 'activities' (tours/rental/sports), or 'general' (utilities/others).
-8. Detect the currency symbol or code used on the receipt (e.g. '฿' for Thai Baht / THB / บาท, '$', 'CA$', 'A$', '€', '£', '¥', '₩', '₹', 'CHF', 'S$', 'R$', 'kr', '₫', 'AED', etc.). If Thai Baht ('฿', 'THB', 'Baht', 'บาท') is present or detected on the receipt, set currencySymbol to '฿'. If unspecified or unclear, return null.
+6. Extract the final printed receipt grand total into "total" field. Ensure the equation holds: sum(items price) + sum(adjustments value) + tip = total.
+7. Validate if the image is a valid receipt. If it's a photo of something else (like a dog, a car, landscape, blank screen, or arbitrary text), return a JSON with error: "This image does not appear to be a valid receipt."
+8. Categorize the bill type. Output exactly one of: 'food_drink' (restaurants/bars), 'groceries' (supermarkets), 'transport_fuel' (fuel/taxi/tolls), 'lodging' (hotels/hostels/Airbnb), 'tickets_entertainment' (movies/gigs/parks), 'shopping' (stores), 'activities' (tours/rental/sports), or 'general' (utilities/others).
+9. Detect the currency symbol or code used on the receipt (e.g. '฿' for Thai Baht / THB / บาท, '$', 'CA$', 'A$', '€', '£', '¥', '₩', '₹', 'CHF', 'S$', 'R$', 'kr', '₫', 'AED', etc.). If Thai Baht ('฿', 'THB', 'Baht', 'บาท') is present or detected on the receipt, set currencySymbol to '฿'. If unspecified or unclear, return null.
 
 Return format must be EXACTLY this JSON structure:
 {
@@ -161,6 +163,7 @@ Return format must be EXACTLY this JSON structure:
   "date": "YYYY-MM-DD",
   "category": "food_drink",
   "currencySymbol": "฿",
+  "total": 11706.00,
   "items": [
     {"name": "Item Name", "price": 10.50, "quantity": 3}
   ],

@@ -1880,10 +1880,26 @@ const selectAllText = (event: Event) => {
             <span>TIP:</span>
             <span class="font-bold">{{ store.currencySymbol }}{{ tipAmount.toFixed(2) }}</span>
           </div>
-          <div class="divider"></div>
           <div class="flex justify-between font-bold text-base mt-1">
             <span>TOTAL BILL:</span>
             <span class="text-primary-pink">{{ store.currencySymbol }}{{ totalBill.toFixed(2) }}</span>
+          </div>
+
+          <!-- Expected Receipt Total Reconciliation Banner -->
+          <div 
+            v-if="store.expectedTotal !== null && Math.abs(totalBill - store.expectedTotal) > 0.01" 
+            class="mt-2.5 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg flex flex-col gap-1 text-[11px] text-amber-200"
+          >
+            <div class="flex items-center justify-between font-bold">
+              <span class="flex items-center gap-1.5">
+                <i class="pi pi-exclamation-triangle text-amber-400 text-xs"></i>
+                Receipt Total: {{ store.currencySymbol }}{{ store.expectedTotal.toFixed(2) }}
+              </span>
+              <span class="text-[10px] text-amber-300">Diff: {{ store.currencySymbol }}{{ (totalBill - store.expectedTotal).toFixed(2) }}</span>
+            </div>
+            <div class="text-[10px] text-slate-300">
+              Scanned items don't match receipt total. Check item prices or rounding lines.
+            </div>
           </div>
         </div>
       </div>
