@@ -156,6 +156,7 @@ export const store = reactive({
   adjustments: [] as Adjustment[],
   tipInput: 0,
   tipType: 'percentage' as 'percentage' | 'flat',
+  expectedTotal: null as number | null,
   currencySymbol: '$',
   category: 'food_drink' as 'food_drink' | 'groceries' | 'transport_fuel' | 'lodging' | 'tickets_entertainment' | 'shopping' | 'activities' | 'general',
   isParsing: false,
@@ -182,6 +183,7 @@ export const store = reactive({
     this.adjustments = []
     this.tipInput = 0
     this.tipType = 'percentage'
+    this.expectedTotal = null
     this.ocrError = null
     this.showPaywall = false
     this.category = 'food_drink'
@@ -303,17 +305,20 @@ Follow these rules strictly:
 1. Extract the merchant/restaurant name and target date if present.
 2. Extract all individual line items (name, total price, quantity count). If an item has a quantity/count specified (e.g. '3 - Beer : 15$'), return the quantity as 3, and the price as the total line price ($15.00). If no quantity is specified, default to 1.
 3. Do NOT include tax, service charges, VAT, or card fees in the items list.
-4. Extract tax, service charge, card fee, or roundings as individual entries in an adjustments array:
-   Example: [{"name": "Tax", "value": 3.50}, {"name": "Service Charge", "value": 5.00}]
+4. Extract tax, service charge, card fee, discounts, or roundings as individual entries in an adjustments array.
+   - For roundings/discounts: if it reduces total, value must be negative (e.g. -0.20); if it increases total, value must be positive (e.g. 0.20).
+   - Example: [{"name": "Tax", "value": 3.50}, {"name": "Rounding", "value": 0.20}]
 5. Extract the tip value (if specified on the receipt).
-6. Validate if the image is a valid receipt. If it's a photo of something else (like a dog, a car, landscape, blank screen, or arbitrary text), return a JSON with error: "This image does not appear to be a valid receipt."
-7. Detect the currency symbol or code used on the receipt (e.g. '฿' for Thai Baht / THB / บาท, '$', 'CA$', 'A$', '€', '£', '¥', '₩', '₹', 'CHF', 'S$', 'R$', 'kr', '₫', 'AED', etc.). If Thai Baht ('฿', 'THB', 'Baht', 'บาท') is present or detected on the receipt, set currencySymbol to '฿'. If unspecified or unclear, return null.
+6. Extract the final printed receipt grand total into "total" field. Ensure the equation holds: sum(items price) + sum(adjustments value) + tip = total.
+7. Validate if the image is a valid receipt. If it's a photo of something else (like a dog, a car, landscape, blank screen, or arbitrary text), return a JSON with error: "This image does not appear to be a valid receipt."
+8. Detect the currency symbol or code used on the receipt (e.g. '฿' for Thai Baht / THB / บาท, '$', 'CA$', 'A$', '€', '£', '¥', '₩', '₹', 'CHF', 'S$', 'R$', 'kr', '₫', 'AED', etc.). If Thai Baht ('฿', 'THB', 'Baht', 'บาท') is present or detected on the receipt, set currencySymbol to '฿'. If unspecified or unclear, return null.
 
 Return format must be EXACTLY this JSON structure:
 {
   "restaurant": "Restaurant Name",
   "date": "YYYY-MM-DD",
   "currencySymbol": "฿",
+  "total": 11706.00,
   "items": [
     {"name": "Item Name", "price": 10.50, "quantity": 3}
   ],
@@ -408,6 +413,29 @@ Return format must be EXACTLY this JSON structure:
       }))
       this.tipInput = Number(result.tip) || 0
       this.tipType = 'flat'
+
+      const extractedGrandTotal = result.total !== undefined && result.total !== null ? Number(result.total) : null
+      this.expectedTotal = (extractedGrandTotal !== null && !isNaN(extractedGrandTotal)) ? extractedGrandTotal : null
+
+      // Auto-reconciliation: Verify if adjustments/roundings need sign correction to match receipt grand total
+      if (this.expectedTotal !== null) {
+        const computedSubtotal = this.items.reduce((sum, item) => sum + (Number(item.price) || 0), 0)
+        const computedAdjustments = this.adjustments.reduce((sum, adj) => sum + (Number(adj.value) || 0), 0)
+        const currentSum = Math.round((computedSubtotal + computedAdjustments + this.tipInput) * 100) / 100
+        const targetTotal = Math.round(this.expectedTotal * 100) / 100
+
+        if (currentSum !== targetTotal) {
+          // Check if flipping any single adjustment sign (e.g. rounding -0.20 -> +0.20) reconciles to expected total
+          for (const adj of this.adjustments) {
+            const flippedVal = -adj.value
+            const testSum = Math.round((computedSubtotal + (computedAdjustments - adj.value + flippedVal) + this.tipInput) * 100) / 100
+            if (testSum === targetTotal) {
+              adj.value = flippedVal
+              break
+            }
+          }
+        }
+      }
       
       // Auto-generate Bill Name
       const parsedDate = result.date ? result.date.trim() : getTodayFormatted()
@@ -647,6 +675,7 @@ Return format must be EXACTLY this JSON structure:
         tipType: this.tipType,
         currencySymbol: this.currencySymbol,
         category: this.category,
+        expectedTotal: this.expectedTotal,
         isModified: this.isModified
       }
       await setStorageItem('splat_store', JSON.stringify(data))
@@ -715,6 +744,7 @@ Return format must be EXACTLY this JSON structure:
       if (data.tipType) this.tipType = data.tipType
       if (data.currencySymbol) this.currencySymbol = data.currencySymbol
       if (data.category) this.category = data.category
+      if (data.expectedTotal !== undefined) this.expectedTotal = data.expectedTotal
       if (data.isModified !== undefined) this.isModified = data.isModified
     } catch (e) {
       console.error('Failed to load from localStorage', e)
