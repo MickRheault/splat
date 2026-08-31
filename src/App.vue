@@ -150,6 +150,19 @@ const personShareText = computed(() => {
 // History List State
 const savedSplits = ref<any[]>([])
 const showAllHistory = ref(false)
+const hasPendingScanRecovery = ref(false)
+
+const retryPendingScan = async () => {
+  if (!store.pendingScanImage) return
+  const img = store.pendingScanImage
+  hasPendingScanRecovery.value = false
+  store.simulateOCR(img)
+}
+
+const dismissPendingScan = async () => {
+  hasPendingScanRecovery.value = false
+  await store.clearPendingScan()
+}
 
 const visibleSplits = computed(() => {
   if (showAllHistory.value) {
@@ -408,6 +421,12 @@ onMounted(async () => {
   // 4. Wait for local storage data to finish loading BEFORE hiding splash screen
   await localDataPromise;
   console.log(`[PERF] Local database loaded in ${(performance.now() - dbLoadStart).toFixed(1)}ms. Total elapsed:`, getElapsed());
+
+  // Check if there was an interrupted pending scan from background/OS kill
+  const hasPending = await store.checkPendingScan()
+  if (hasPending && store.step === 'capture') {
+    hasPendingScanRecovery.value = true
+  }
 
   // 5. Notify Capgo updater and hide native splash screen when ready
   if (Capacitor.isNativePlatform()) {
@@ -1500,6 +1519,38 @@ const selectAllText = (event: Event) => {
             class="p-button-text p-button-danger p-button-sm" 
             :style="{ height: 'auto', minWidth: 'auto', padding: '0 !important' }"
             @click="store.ocrError = null" 
+          />
+        </div>
+      </div>
+
+      <!-- Pending Scan Interrupted Recovery Banner -->
+      <div v-if="hasPendingScanRecovery && store.pendingScanImage && !store.isParsing" class="mb-3 p-3 bg-blue-950/80 border-2 border-blue-500 rounded-xl text-white shadow-[3px_3px_0px_rgba(59,130,246,0.6)]">
+        <div class="flex items-start justify-between gap-2">
+          <div class="flex gap-2.5 items-start text-left">
+            <i class="pi pi-sync text-blue-400 mt-1" style="font-size: 1.2rem;"></i>
+            <div>
+              <h5 class="font-extrabold text-sm text-white">Resume Previous Scan?</h5>
+              <p class="text-xs text-blue-200 mt-0.5">Your last scan was interrupted when the app closed.</p>
+            </div>
+          </div>
+          <Button 
+            icon="pi pi-times" 
+            class="p-button-text p-button-sm text-blue-300 hover:text-white" 
+            :style="{ height: 'auto', minWidth: 'auto', padding: '0 !important' }"
+            @click="dismissPendingScan" 
+          />
+        </div>
+        <div class="flex gap-2 mt-3 justify-end">
+          <Button 
+            label="Discard" 
+            class="p-button-text p-button-sm text-xs text-slate-300 hover:text-white px-2 py-1" 
+            @click="dismissPendingScan" 
+          />
+          <Button 
+            label="Resume Scan" 
+            icon="pi pi-play" 
+            class="p-button-primary p-button-sm text-xs font-bold px-3 py-1 bg-blue-600 hover:bg-blue-500 border-none" 
+            @click="retryPendingScan" 
           />
         </div>
       </div>
