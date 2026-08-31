@@ -310,6 +310,25 @@ const isAdminPasscodeOpen = ref(false)
 const adminPasscodeInput = ref('')
 const adminPasscodeError = ref('')
 
+const cleanUrlAccessParams = () => {
+  try {
+    const url = new URL(window.location.href)
+    const accessKeys = ['key', 'passcode', 'access', 'admin', 'dev', 'unlock']
+    let modified = false
+    accessKeys.forEach(k => {
+      if (url.searchParams.has(k)) {
+        url.searchParams.delete(k)
+        modified = true
+      }
+    })
+    if (modified) {
+      window.history.replaceState({}, '', url.toString())
+    }
+  } catch (e) {
+    // Ignore URL rewrite errors in non-standard environments
+  }
+}
+
 const checkWebAccess = () => {
   if (Capacitor.isNativePlatform()) {
     isWebUnlocked.value = true
@@ -319,11 +338,13 @@ const checkWebAccess = () => {
   const keyParam = params.get('key') || params.get('passcode') || params.get('access') || params.get('admin') || params.get('dev')
   
   if (keyParam) {
-    if (keyParam === WEB_ADMIN_KEY || keyParam === 'true' || keyParam === 'dev') {
+    if (keyParam === WEB_ADMIN_KEY) {
       localStorage.setItem('splat_web_unlocked', 'true')
+      cleanUrlAccessParams()
       isWebUnlocked.value = true
       return
     }
+    cleanUrlAccessParams()
   }
   
   if (localStorage.getItem('splat_web_unlocked') === 'true') {
@@ -333,12 +354,13 @@ const checkWebAccess = () => {
   isWebUnlocked.value = false
 }
 
-// Unlocked via URL parameter (e.g. ?admin=1985admin1985)
+// Unlocked via URL parameter (e.g. ?key=1985admin1985)
 
 const submitAdminPasscode = () => {
   const input = adminPasscodeInput.value.trim()
-  if (input === WEB_ADMIN_KEY || input === '1985admin1985' || input === 'dev') {
+  if (input === WEB_ADMIN_KEY) {
     localStorage.setItem('splat_web_unlocked', 'true')
+    cleanUrlAccessParams()
     isWebUnlocked.value = true
     isAdminPasscodeOpen.value = false
   } else {
@@ -348,14 +370,7 @@ const submitAdminPasscode = () => {
 
 const lockWebAccess = () => {
   localStorage.removeItem('splat_web_unlocked')
-  const url = new URL(window.location.href)
-  url.searchParams.delete('dev')
-  url.searchParams.delete('admin')
-  url.searchParams.delete('access')
-  url.searchParams.delete('unlock')
-  url.searchParams.delete('key')
-  url.searchParams.delete('passcode')
-  window.history.replaceState({}, '', url.toString())
+  cleanUrlAccessParams()
   isWebUnlocked.value = false
 }
 
@@ -1865,10 +1880,26 @@ const selectAllText = (event: Event) => {
             <span>TIP:</span>
             <span class="font-bold">{{ store.currencySymbol }}{{ tipAmount.toFixed(2) }}</span>
           </div>
-          <div class="divider"></div>
           <div class="flex justify-between font-bold text-base mt-1">
             <span>TOTAL BILL:</span>
             <span class="text-primary-pink">{{ store.currencySymbol }}{{ totalBill.toFixed(2) }}</span>
+          </div>
+
+          <!-- Expected Receipt Total Reconciliation Banner -->
+          <div 
+            v-if="store.expectedTotal !== null && Math.abs(totalBill - store.expectedTotal) > 0.01" 
+            class="mt-2.5 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg flex flex-col gap-1 text-[11px] text-amber-200"
+          >
+            <div class="flex items-center justify-between font-bold">
+              <span class="flex items-center gap-1.5">
+                <i class="pi pi-exclamation-triangle text-amber-400 text-xs"></i>
+                Receipt Total: {{ store.currencySymbol }}{{ store.expectedTotal.toFixed(2) }}
+              </span>
+              <span class="text-[10px] text-amber-300">Diff: {{ store.currencySymbol }}{{ (totalBill - store.expectedTotal).toFixed(2) }}</span>
+            </div>
+            <div class="text-[10px] text-slate-300">
+              Scanned items don't match receipt total. Check item prices or rounding lines.
+            </div>
           </div>
         </div>
       </div>
