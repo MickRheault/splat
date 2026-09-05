@@ -2,12 +2,14 @@ import { Redis } from '@upstash/redis';
 
 declare const process: any;
 
-const kv = (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
-  ? new Redis({
-      url: process.env.KV_REST_API_URL,
-      token: process.env.KV_REST_API_TOKEN,
-    })
-  : null;
+function getKV() {
+  return (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
+    ? new Redis({
+        url: process.env.KV_REST_API_URL,
+        token: process.env.KV_REST_API_TOKEN,
+      })
+    : null;
+}
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -25,9 +27,11 @@ export default async function handler(req: any, res: any) {
     return;
   }
 
+  const freeScansLimit = process.env.FREE_SCANS_LIMIT ? parseInt(process.env.FREE_SCANS_LIMIT, 10) : 3;
+
   try {
-    const hasKV = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN;
-    if (hasKV && kv) {
+    const kv = getKV();
+    if (kv) {
       const passKey = `pass:${deviceId}`;
       const passType = await kv.get(passKey); // "trip", "yearly", or null
       let expirationDate = null;
@@ -46,8 +50,8 @@ export default async function handler(req: any, res: any) {
         passType,
         expirationDate,
         freeScansUsed,
-        freeScansLimit: 3,
-        freeScansRemaining: Math.max(0, 3 - freeScansUsed)
+        freeScansLimit,
+        freeScansRemaining: Math.max(0, freeScansLimit - freeScansUsed)
       });
       return;
     }
@@ -55,8 +59,8 @@ export default async function handler(req: any, res: any) {
     res.status(200).json({
       passType: null,
       freeScansUsed: 0,
-      freeScansLimit: 3,
-      freeScansRemaining: 3
+      freeScansLimit,
+      freeScansRemaining: freeScansLimit
     });
   } catch (e: any) {
     res.status(500).json({ error: e.message || 'Internal Server Error' });

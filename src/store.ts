@@ -1,7 +1,7 @@
 import { reactive, computed } from 'vue'
 import { Capacitor } from '@capacitor/core'
 import { Preferences } from '@capacitor/preferences'
-import { billingManager, getDeviceId } from './services/billing'
+import { billingManager, getDeviceId, createDefaultUsage, DEFAULT_FREE_SCANS_LIMIT } from './services/billing'
 import { API_BASE_URL } from './config'
 
 export { getDeviceId }
@@ -166,12 +166,7 @@ export const store = reactive({
   pendingScanTimestamp: null as number | null,
   ocrError: null as string | null,
   showPaywall: false,
-  usageInfo: {
-    passType: null,
-    freeScansUsed: 0,
-    freeScansLimit: 3,
-    freeScansRemaining: 3
-  } as any,
+  usageInfo: createDefaultUsage() as any,
   simulatedUsage: null as any,
   fetchUsageCount: 0,
 
@@ -537,8 +532,9 @@ Return format must be EXACTLY this JSON structure:
     }
   },
 
-  setSimulatedUsage(passType: 'trip' | 'yearly' | null, freeScansUsed: number) {
-    const usage = billingManager.setSimulatedUsage(passType, freeScansUsed)
+  setSimulatedUsage(passType: 'trip' | 'yearly' | null, freeScansUsed: number, freeScansLimit?: number) {
+    const limit = freeScansLimit ?? this.usageInfo?.freeScansLimit ?? DEFAULT_FREE_SCANS_LIMIT
+    const usage = billingManager.setSimulatedUsage(passType, freeScansUsed, limit)
     this.simulatedUsage = usage
     this.usageInfo = { ...usage }
     setStorageItem('splat_simulated_usage', JSON.stringify(usage))
@@ -559,7 +555,8 @@ Return format must be EXACTLY this JSON structure:
     if (this.simulatedUsage) {
       if (this.simulatedUsage.passType) return
       const newUsed = this.simulatedUsage.freeScansUsed + 1
-      this.setSimulatedUsage(null, newUsed)
+      const limit = this.simulatedUsage.freeScansLimit ?? this.usageInfo?.freeScansLimit ?? DEFAULT_FREE_SCANS_LIMIT
+      this.setSimulatedUsage(null, newUsed, limit)
     }
   },
 
@@ -753,7 +750,7 @@ Return format must be EXACTLY this JSON structure:
           const parsed = JSON.parse(simUsageStr)
           this.simulatedUsage = parsed
           this.usageInfo = { ...parsed }
-          billingManager.setSimulatedUsage(parsed.passType, parsed.freeScansUsed)
+          billingManager.setSimulatedUsage(parsed.passType, parsed.freeScansUsed, parsed.freeScansLimit)
         } else {
           const usageStr = await getStorageItem('splat_usage_info')
           if (usageStr) {

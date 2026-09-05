@@ -2,12 +2,14 @@ import { Redis } from '@upstash/redis';
 
 declare const process: any;
 
-const kv = (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
-  ? new Redis({
-      url: process.env.KV_REST_API_URL,
-      token: process.env.KV_REST_API_TOKEN,
-    })
-  : null;
+function getKV() {
+  return (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
+    ? new Redis({
+        url: process.env.KV_REST_API_URL,
+        token: process.env.KV_REST_API_TOKEN,
+      })
+    : null;
+}
 
 export const config = {
   maxDuration: 45,
@@ -46,8 +48,8 @@ export default async function handler(req: any, res: any) {
     }
 
     // 1. Vercel KV limits and subscription checks (only run if KV env vars are set)
-    const hasKV = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN;
-    if (hasKV && deviceId && kv) {
+    const kv = getKV();
+    if (kv && deviceId) {
       // A. Rate Limiting: Max 4 scans per 60 seconds per device ID
       const rateLimitKey = `ratelimit:${deviceId}`;
       const rateLimitCount = (await kv.get<number>(rateLimitKey)) || 0;
@@ -68,16 +70,17 @@ export default async function handler(req: any, res: any) {
       }
 
       if (!passType) {
-        // IP-based Rate Limiting for Free Scans: Max 10 scans per day per IP
+        // IP-based Rate Limiting for Free Scans: Max 20 scans per day per IP (default)
+        const ipDailyLimit = process.env.IP_DAILY_FREE_SCANS_LIMIT ? parseInt(process.env.IP_DAILY_FREE_SCANS_LIMIT, 10) : 20;
         const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.headers['x-real-ip'] || 'unknown';
         if (ip !== 'unknown') {
           const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
           const ipKey = `ipfree:${ip}:${today}`;
           const ipScans = (await kv.get<number>(ipKey)) || 0;
-          if (ipScans >= 10) {
+          if (ipScans >= ipDailyLimit) {
             res.status(403).json({
               error: 'LIMIT_EXCEEDED',
-              message: 'Daily limit of 10 free scans reached for this network. Please try again tomorrow!'
+              message: `Daily limit of ${ipDailyLimit} free scans reached for this network. Please try again tomorrow!`
             });
             return;
           }
@@ -86,15 +89,16 @@ export default async function handler(req: any, res: any) {
           await kv.expire(ipKey, 24 * 60 * 60); // 24 hours expiry
         }
 
-        // No active pass. Check monthly free scan limit (cap of 3)
+        // No active pass. Check monthly free scan limit
+        const freeScansLimit = process.env.FREE_SCANS_LIMIT ? parseInt(process.env.FREE_SCANS_LIMIT, 10) : 3;
         const currentMonth = new Date().toISOString().slice(0, 7); // e.g. "2026-06"
         const freeScansKey = `free:${deviceId}:${currentMonth}`;
         const freeScansUsed = (await kv.get<number>(freeScansKey)) || 0;
 
-        if (freeScansUsed >= 3) {
+        if (freeScansUsed >= freeScansLimit) {
           res.status(403).json({ 
             error: 'LIMIT_EXCEEDED', 
-            message: 'You have reached your 3 free scans for this month.' 
+            message: `You have reached your ${freeScansLimit} free scans for this month.` 
           });
           return;
         }

@@ -117,7 +117,8 @@ describe('BillingManager - Core Billing Functions', () => {
     billingManager.setSimulatedUsage('yearly', 1);
     const status = await billingManager.fetchStatus();
     expect(status.passType).toBe('yearly');
-    expect(status.freeScansRemaining).toBe(2);
+    expect(status.freeScansLimit).toBe(12);
+    expect(status.freeScansRemaining).toBe(11);
   });
 
   test('fetchStatus handles Vercel fetch on web platform', async () => {

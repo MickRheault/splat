@@ -36,6 +36,20 @@ export interface UsageInfo {
   expirationDate?: string | null;
 }
 
+export const DEFAULT_FREE_SCANS_LIMIT = 
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_FREE_SCANS_LIMIT)
+    ? parseInt(import.meta.env.VITE_FREE_SCANS_LIMIT, 10)
+    : 12;
+
+export function createDefaultUsage(): UsageInfo {
+  return {
+    passType: null,
+    freeScansUsed: 0,
+    freeScansLimit: DEFAULT_FREE_SCANS_LIMIT,
+    freeScansRemaining: DEFAULT_FREE_SCANS_LIMIT
+  };
+}
+
 const checkLocalPassFallback = async (
   key: string,
   passType: 'yearly' | 'trip',
@@ -197,12 +211,7 @@ export class BillingManager {
           const tripEnt = customerInfo.entitlements.active['trip'];
           const yearlyEnt = customerInfo.entitlements.active['yearly'];
           
-          const baseInfo = fetchedUsageInfo || currentUsage || {
-            passType: null,
-            freeScansUsed: 0,
-            freeScansLimit: 3,
-            freeScansRemaining: 3
-          };
+          const baseInfo = fetchedUsageInfo || currentUsage || createDefaultUsage();
           
           if (tripEnt) {
             fetchedUsageInfo = {
@@ -240,12 +249,7 @@ export class BillingManager {
 
           const expiryDate = new Date(purchaseDateMs + 14 * 24 * 60 * 60 * 1000);
           if (expiryDate.getTime() > Date.now()) {
-            const baseInfo = fetchedUsageInfo || currentUsage || {
-              passType: null,
-              freeScansUsed: 0,
-              freeScansLimit: 3,
-              freeScansRemaining: 3
-            };
+            const baseInfo = fetchedUsageInfo || currentUsage || createDefaultUsage();
             fetchedUsageInfo = {
               ...baseInfo,
               passType: 'trip',
@@ -274,12 +278,7 @@ export class BillingManager {
               : Date.now() + 365 * 24 * 60 * 60 * 1000;
 
             if (expiryDateMs > Date.now()) {
-              const baseInfo = fetchedUsageInfo || currentUsage || {
-                passType: null,
-                freeScansUsed: 0,
-                freeScansLimit: 3,
-                freeScansRemaining: 3
-              };
+              const baseInfo = fetchedUsageInfo || currentUsage || createDefaultUsage();
               fetchedUsageInfo = {
                 ...baseInfo,
                 passType: 'yearly',
@@ -293,12 +292,7 @@ export class BillingManager {
         }
 
         // 1. Native Preferences check for yearly subscription
-        const defaultBase = fetchedUsageInfo || currentUsage || {
-          passType: null,
-          freeScansUsed: 0,
-          freeScansLimit: 3,
-          freeScansRemaining: 3
-        };
+        const defaultBase = fetchedUsageInfo || currentUsage || createDefaultUsage();
 
         if (!hasActiveEntitlement) {
           const yearlyLocal = await checkLocalPassFallback('splat_local_pass_yearly', 'yearly', 365, defaultBase);
@@ -327,12 +321,7 @@ export class BillingManager {
             fetchedUsageInfo = { ...currentUsage };
             hasActiveEntitlement = true;
           } else {
-            const baseInfo = fetchedUsageInfo || currentUsage || {
-              passType: null,
-              freeScansUsed: 0,
-              freeScansLimit: 3,
-              freeScansRemaining: 3
-            };
+            const baseInfo = fetchedUsageInfo || currentUsage || createDefaultUsage();
             fetchedUsageInfo = {
               ...baseInfo,
               passType: null,
@@ -349,12 +338,7 @@ export class BillingManager {
       }
     }
 
-    const defaultUsage: UsageInfo = {
-      passType: null,
-      freeScansUsed: 0,
-      freeScansLimit: 3,
-      freeScansRemaining: 3
-    };
+    const defaultUsage: UsageInfo = createDefaultUsage();
 
     // Discard result if a newer fetch has started (latest-win check)
     if (currentCount !== this.fetchUsageCount) {
@@ -435,8 +419,8 @@ export class BillingManager {
         await setNativeItem('splat_usage_info', JSON.stringify({
           passType: 'trip',
           freeScansUsed: 0,
-          freeScansLimit: 3,
-          freeScansRemaining: 3,
+          freeScansLimit: DEFAULT_FREE_SCANS_LIMIT,
+          freeScansRemaining: DEFAULT_FREE_SCANS_LIMIT,
           expirationDate: expiryDate
         }));
       } else if (option === 'yearly') {
@@ -446,8 +430,8 @@ export class BillingManager {
         await setNativeItem('splat_usage_info', JSON.stringify({
           passType: 'yearly',
           freeScansUsed: 0,
-          freeScansLimit: 3,
-          freeScansRemaining: 3,
+          freeScansLimit: DEFAULT_FREE_SCANS_LIMIT,
+          freeScansRemaining: DEFAULT_FREE_SCANS_LIMIT,
           expirationDate: expiryDate
         }));
       }
@@ -511,8 +495,8 @@ export class BillingManager {
         await setNativeItem('splat_usage_info', JSON.stringify({
           passType,
           freeScansUsed: 0,
-          freeScansLimit: 3,
-          freeScansRemaining: 3,
+          freeScansLimit: DEFAULT_FREE_SCANS_LIMIT,
+          freeScansRemaining: DEFAULT_FREE_SCANS_LIMIT,
           expirationDate: expiryDate
         }));
 
@@ -556,12 +540,12 @@ export class BillingManager {
     return details.join('\n');
   }
 
-  public setSimulatedUsage(passType: 'trip' | 'yearly' | null, freeScansUsed: number): UsageInfo {
+  public setSimulatedUsage(passType: 'trip' | 'yearly' | null, freeScansUsed: number, freeScansLimit: number = DEFAULT_FREE_SCANS_LIMIT): UsageInfo {
     const usage: UsageInfo = {
       passType,
       freeScansUsed,
-      freeScansLimit: 3,
-      freeScansRemaining: Math.max(0, 3 - freeScansUsed)
+      freeScansLimit,
+      freeScansRemaining: Math.max(0, freeScansLimit - freeScansUsed)
     };
     this.simulatedUsage = usage;
     return usage;
