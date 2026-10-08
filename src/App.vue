@@ -316,7 +316,7 @@ const loadSavedNames = async () => {
   }
 }
 
-const WEB_ADMIN_KEY = import.meta.env.VITE_WEB_ADMIN_KEY || '1985admin1985'
+const WEB_ADMIN_KEY = import.meta.env.VITE_WEB_ADMIN_KEY || ''
 
 const isWebUnlocked = ref(false)
 const isAdminPasscodeOpen = ref(false)
@@ -351,7 +351,7 @@ const checkWebAccess = () => {
   const keyParam = params.get('key') || params.get('passcode') || params.get('access') || params.get('admin') || params.get('dev')
   
   if (keyParam) {
-    if (keyParam === WEB_ADMIN_KEY) {
+    if (WEB_ADMIN_KEY && keyParam === WEB_ADMIN_KEY) {
       localStorage.setItem('splat_web_unlocked', 'true')
       cleanUrlAccessParams()
       isWebUnlocked.value = true
@@ -367,11 +367,11 @@ const checkWebAccess = () => {
   isWebUnlocked.value = false
 }
 
-// Unlocked via URL parameter (e.g. ?key=1985admin1985)
+// Unlocked via URL parameter (e.g. ?key=SECRET)
 
 const submitAdminPasscode = () => {
   const input = adminPasscodeInput.value.trim()
-  if (input === WEB_ADMIN_KEY) {
+  if (WEB_ADMIN_KEY && input === WEB_ADMIN_KEY) {
     localStorage.setItem('splat_web_unlocked', 'true')
     cleanUrlAccessParams()
     isWebUnlocked.value = true

@@ -13,7 +13,20 @@ dist-ssr
 *.local
 .env
 .env.*
-!.env.production
+
+# Test coverage
+coverage
+
+# Deployment
+.vercel
+
+# Keys and credentials
+*key.json
+*service-account*.json
+*.pem
+*.keystore
+*.jks
+revenuecat-key.json
 
 # Editor directories and files
 .vscode/*
@@ -24,5 +37,3 @@ dist-ssr
 *.ntvs*
 *.njsproj
 *.sln
-# Visual testing/previews
-# Capgo OTA update zip bundles tracked per release
