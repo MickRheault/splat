@@ -39,6 +39,8 @@ jobs:
     - name: Build web project
       env:
         VITE_API_BASE_URL: https://splat-bills.vercel.app
+        VITE_REVENUECAT_ANDROID_API_KEY: ${{ secrets.VITE_REVENUECAT_ANDROID_API_KEY }}
+        VITE_REVENUECAT_IOS_API_KEY: ${{ secrets.VITE_REVENUECAT_IOS_API_KEY }}
       run: npm run build
 
     - name: Package OTA Zip and Manifest
