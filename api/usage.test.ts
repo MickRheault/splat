@@ -46,7 +46,7 @@ describe('Usage API Handler', () => {
 
     await handler(req, res);
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Missing deviceId' });
+    expect(res.json).toHaveBeenCalledWith({ error: 'Missing or invalid deviceId' });
   });
 
   test('should return default limit of 3 when FREE_SCANS_LIMIT is unset', async () => {
@@ -72,7 +72,7 @@ describe('Usage API Handler', () => {
   test('should return promotional limit of 12 when FREE_SCANS_LIMIT is set to 12', async () => {
     process.env.FREE_SCANS_LIMIT = '12';
     // First get for passKey (null), second get for freeScansKey (3 used)
-    mockGet.mockResolvedValueOnce(null).mockResolvedValueOnce(3);
+    mockGet.mockImplementation(async (key: string) => key.startsWith('free:') ? 3 : null);
 
     const req = { method: 'GET', query: { deviceId: 'dev_123' } };
     const res = {
@@ -94,7 +94,7 @@ describe('Usage API Handler', () => {
 
   test('should clamp freeScansRemaining to 0 when freeScansUsed exceeds limit', async () => {
     process.env.FREE_SCANS_LIMIT = '12';
-    mockGet.mockResolvedValueOnce(null).mockResolvedValueOnce(15);
+    mockGet.mockImplementation(async (key: string) => key.startsWith('free:') ? 15 : null);
 
     const req = { method: 'GET', query: { deviceId: 'dev_123' } };
     const res = {
@@ -114,24 +114,11 @@ describe('Usage API Handler', () => {
     });
   });
 
-  test('should return promotional limit when KV is not configured', async () => {
+  test('should pause usage reporting when KV is not configured', async () => {
     delete process.env.KV_REST_API_URL;
-    process.env.FREE_SCANS_LIMIT = '12';
-
-    const req = { method: 'GET', query: { deviceId: 'dev_123' } };
-    const res = {
-      setHeader: vi.fn(),
-      status: vi.fn().mockReturnThis(),
-      json: vi.fn()
-    };
-
-    await handler(req, res);
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith({
-      passType: null,
-      freeScansUsed: 0,
-      freeScansLimit: 12,
-      freeScansRemaining: 12
-    });
+    const res = { setHeader: vi.fn(), status: vi.fn().mockReturnThis(), json: vi.fn() };
+    await handler({ method: 'GET', query: { deviceId: 'dev_123' } }, res);
+    expect(res.status).toHaveBeenCalledWith(503);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: 'BILLING_UNAVAILABLE' }));
   });
 });

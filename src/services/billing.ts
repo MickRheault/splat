@@ -1,20 +1,8 @@
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
-import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
+import { Purchases, LOG_LEVEL, PRODUCT_CATEGORY } from '@revenuecat/purchases-capacitor';
 import { API_BASE_URL } from '../config';
-
-const getNativeItem = async (key: string): Promise<string | null> => {
-  try {
-    if (Capacitor.isNativePlatform()) {
-      const { value } = await Preferences.get({ key });
-      return value;
-    }
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-};
 
 const setNativeItem = async (key: string, value: string): Promise<void> => {
   try {
@@ -49,31 +37,6 @@ export function createDefaultUsage(): UsageInfo {
     freeScansRemaining: DEFAULT_FREE_SCANS_LIMIT
   };
 }
-
-const checkLocalPassFallback = async (
-  key: string,
-  passType: 'yearly' | 'trip',
-  durationDays: number,
-  baseUsageInfo: UsageInfo
-): Promise<UsageInfo | null> => {
-  try {
-    const raw = await getNativeItem(key);
-    if (raw) {
-      const { purchaseDate } = JSON.parse(raw);
-      const expiryMs = purchaseDate + durationDays * 24 * 60 * 60 * 1000;
-      if (expiryMs > Date.now()) {
-        return {
-          ...baseUsageInfo,
-          passType,
-          expirationDate: new Date(expiryMs).toISOString()
-        };
-      }
-    }
-  } catch (e) {
-    console.warn(`Failed to parse local ${passType} pass fallback`, e);
-  }
-  return null;
-};
 
 export const getDeviceId = async (): Promise<string> => {
   try {
@@ -126,23 +89,15 @@ export class BillingManager {
           apiKey: apiKey,
           appUserID: deviceId
         });
-        console.log('RevenueCat initialized successfully for device ID:', deviceId);
         this.initialized = true;
 
-        // Automatically sync & restore Google Play/App Store purchases silently on boot
+        // Keep the existing appUserID and store association. Startup never grants
+        // a pass from SDK history or starts a new duration clock.
         try {
-          const { customerInfo } = await Purchases.restorePurchases();
-          const hasPass = !!(
-            customerInfo?.entitlements?.active?.['trip'] ||
-            customerInfo?.allPurchasedProductIdentifiers?.includes('splat_14day_trip') ||
-            customerInfo?.nonSubscriptionTransactions?.some((t: any) => t.productIdentifier === 'splat_14day_trip')
-          );
-          if (hasPass) {
-            const purchaseDateMs = Date.now();
-            await setNativeItem('splat_local_pass_trip', JSON.stringify({ purchaseDate: purchaseDateMs }));
-          }
-        } catch (syncErr) {
-          console.warn('Silent purchase sync on boot failed:', syncErr);
+          await Purchases.restorePurchases();
+          await this.syncPurchase();
+        } catch {
+          console.warn('Purchase verification unavailable on startup; retry Restore purchases.');
         }
       } catch (err) {
         console.warn('RevenueCat initialization failed:', err);
@@ -154,198 +109,23 @@ export class BillingManager {
   }
 
   public async fetchStatus(currentUsage?: UsageInfo): Promise<UsageInfo> {
-    this.fetchUsageCount++;
-    const currentCount = this.fetchUsageCount;
-
-    if (this.simulatedUsage && !Capacitor.isNativePlatform()) {
-      return { ...this.simulatedUsage };
-    }
-
-    const isNative = Capacitor.isNativePlatform();
-    let fetchedUsageInfo: UsageInfo | null = null;
-
-    // 1. Try to fetch usage limits from the Vercel backend API
+    const count = ++this.fetchUsageCount;
     try {
       const deviceId = await getDeviceId();
-      const apiBase = isNative ? API_BASE_URL : '';
-      const res = await fetch(`${apiBase}/api/usage?deviceId=${deviceId}`);
-      if (res.ok) {
-        fetchedUsageInfo = await res.json();
+      const apiBase = Capacitor.isNativePlatform() ? API_BASE_URL : '';
+      const response = await fetch(`${apiBase}/api/usage?deviceId=${encodeURIComponent(deviceId)}`);
+      if (!response.ok) throw new Error('Billing status unavailable');
+      const usage: UsageInfo = await response.json();
+      if (count !== this.fetchUsageCount) return currentUsage || createDefaultUsage();
+      return usage;
+    } catch {
+      // Cached UI status never authorizes OCR; the server still verifies every scan.
+      const usage = currentUsage || createDefaultUsage();
+      if (usage.passType && (!usage.expirationDate || !(Date.parse(usage.expirationDate) > Date.now()))) {
+        return { ...usage, passType: null, expirationDate: null };
       }
-    } catch (err) {
-      console.warn('Failed to fetch usage limits from backend', err);
+      return usage;
     }
-
-    // 2. Sync active entitlements locally using the RevenueCat SDK
-    if (isNative) {
-      try {
-        const { Purchases } = await import('@revenuecat/purchases-capacitor');
-        let { customerInfo } = await Purchases.getCustomerInfo();
-        
-        let hasActiveEnt = !!(
-          customerInfo?.entitlements?.active?.['trip'] ||
-          customerInfo?.entitlements?.active?.['yearly'] ||
-          customerInfo?.activeSubscriptions?.includes('splat_yearly_pro') ||
-          customerInfo?.allPurchasedProductIdentifiers?.includes('splat_yearly_pro') ||
-          customerInfo?.allPurchasedProductIdentifiers?.includes('splat_14day_trip')
-        );
-
-        // If no active entitlement found in RevenueCat cache, restore directly from Google Play / App Store
-        if (!hasActiveEnt) {
-          try {
-            console.log('No active entitlement in cache, restoring from Google Play...');
-            const restored = await Purchases.restorePurchases();
-            if (restored && restored.customerInfo) {
-              customerInfo = restored.customerInfo;
-            }
-          } catch (restoreErr) {
-            console.warn('Failed to restore purchases in fetchStatus:', restoreErr);
-          }
-        }
-
-        console.log('RevenueCat CustomerInfo active entitlements:', JSON.stringify(customerInfo?.entitlements?.active || {}));
-        console.log('RevenueCat CustomerInfo purchased products:', JSON.stringify(customerInfo?.allPurchasedProductIdentifiers || []));
-        
-        let hasActiveEntitlement = false;
-        if (customerInfo && customerInfo.entitlements && customerInfo.entitlements.active) {
-          const tripEnt = customerInfo.entitlements.active['trip'];
-          const yearlyEnt = customerInfo.entitlements.active['yearly'];
-          
-          const baseInfo = fetchedUsageInfo || currentUsage || createDefaultUsage();
-          
-          if (tripEnt) {
-            fetchedUsageInfo = {
-              ...baseInfo,
-              passType: 'trip',
-              expirationDate: tripEnt.expirationDate
-            };
-            hasActiveEntitlement = true;
-          } else if (yearlyEnt) {
-            fetchedUsageInfo = {
-              ...baseInfo,
-              passType: 'yearly',
-              expirationDate: yearlyEnt.expirationDate
-            };
-            hasActiveEntitlement = true;
-          }
-        }
-
-        // Fallback for one-time purchases if entitlement configuration/linking is missing in RC dashboard
-        if (!hasActiveEntitlement && customerInfo && customerInfo.allPurchasedProductIdentifiers && customerInfo.allPurchasedProductIdentifiers.includes('splat_14day_trip')) {
-          let purchaseDateStr = customerInfo.allPurchaseDates?.['splat_14day_trip'];
-          
-          if (!purchaseDateStr && customerInfo.nonSubscriptionTransactions && customerInfo.nonSubscriptionTransactions.length > 0) {
-            const nonSubTx = customerInfo.nonSubscriptionTransactions
-              .filter((t: any) => t.productIdentifier === 'splat_14day_trip')
-              .sort((a: any, b: any) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime())[0];
-            if (nonSubTx && nonSubTx.purchaseDate) {
-              purchaseDateStr = nonSubTx.purchaseDate;
-            }
-          }
-
-          const purchaseDateMs = purchaseDateStr 
-            ? new Date(purchaseDateStr).getTime() 
-            : (customerInfo.requestDate ? new Date(customerInfo.requestDate).getTime() : Date.now());
-
-          const expiryDate = new Date(purchaseDateMs + 14 * 24 * 60 * 60 * 1000);
-          if (expiryDate.getTime() > Date.now()) {
-            const baseInfo = fetchedUsageInfo || currentUsage || createDefaultUsage();
-            fetchedUsageInfo = {
-              ...baseInfo,
-              passType: 'trip',
-              expirationDate: expiryDate.toISOString()
-            };
-            hasActiveEntitlement = true;
-            // Persist valid purchase in native storage for offline/fast load
-            setNativeItem('splat_local_pass_trip', JSON.stringify({ purchaseDate: purchaseDateMs })).catch(() => {});
-          }
-        }
-
-        // Fallback for yearly subscription if entitlement configuration/linking is missing in RC dashboard
-        if (!hasActiveEntitlement && customerInfo) {
-          const isYearlyPurchased = !!(
-            customerInfo.activeSubscriptions?.includes('splat_yearly_pro') ||
-            customerInfo.allPurchasedProductIdentifiers?.includes('splat_yearly_pro') ||
-            (customerInfo.subscriptionsByProductIdentifier && customerInfo.subscriptionsByProductIdentifier['splat_yearly_pro'])
-          );
-
-          if (isYearlyPurchased) {
-            const subInfo = customerInfo.subscriptionsByProductIdentifier?.['splat_yearly_pro'];
-            const expiryDateStr = subInfo?.expiresDate || customerInfo.allExpirationDates?.['splat_yearly_pro'];
-            
-            const expiryDateMs = expiryDateStr 
-              ? new Date(expiryDateStr).getTime() 
-              : Date.now() + 365 * 24 * 60 * 60 * 1000;
-
-            if (expiryDateMs > Date.now()) {
-              const baseInfo = fetchedUsageInfo || currentUsage || createDefaultUsage();
-              fetchedUsageInfo = {
-                ...baseInfo,
-                passType: 'yearly',
-                expirationDate: new Date(expiryDateMs).toISOString()
-              };
-              hasActiveEntitlement = true;
-              // Persist valid purchase in native storage for offline/fast load
-              setNativeItem('splat_local_pass_yearly', JSON.stringify({ purchaseDate: Date.now() })).catch(() => {});
-            }
-          }
-        }
-
-        // 1. Native Preferences check for yearly subscription
-        const defaultBase = fetchedUsageInfo || currentUsage || createDefaultUsage();
-
-        if (!hasActiveEntitlement) {
-          const yearlyLocal = await checkLocalPassFallback('splat_local_pass_yearly', 'yearly', 365, defaultBase);
-          if (yearlyLocal) {
-            fetchedUsageInfo = yearlyLocal;
-            hasActiveEntitlement = true;
-          }
-        }
-
-        // 2. Native Preferences check for trip pass
-        if (!hasActiveEntitlement) {
-          const tripLocal = await checkLocalPassFallback('splat_local_pass_trip', 'trip', 14, defaultBase);
-          if (tripLocal) {
-            fetchedUsageInfo = tripLocal;
-            hasActiveEntitlement = true;
-          }
-        }
-
-        if (!hasActiveEntitlement) {
-          const currentExpiryMs = currentUsage?.expirationDate ? new Date(currentUsage.expirationDate).getTime() : NaN;
-          const isCurrentPassValid = !!(
-            currentUsage?.passType &&
-            (isNaN(currentExpiryMs) || currentExpiryMs > Date.now())
-          );
-          if (isCurrentPassValid) {
-            fetchedUsageInfo = { ...currentUsage };
-            hasActiveEntitlement = true;
-          } else {
-            const baseInfo = fetchedUsageInfo || currentUsage || createDefaultUsage();
-            fetchedUsageInfo = {
-              ...baseInfo,
-              passType: null,
-              expirationDate: null
-            };
-          }
-        }
-      } catch (rcErr) {
-        console.warn('Failed to fetch RevenueCat entitlement info', rcErr);
-        if (fetchedUsageInfo) {
-          fetchedUsageInfo.passType = currentUsage?.passType || null;
-          fetchedUsageInfo.expirationDate = currentUsage?.expirationDate || null;
-        }
-      }
-    }
-
-    const defaultUsage: UsageInfo = createDefaultUsage();
-
-    // Discard result if a newer fetch has started (latest-win check)
-    if (currentCount !== this.fetchUsageCount) {
-      return currentUsage || defaultUsage;
-    }
-
-    return fetchedUsageInfo || currentUsage || defaultUsage;
   }
 
   public isAlreadyOwnedError(err: any): boolean {
@@ -388,7 +168,6 @@ export class BillingManager {
       
       if (!purchased) {
         try {
-          const { PRODUCT_CATEGORY } = await import('@revenuecat/purchases-capacitor');
           const type = option === 'trip' 
             ? PRODUCT_CATEGORY.NON_SUBSCRIPTION 
             : PRODUCT_CATEGORY.SUBSCRIPTION;
@@ -412,114 +191,33 @@ export class BillingManager {
         }
       }
 
-      if (option === 'trip') {
-        const purchaseDateMs = Date.now();
-        const expiryDate = new Date(purchaseDateMs + 14 * 24 * 60 * 60 * 1000).toISOString();
-        await setNativeItem('splat_local_pass_trip', JSON.stringify({ purchaseDate: purchaseDateMs }));
-        await setNativeItem('splat_usage_info', JSON.stringify({
-          passType: 'trip',
-          freeScansUsed: 0,
-          freeScansLimit: DEFAULT_FREE_SCANS_LIMIT,
-          freeScansRemaining: DEFAULT_FREE_SCANS_LIMIT,
-          expirationDate: expiryDate
-        }));
-      } else if (option === 'yearly') {
-        const purchaseDateMs = Date.now();
-        const expiryDate = new Date(purchaseDateMs + 365 * 24 * 60 * 60 * 1000).toISOString();
-        await setNativeItem('splat_local_pass_yearly', JSON.stringify({ purchaseDate: purchaseDateMs }));
-        await setNativeItem('splat_usage_info', JSON.stringify({
-          passType: 'yearly',
-          freeScansUsed: 0,
-          freeScansLimit: DEFAULT_FREE_SCANS_LIMIT,
-          freeScansRemaining: DEFAULT_FREE_SCANS_LIMIT,
-          expirationDate: expiryDate
-        }));
-      }
-
-      // Clear dev mode simulated usage if active
       this.clearSimulatedUsage();
-
-      // Sync pass with server Upstash KV
-      try {
-        const deviceId = await getDeviceId();
-        await fetch(`${API_BASE_URL}/api/mock-purchase`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ deviceId, type: option })
-        });
-      } catch (syncErr) {
-        console.warn('Failed to sync native purchase to server KV:', syncErr);
-      }
+      const usage = await this.syncPurchase();
+      if (!usage.passType) throw new Error('Purchase verification is pending or the pass has expired. Please retry Restore purchases.');
     } else {
-      const deviceId = await getDeviceId();
-      const response = await fetch('/api/mock-purchase', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deviceId, type: option })
-      });
-
-      if (!response.ok) {
-        throw new Error('Server activation failed');
-      }
+      throw new Error('Purchases are available in the iOS and Android apps.');
     }
   }
 
+  private async syncPurchase(): Promise<UsageInfo> {
+    const deviceId = await getDeviceId();
+    const apiBase = Capacitor.isNativePlatform() ? API_BASE_URL : '';
+    const response = await fetch(`${apiBase}/api/sync-purchase`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId })
+    });
+    if (!response.ok) throw new Error('Purchase verification is temporarily unavailable. Please retry Restore purchases shortly.');
+    const usage: UsageInfo = await response.json();
+    await setNativeItem('splat_usage_info', JSON.stringify(usage));
+    return usage;
+  }
+
   public async restore(): Promise<boolean> {
-    const isNative = Capacitor.isNativePlatform();
-    if (isNative) {
-      const { customerInfo } = await Purchases.restorePurchases();
-      
-      const isTrip = !!(
-        customerInfo.entitlements?.active?.['trip'] ||
-        customerInfo.allPurchasedProductIdentifiers?.includes('splat_14day_trip') ||
-        customerInfo.nonSubscriptionTransactions?.some((t: any) => t.productIdentifier === 'splat_14day_trip')
-      );
-
-      const isYearly = !!(
-        customerInfo.entitlements?.active?.['yearly'] ||
-        customerInfo.allPurchasedProductIdentifiers?.includes('splat_yearly_pro') ||
-        customerInfo.activeSubscriptions?.includes('splat_yearly_pro') ||
-        (customerInfo.subscriptionsByProductIdentifier && customerInfo.subscriptionsByProductIdentifier['splat_yearly_pro'])
-      );
-
-      const hasActivePass = isTrip || isYearly;
-
-      if (hasActivePass) {
-        const passType = isYearly ? 'yearly' : 'trip';
-        const purchaseDateMs = Date.now();
-        const durationDays = passType === 'yearly' ? 365 : 14;
-        const expiryDate = new Date(purchaseDateMs + durationDays * 24 * 60 * 60 * 1000).toISOString();
-
-        // 1. Save to native preferences for fast offline load
-        await setNativeItem(`splat_local_pass_${passType}`, JSON.stringify({ purchaseDate: purchaseDateMs }));
-        await setNativeItem('splat_usage_info', JSON.stringify({
-          passType,
-          freeScansUsed: 0,
-          freeScansLimit: DEFAULT_FREE_SCANS_LIMIT,
-          freeScansRemaining: DEFAULT_FREE_SCANS_LIMIT,
-          expirationDate: expiryDate
-        }));
-
-        // 2. Clear dev mode simulated usage if active
-        this.clearSimulatedUsage();
-
-        // 3. Sync pass with server Upstash KV
-        try {
-          const deviceId = await getDeviceId();
-          await fetch(`${API_BASE_URL}/api/mock-purchase`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ deviceId, type: passType })
-          });
-        } catch (syncErr) {
-          console.warn('Failed to sync restored pass to server KV:', syncErr);
-        }
-      }
-
-      return hasActivePass;
-    } else {
-      throw new Error('Restore purchases is only available on native platforms.');
-    }
+    if (!Capacitor.isNativePlatform()) throw new Error('Restore purchases is only available on native platforms.');
+    await Purchases.restorePurchases();
+    this.clearSimulatedUsage();
+    const usage = await this.syncPurchase();
+    return usage.passType !== null;
   }
 
   public formatError(e: any): string {

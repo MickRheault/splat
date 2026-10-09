@@ -1,68 +1,16 @@
-import { Redis } from '@upstash/redis';
-
-declare const process: any;
-
-function getKV() {
-  return (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
-    ? new Redis({
-        url: process.env.KV_REST_API_URL,
-        token: process.env.KV_REST_API_TOKEN,
-      })
-    : null;
-}
+import { getBillingRedis, usageInfo, validDeviceId, RETRY_ERROR } from '../server/billing.js';
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    res.status(204).end();
-    return;
-  }
-
-  const { deviceId } = req.query;
-  if (!deviceId) {
-    res.status(400).json({ error: 'Missing deviceId' });
-    return;
-  }
-
-  const freeScansLimit = process.env.FREE_SCANS_LIMIT ? parseInt(process.env.FREE_SCANS_LIMIT, 10) : 3;
-
+  if (req.method === 'OPTIONS') { res.status(204).end(); return; }
+  if (req.method !== 'GET') { res.status(405).json({ error: 'Method Not Allowed' }); return; }
+  const deviceId = req.query?.deviceId;
+  if (!validDeviceId(deviceId)) { res.status(400).json({ error: 'Missing or invalid deviceId' }); return; }
   try {
-    const kv = getKV();
-    if (kv) {
-      const passKey = `pass:${deviceId}`;
-      const passType = await kv.get(passKey); // "trip", "yearly", or null
-      let expirationDate = null;
-      if (passType) {
-        const ttl = await kv.ttl(passKey);
-        if (ttl > 0) {
-          expirationDate = new Date(Date.now() + ttl * 1000).toISOString();
-        }
-      }
-
-      const currentMonth = new Date().toISOString().slice(0, 7);
-      const freeScansKey = `free:${deviceId}:${currentMonth}`;
-      const freeScansUsed = (await kv.get<number>(freeScansKey)) || 0;
-
-      res.status(200).json({
-        passType,
-        expirationDate,
-        freeScansUsed,
-        freeScansLimit,
-        freeScansRemaining: Math.max(0, freeScansLimit - freeScansUsed)
-      });
-      return;
-    }
-
-    res.status(200).json({
-      passType: null,
-      freeScansUsed: 0,
-      freeScansLimit,
-      freeScansRemaining: freeScansLimit
-    });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message || 'Internal Server Error' });
+    res.status(200).json(await usageInfo(getBillingRedis(), deviceId));
+  } catch {
+    res.status(503).json(RETRY_ERROR);
   }
 }

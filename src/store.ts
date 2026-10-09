@@ -161,7 +161,7 @@ export const store = reactive({
   category: 'food_drink' as 'food_drink' | 'groceries' | 'transport_fuel' | 'lodging' | 'tickets_entertainment' | 'shopping' | 'activities' | 'general',
   isParsing: false,
   isModified: false,
-  apiKey: import.meta.env.VITE_GEMINI_API_KEY || '',
+  apiKey: import.meta.env.DEV ? (import.meta.env.VITE_GEMINI_API_KEY || '') : '',
   pendingScanImage: null as string | null,
   pendingScanTimestamp: null as number | null,
   ocrError: null as string | null,
@@ -402,13 +402,13 @@ Return format must be EXACTLY this JSON structure:
         const response = await fetch(`${apiBase}/api/ocr`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: imageSrc, deviceId, passType: this.usageInfo?.passType || null }),
+          body: JSON.stringify({ image: imageSrc, deviceId }),
           signal: controller.signal
         })
 
         if (!response.ok) {
           const errJson = await response.json().catch(() => ({}))
-          throw new Error(errJson.error || `Serverless Error: Status ${response.status}`)
+          throw new Error(errJson.error === 'BILLING_UNAVAILABLE' ? errJson.message : (errJson.error || `Serverless Error: Status ${response.status}`))
         }
 
         resJson = await response.json()

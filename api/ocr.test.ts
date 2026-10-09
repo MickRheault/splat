@@ -27,16 +27,31 @@ describe('OCR API Limit Enforcement', () => {
     process.env.KV_REST_API_TOKEN = 'mock-token';
   });
 
+  test.each([undefined, null, '', '   ', 123, {}, []])('rejects invalid deviceId %j before any external call', async (deviceId) => {
+    const provider = vi.fn();
+    vi.stubGlobal('fetch', provider);
+    const res = { setHeader: vi.fn(), status: vi.fn().mockReturnThis(), json: vi.fn() };
+    await handler({ method: 'POST', body: { image: 'data:image/jpeg;base64,abc', deviceId } }, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Missing or invalid deviceId' });
+    expect(mockGet).not.toHaveBeenCalled();
+    expect(mockSet).not.toHaveBeenCalled();
+    expect(provider).not.toHaveBeenCalled();
+  });
+
+  test('client paid-pass claim cannot bypass exhausted free quota', async () => {
+    mockGet.mockImplementation(async (key: string) => key.startsWith('free:') ? 3 : null);
+    const provider = vi.fn();
+    vi.stubGlobal('fetch', provider);
+    const res = { setHeader: vi.fn(), status: vi.fn().mockReturnThis(), json: vi.fn() };
+    await handler({ method: 'POST', headers: {}, body: { image: 'data:image/jpeg;base64,abc', deviceId: 'web_test', passType: 'yearly' } }, res);
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(mockSet).not.toHaveBeenCalled();
+    expect(provider).not.toHaveBeenCalled();
+  });
+
   test('should return 403 with dynamic message when monthly free limit is exceeded (default 3)', async () => {
-    // 1: rateLimitKey count = 0
-    // 2: passKey = null
-    // 3: ipKey = 0
-    // 4: freeScansKey = 3
-    mockGet
-      .mockResolvedValueOnce(0)
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(0)
-      .mockResolvedValueOnce(3);
+    mockGet.mockImplementation(async (key: string) => key.startsWith('free:') ? 3 : null);
 
     const req = {
       method: 'POST',
@@ -60,11 +75,7 @@ describe('OCR API Limit Enforcement', () => {
   test('should return 403 with promotional limit message when FREE_SCANS_LIMIT=12', async () => {
     process.env.FREE_SCANS_LIMIT = '12';
 
-    mockGet
-      .mockResolvedValueOnce(0) // ratelimit
-      .mockResolvedValueOnce(null) // passKey
-      .mockResolvedValueOnce(0) // ipKey
-      .mockResolvedValueOnce(12); // freeScansKey
+    mockGet.mockImplementation(async (key: string) => key.startsWith('free:') ? 12 : null);
 
     const req = {
       method: 'POST',
@@ -86,10 +97,7 @@ describe('OCR API Limit Enforcement', () => {
   });
 
   test('should return 403 when daily IP limit (default 20) is reached', async () => {
-    mockGet
-      .mockResolvedValueOnce(0) // ratelimit
-      .mockResolvedValueOnce(null) // passKey
-      .mockResolvedValueOnce(20); // ipKey count 20
+    mockGet.mockImplementation(async (key: string) => key.startsWith('ipfree:') ? 20 : null);
 
     const req = {
       method: 'POST',
@@ -113,10 +121,7 @@ describe('OCR API Limit Enforcement', () => {
   test('should respect custom IP_DAILY_FREE_SCANS_LIMIT', async () => {
     process.env.IP_DAILY_FREE_SCANS_LIMIT = '50';
 
-    mockGet
-      .mockResolvedValueOnce(0) // ratelimit
-      .mockResolvedValueOnce(null) // passKey
-      .mockResolvedValueOnce(50); // ipKey count 50
+    mockGet.mockImplementation(async (key: string) => key.startsWith('ipfree:') ? 50 : null);
 
     const req = {
       method: 'POST',
@@ -139,12 +144,7 @@ describe('OCR API Limit Enforcement', () => {
 
   test('should successfully parse OCR and increment scan count when Gemini returns valid content', async () => {
     process.env.GEMINI_API_KEY = 'test-key';
-    mockGet
-      .mockResolvedValueOnce(0) // ratelimit
-      .mockResolvedValueOnce(null) // passKey check at top
-      .mockResolvedValueOnce(0) // ipKey count
-      .mockResolvedValueOnce(0) // freeScansKey
-      .mockResolvedValueOnce(null); // passKey check after success
+    mockGet.mockResolvedValue(null);
 
     const fakeGeminiResponse = {
       candidates: [

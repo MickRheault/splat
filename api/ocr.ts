@@ -1,15 +1,4 @@
-import { Redis } from '@upstash/redis';
-
-declare const process: any;
-
-function getKV() {
-  return (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
-    ? new Redis({
-        url: process.env.KV_REST_API_URL,
-        token: process.env.KV_REST_API_TOKEN,
-      })
-    : null;
-}
+import { billingKey, getBillingRedis, getPass, scanLimit, RETRY_ERROR } from '../server/billing.js';
 
 export const config = {
   maxDuration: 45,
@@ -20,7 +9,7 @@ function getWeekKey(deviceId: string) {
   const oneJan = new Date(d.getFullYear(), 0, 1);
   const numberOfDays = Math.floor((d.getTime() - oneJan.getTime()) / (24 * 60 * 60 * 1000));
   const weekNumber = Math.ceil((numberOfDays + oneJan.getDay() + 1) / 7);
-  return `usage:${deviceId}:${d.getFullYear()}-W${weekNumber}`;
+  return billingKey(`usage:${deviceId}:${d.getFullYear()}-W${weekNumber}`);
 }
 
 export default async function handler(req: any, res: any) {
@@ -40,18 +29,24 @@ export default async function handler(req: any, res: any) {
     return;
   }
 
+  let checkingBilling = true;
   try {
-    const { image, deviceId } = req.body;
+    const { image, deviceId } = req.body ?? {};
+    if (typeof deviceId !== 'string' || !deviceId.trim()) {
+      res.status(400).json({ error: 'Missing or invalid deviceId' });
+      return;
+    }
     if (!image) {
       res.status(400).json({ error: 'Missing image data' });
       return;
     }
 
-    // 1. Vercel KV limits and subscription checks (only run if KV env vars are set)
-    const kv = getKV();
-    if (kv && deviceId) {
+    // Billing must be available before any provider request.
+    const kv = getBillingRedis();
+    const { passType } = await getPass(kv, deviceId);
+    {
       // A. Rate Limiting: Max 4 scans per 60 seconds per device ID
-      const rateLimitKey = `ratelimit:${deviceId}`;
+      const rateLimitKey = billingKey(`ratelimit:${deviceId}`);
       const rateLimitCount = (await kv.get<number>(rateLimitKey)) || 0;
       if (rateLimitCount >= 4) {
         res.status(429).json({ 
@@ -61,21 +56,15 @@ export default async function handler(req: any, res: any) {
         return;
       }
 
-      // B. Check subscription / pass status
-      const passKey = `pass:${deviceId}`;
-      let passType = await kv.get(passKey); // e.g. "trip" or "yearly"
-      if (!passType && req.body?.passType && (req.body.passType === 'trip' || req.body.passType === 'yearly')) {
-        passType = req.body.passType;
-        await kv.set(passKey, passType, { ex: passType === 'trip' ? 14 * 24 * 60 * 60 : 365 * 24 * 60 * 60 });
-      }
+      // Only the server-verified pass can authorize paid usage.
 
       if (!passType) {
         // IP-based Rate Limiting for Free Scans: Max 20 scans per day per IP (default)
-        const ipDailyLimit = process.env.IP_DAILY_FREE_SCANS_LIMIT ? parseInt(process.env.IP_DAILY_FREE_SCANS_LIMIT, 10) : 20;
+        const ipDailyLimit = scanLimit('IP_DAILY_FREE_SCANS_LIMIT', 20);
         const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.headers['x-real-ip'] || 'unknown';
         if (ip !== 'unknown') {
           const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-          const ipKey = `ipfree:${ip}:${today}`;
+          const ipKey = billingKey(`ipfree:${ip}:${today}`);
           const ipScans = (await kv.get<number>(ipKey)) || 0;
           if (ipScans >= ipDailyLimit) {
             res.status(403).json({
@@ -90,9 +79,9 @@ export default async function handler(req: any, res: any) {
         }
 
         // No active pass. Check monthly free scan limit
-        const freeScansLimit = process.env.FREE_SCANS_LIMIT ? parseInt(process.env.FREE_SCANS_LIMIT, 10) : 3;
+        const freeScansLimit = scanLimit('FREE_SCANS_LIMIT', 3);
         const currentMonth = new Date().toISOString().slice(0, 7); // e.g. "2026-06"
-        const freeScansKey = `free:${deviceId}:${currentMonth}`;
+        const freeScansKey = billingKey(`free:${deviceId}:${currentMonth}`);
         const freeScansUsed = (await kv.get<number>(freeScansKey)) || 0;
 
         if (freeScansUsed >= freeScansLimit) {
@@ -125,7 +114,8 @@ export default async function handler(req: any, res: any) {
       }
     }
 
-    const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+    checkingBilling = false;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       res.status(500).json({ error: 'Gemini API key is not configured on Vercel backend' });
       return;
@@ -215,7 +205,7 @@ Return format must be EXACTLY this JSON structure:
       return;
     }
 
-    const result = await response.json();
+    const result = await response.json() as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
 
     // Verify valid response content from Gemini before deducting user quota
     const parsedText = result.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -229,23 +219,22 @@ Return format must be EXACTLY this JSON structure:
     }
 
     // Only increment user scan usage if parsing succeeded without an explicit error payload
-    if (deviceId && kv && parsedJson && !parsedJson.error) {
-      const passKey = `pass:${deviceId}`;
-      const passType = await kv.get(passKey);
+    if (parsedJson && !parsedJson.error) {
+      checkingBilling = true;
 
       if (!passType) {
         // Increment IP scan count
         const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.headers['x-real-ip'] || 'unknown';
         if (ip !== 'unknown') {
           const today = new Date().toISOString().slice(0, 10);
-          const ipKey = `ipfree:${ip}:${today}`;
+          const ipKey = billingKey(`ipfree:${ip}:${today}`);
           await kv.incr(ipKey);
           await kv.expire(ipKey, 24 * 60 * 60);
         }
 
         // Increment free scan count
         const currentMonth = new Date().toISOString().slice(0, 7);
-        const freeScansKey = `free:${deviceId}:${currentMonth}`;
+        const freeScansKey = billingKey(`free:${deviceId}:${currentMonth}`);
         await kv.incr(freeScansKey);
         await kv.expire(freeScansKey, 35 * 24 * 60 * 60);
       } else {
@@ -257,7 +246,8 @@ Return format must be EXACTLY this JSON structure:
     }
 
     res.status(200).json(result);
-  } catch (e: any) {
-    res.status(500).json({ error: e.message || 'Internal Server Error' });
+  } catch {
+    if (checkingBilling) res.status(503).json(RETRY_ERROR);
+    else res.status(500).json({ error: 'OCR failed. Please retry.' });
   }
 }
