@@ -247,7 +247,8 @@ const isDevMenuOpen = ref(false)
 const isPerformingDevAction = ref(false)
 const localDeviceId = ref('')
 
-const isDevMenuEnabled = import.meta.env.VITE_ENABLE_DEV_MENU === 'true' || import.meta.env.DEV
+const isDevMenuEnabled = import.meta.env.VITE_BILLING_TEST_MODE === 'true' &&
+  (import.meta.env.VITE_ENABLE_DEV_MENU === 'true' || import.meta.env.DEV)
 
 const handleVersionTap = async () => {
   if (!isDevMenuEnabled) return
@@ -267,41 +268,19 @@ const handleDevAction = async (type: 'trip' | 'yearly' | 'reset') => {
     const apiBase = isNative ? API_BASE_URL : ''
     const deviceId = await getDeviceId()
 
-    // 1. Try to synchronize with Vercel backend KV database
     const response = await fetch(`${apiBase}/api/mock-purchase`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ deviceId, type })
     })
-
-    if (response.ok) {
-      await store.fetchUsage()
-    }
-
-    // 2. Register client-side simulation state
-    if (type === 'reset') {
-      store.clearSimulatedUsage()
-      store.ocrError = null
-      alert('Usage and active passes reset client and server-side!')
-    } else {
-      const currentUsed = store.simulatedUsage?.freeScansUsed || 0
-      store.setSimulatedUsage(type, currentUsed)
-      alert(`Simulated purchase success: Active ${type === 'trip' ? '14-Day' : 'Yearly'} pass registered client and server-side!`)
-    }
+    if (!response.ok) throw new Error('Test billing is unavailable or disabled on this server.')
+    store.clearSimulatedUsage()
+    await store.fetchUsage()
+    store.ocrError = null
+    alert(type === 'reset' ? 'Test billing reset.' : `Verified test ${type} pass activated.`)
     isDevMenuOpen.value = false
   } catch (err: any) {
-    console.warn('Failed to sync dev action with server:', err)
-    // Fall back to client-only simulation if server is offline or unreachable
-    if (type === 'reset') {
-      store.setSimulatedUsage(null, 0)
-      store.ocrError = null
-      alert('Simulated usage reset client-side (failed to sync with server).')
-    } else {
-      const currentUsed = store.simulatedUsage?.freeScansUsed || 0
-      store.setSimulatedUsage(type, currentUsed)
-      alert(`Simulated purchase success: Active ${type === 'trip' ? '14-Day' : 'Yearly'} pass registered client-side (failed to sync with server).`)
-    }
-    isDevMenuOpen.value = false
+    alert(err.message || 'Test billing failed. Please retry.')
   } finally {
     isPerformingDevAction.value = false
   }

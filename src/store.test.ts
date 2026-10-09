@@ -373,6 +373,23 @@ describe('Splat Core Store & Math Logic', () => {
     })
 
 
+    test('billing outage shows a retry message and still allows manual splitting', async () => {
+      store.usageInfo = { passType: null, freeScansUsed: 0, freeScansLimit: 3, freeScansRemaining: 3 }
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+        error: 'BILLING_UNAVAILABLE', message: 'Please retry shortly. Manual splitting is still available.'
+      }), { status: 503 }))
+      await store.parseWithGemini('data:image/jpeg;base64,abc')
+      expect(store.ocrError).toBe('Please retry shortly. Manual splitting is still available.')
+      expect(store.showPaywall).toBe(false)
+      const requestBody = JSON.parse(fetchSpy.mock.calls[0]?.[1]?.body as string)
+      expect(requestBody.deviceId).toEqual(expect.any(String))
+      expect(requestBody).not.toHaveProperty('passType')
+      store.addParticipant('Alice')
+      store.addItem('Coffee', 5)
+      expect(totalBill.value).toBe(5)
+      fetchSpy.mockRestore()
+    })
+
     test('should throw error if Gemini returns receipt validation error', async () => {
       store.apiKey = 'fake_key'
       const mockResponse = {

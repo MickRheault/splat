@@ -26,14 +26,16 @@ A progressive web application for splitting receipt bills proportionally (tax an
    npm install
    ```
 
-2. Add your Gemini API key:
+2. Copy the configuration template:
    ```bash
    cp .env.example .env
    ```
-   Add key in `.env`:
-   ```env
-   VITE_GEMINI_API_KEY=your_key_here
-   ```
+   Manual entry works without service credentials. For OCR, configure the server's
+   `GEMINI_API_KEY` and Redis settings. Paid passes also require server-side
+   RevenueCat verification. See [billing setup and rollout](docs/billing.md).
+
+   `VITE_*` variables are public in the browser/native bundle; secret API keys
+   belong only in server environment variables.
 
 ### Commands
 - **Run dev server**: `npm run dev`
