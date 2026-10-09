@@ -22,7 +22,11 @@ Configure RevenueCat's webhook URL as
 `Bearer <REVENUECAT_WEBHOOK_SECRET>`. Enable purchase, renewal, non-renewing
 purchase, expiration, cancellation, billing issue, product change, extension,
 and transfer events. The handler refreshes authoritative customer state;
-it does not derive a pass from the event's claimed entitlement or expiry.
+it does not derive a pass from the event's claimed entitlement or expiry. The
+existing immediate revocation behavior is preserved when the verified subscription
+reports cancellation (`unsubscribe_detected_at`), a billing issue, or a refund. Restore does
+not reactivate that subscription while the flag remains. A different cancellation
+or grace-period policy requires a separate product decision.
 
 Keep native public SDK keys and `VITE_API_BASE_URL` as currently configured.
 Leave `VITE_BILLING_TEST_MODE` and `VITE_ENABLE_DEV_MENU` unset or `false` in

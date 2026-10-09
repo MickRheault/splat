@@ -13,6 +13,9 @@ interface Purchase {
   purchase_date?: string;
   expires_date?: string | null;
   is_sandbox?: boolean;
+  unsubscribe_detected_at?: string | null;
+  billing_issues_detected_at?: string | null;
+  refunded_at?: string | null;
 }
 interface Subscriber {
   entitlements: Record<string, { product_identifier: string; expires_date?: string | null }>;
@@ -21,9 +24,9 @@ interface Subscriber {
 }
 const DAY = 86400000;
 const CACHE_MS = 5 * 60000;
-const PRODUCTS: Record<string, { type: PassType; days: number }> = {
-  splat_14day_trip: { type: 'trip', days: 14 },
-  splat_yearly_pro: { type: 'yearly', days: 365 },
+const PASS_DAYS: Record<PassType, number> = { trip: 14, yearly: 365 };
+const PRODUCT_TYPES: Record<string, PassType> = {
+  splat_14day_trip: 'trip', splat_yearly_pro: 'yearly',
 };
 const NO_PASS: Pass = { passType: null, expirationDate: null };
 export const RETRY_ERROR = { error: 'BILLING_UNAVAILABLE', message: 'Scan eligibility could not be verified. Please retry shortly. Manual splitting is still available.' };
@@ -99,12 +102,15 @@ export async function syncPass(kv: Redis, deviceId: string): Promise<Pass> {
   for (const productId of productIds) {
     const entitlementType = (['trip', 'yearly'] as const).find(type => subscriber.entitlements[type]?.product_identifier === productId);
     // Android subscription identifiers can include a base-plan suffix.
-    const product = entitlementType ? { type: entitlementType, days: entitlementType === 'trip' ? 14 : 365 } : PRODUCTS[productId.split(':')[0]!];
-    if (!product) continue;
+    const passType = entitlementType ?? PRODUCT_TYPES[productId.split(':')[0]!];
+    if (!passType) continue;
     const subscription = subscriber.subscriptions[productId];
     const transactions = subscriber.non_subscriptions[productId] ?? [];
     if (!Array.isArray(transactions)) throw new Error('Invalid RevenueCat transactions');
-    const entitlement = subscriber.entitlements[product.type];
+    const entitlement = subscriber.entitlements[passType];
+    // Preserve the existing backend's immediate cancellation/billing-issue rule.
+    // Restore cannot reactivate a subscription while the verified flag remains.
+    if (subscription?.unsubscribe_detected_at || subscription?.billing_issues_detected_at || subscription?.refunded_at) continue;
     const purchases = subscription ? [subscription] : transactions;
     for (const purchase of purchases) {
       if (purchase.is_sandbox !== sandbox) continue;
@@ -114,9 +120,9 @@ export async function syncPass(kv: Redis, deviceId: string): Promise<Pass> {
       // RevenueCat non-consumables may have no expiry. Use the original purchase date,
       // never the SDK request/restore/startup time, for Splat's fixed-duration passes.
       const expiry = mapped?.expires_date ?? subscription?.expires_date;
-      const expirationMs = expiry ? Date.parse(expiry) : purchaseMs + product.days * DAY;
+      const expirationMs = expiry ? Date.parse(expiry) : purchaseMs + PASS_DAYS[passType] * DAY;
       if (!Number.isFinite(expirationMs)) throw new Error('Invalid verified expiry');
-      if (expirationMs > Date.now()) candidates.push({ passType: product.type, expirationDate: new Date(expirationMs).toISOString() });
+      if (expirationMs > Date.now()) candidates.push({ passType, expirationDate: new Date(expirationMs).toISOString() });
     }
   }
   const pass = candidates.sort((a, b) => Date.parse(b.expirationDate!) - Date.parse(a.expirationDate!))[0] ?? { ...NO_PASS };
@@ -147,10 +153,10 @@ export async function usageInfo(kv: Redis, deviceId: string, pass?: Pass) {
 }
 export async function activateMock(kv: Redis, deviceId: string, type: PassType) {
   if (!mockBillingEnabled()) throw new Error('Mock billing disabled');
-  const pass = { passType: type, expirationDate: new Date(Date.now() + (type === 'trip' ? 14 : 365) * DAY).toISOString() };
+  const pass = { passType: type, expirationDate: new Date(Date.now() + PASS_DAYS[type] * DAY).toISOString() };
   // Mock passes last for their duration only in this isolated test namespace.
   await kv.set(cacheKey(deviceId), { ...pass, version: 1, source: 'mock', deviceId,
-    environment: billingKey('environment'), verifiedUntil: Date.parse(pass.expirationDate) }, { ex: (type === 'trip' ? 14 : 365) * 86400 });
+    environment: billingKey('environment'), verifiedUntil: Date.parse(pass.expirationDate) }, { ex: PASS_DAYS[type] * 86400 });
   return pass;
 }
 export async function resetMock(kv: Redis, deviceId: string) {

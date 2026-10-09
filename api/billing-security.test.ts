@@ -179,3 +179,15 @@ test('a genuinely new verified transaction can activate an expired pass with its
   const res = response(); await syncPurchase({ method: 'POST', body: { deviceId: 'device' } }, res);
   expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ passType: 'trip', expirationDate: '2026-10-30T00:00:00.000Z' }));
 });
+
+test.each(['unsubscribe_detected_at', 'billing_issues_detected_at', 'refunded_at'])('existing immediate revocation is preserved when RevenueCat reports %s', async (field) => {
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => new Response(JSON.stringify({ subscriber: {
+    entitlements: { yearly: { product_identifier: 'splat_yearly_pro', expires_date: '2027-02-01T00:00:00Z' } },
+    subscriptions: { splat_yearly_pro: { is_sandbox: false, purchase_date: '2026-02-01T00:00:00Z', expires_date: '2027-02-01T00:00:00Z', [field]: '2026-10-09T00:00:00Z' } },
+    non_subscriptions: {}
+  } }))));
+  for (let i = 0; i < 2; i++) {
+    const res = response(); await syncPurchase({ method: 'POST', body: { deviceId: 'device' } }, res);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ passType: null }));
+  }
+});

@@ -38,10 +38,15 @@ test('duplicate non-renewing purchase webhooks keep the original expiry instead 
   }
   expect(set).toHaveBeenCalledWith('verified-pass:v1:test-device', expect.objectContaining({ source: 'revenuecat', passType: 'trip', expirationDate: '2026-10-15T00:00:00.000Z' }), expect.any(Object));
 });
-test('cancellation refreshes authoritative state without inventing an immediate revocation policy', async () => {
+test('cancellation preserves immediate revocation when RevenueCat confirms cancellation', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ subscriber: {
+    entitlements: { yearly: { product_identifier: 'splat_yearly_pro', expires_date: '2027-02-01T00:00:00Z' } },
+    subscriptions: { splat_yearly_pro: { purchase_date: '2026-02-01T00:00:00Z', expires_date: '2027-02-01T00:00:00Z', is_sandbox: false, unsubscribe_detected_at: '2026-10-09T00:00:00Z' } },
+    non_subscriptions: {}
+  } }))));
   const res = response(); await handler(request('CANCELLATION'), res);
   expect(res.status).toHaveBeenCalledWith(200);
-  expect(set).toHaveBeenCalledWith('verified-pass:v1:test-device', expect.objectContaining({ passType: 'trip' }), expect.any(Object));
+  expect(set).toHaveBeenCalledWith('verified-pass:v1:test-device', expect.objectContaining({ passType: null }), expect.any(Object));
 });
 test('unrelated webhook events are acknowledged without touching billing', async () => {
   const res = response(); await handler(request('TEST'), res);
