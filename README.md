@@ -3,7 +3,7 @@
 A progressive web application for splitting receipt bills proportionally (tax and tip) among group members, featuring automated AI OCR scanning.
 
 ## Key Features
-- **AI OCR Scanning**: Automatically parses receipt items, tax, tip, and currency symbol using Gemini 2.5 Flash.
+- **AI OCR Scanning**: Automatically parses receipt items, tax, tip, and currency symbol using Gemini 3.8 Flash.
 - **Manual Entry**: Skip OCR and build custom receipts manually.
 - **Cost Allocation**: Assign shares to participants using a tactile mobile-friendly interface.
 - **Everyone Tag**: Shows unassigned participants as red negative tags when $\ge$ 50% of the group shares an item.

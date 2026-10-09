@@ -335,7 +335,7 @@ export const store = reactive({
         const mimeType = match[1]
         const base64Data = match[2]
 
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${this.apiKey}`
         const geminiPayload = {
           contents: [
             {
