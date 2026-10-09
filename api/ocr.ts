@@ -131,8 +131,6 @@ export default async function handler(req: any, res: any) {
       return;
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
-    
     const match = image.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
     if (!match) {
       res.status(400).json({ error: 'Invalid image format. Expected base64 data URL.' });
@@ -191,13 +189,25 @@ Return format must be EXACTLY this JSON structure:
       }
     };
 
-    const response = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(geminiPayload)
-    });
+    const primaryModel = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+    const fallbackModel = 'gemini-3.8-flash';
+
+    const callGemini = async (model: string) => {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      return fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(geminiPayload)
+      });
+    };
+
+    let response = await callGemini(primaryModel);
+    if (response.status === 503) {
+      console.warn(`Primary model ${primaryModel} returned 503 (high demand), retrying with ${fallbackModel}...`);
+      response = await callGemini(fallbackModel);
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
