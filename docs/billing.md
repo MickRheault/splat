@@ -28,11 +28,18 @@ reports cancellation (`unsubscribe_detected_at`), a billing issue, or a refund. 
 not reactivate that subscription while the flag remains. A different cancellation
 or grace-period policy requires a separate product decision.
 
-Keep native public SDK keys and `VITE_API_BASE_URL` as currently configured.
-Leave `VITE_BILLING_TEST_MODE` and `VITE_ENABLE_DEV_MENU` unset or `false` in
-production, including OTA builds. Do not configure `VITE_GEMINI_API_KEY` in a
-deployed build. Merging triggers the existing deployment/OTA workflows; configure
-these server settings first. No deployment settings are changed by this PR.
+The OTA GitHub Actions job selects the **Production** GitHub environment.
+Configure `VITE_REVENUECAT_ANDROID_API_KEY` and `VITE_REVENUECAT_IOS_API_KEY` as
+**environment secrets** there. These must contain the platform's public SDK keys;
+the server's `sk_` secret is not a frontend key. The release fails before bumping
+or building if either SDK key is empty, a dummy value, or a server secret. Vercel
+environment settings alone do not supply keys to the GitHub OTA build.
+
+Keep `VITE_API_BASE_URL` as currently configured. Leave `VITE_BILLING_TEST_MODE`
+and `VITE_ENABLE_DEV_MENU` unset or `false` in production, including OTA builds.
+Do not configure `VITE_GEMINI_API_KEY` in a deployed build. Merging triggers the
+existing deployment/OTA workflows; configure server settings first. This PR does
+not change Vercel settings.
 
 ## Purchase, restore, and migration
 
