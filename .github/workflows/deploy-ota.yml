@@ -10,6 +10,7 @@ on:
 jobs:
   deploy-ota:
     runs-on: ubuntu-latest
+    environment: Production
     permissions:
       contents: write
 
@@ -27,6 +28,19 @@ jobs:
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
+
+    - name: Validate RevenueCat SDK keys
+      env:
+        VITE_REVENUECAT_ANDROID_API_KEY: ${{ secrets.VITE_REVENUECAT_ANDROID_API_KEY }}
+        VITE_REVENUECAT_IOS_API_KEY: ${{ secrets.VITE_REVENUECAT_IOS_API_KEY }}
+      run: |
+        for name in VITE_REVENUECAT_ANDROID_API_KEY VITE_REVENUECAT_IOS_API_KEY; do
+          value="${!name}"
+          if [[ -z "$value" || "$value" == *dummy* || "$value" == sk_* ]]; then
+            echo "::error::$name must contain a public RevenueCat SDK key in the Production environment."
+            exit 1
+          fi
+        done
 
     - name: Bump Version
       run: |
