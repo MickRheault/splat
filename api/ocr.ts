@@ -219,7 +219,7 @@ Return format must be EXACTLY this JSON structure:
     }
 
     // Only increment user scan usage if parsing succeeded without an explicit error payload
-    if (hasKV && deviceId && kv && parsedJson && !parsedJson.error) {
+    if (deviceId && kv && parsedJson && !parsedJson.error) {
       const passKey = `pass:${deviceId}`;
       const passType = await kv.get(passKey);
 

@@ -136,4 +136,54 @@ describe('OCR API Limit Enforcement', () => {
       message: 'Daily limit of 50 free scans reached for this network. Please try again tomorrow!'
     });
   });
+
+  test('should successfully parse OCR and increment scan count when Gemini returns valid content', async () => {
+    process.env.GEMINI_API_KEY = 'test-key';
+    mockGet
+      .mockResolvedValueOnce(0) // ratelimit
+      .mockResolvedValueOnce(null) // passKey check at top
+      .mockResolvedValueOnce(0) // ipKey count
+      .mockResolvedValueOnce(0) // freeScansKey
+      .mockResolvedValueOnce(null); // passKey check after success
+
+    const fakeGeminiResponse = {
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                text: JSON.stringify({
+                  items: [{ name: 'Coffee', price: 5, quantity: 1 }],
+                  adjustments: [],
+                  currencySymbol: '$',
+                  category: 'food_drink'
+                })
+              }
+            ]
+          }
+        }
+      ]
+    };
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue(fakeGeminiResponse)
+    } as any);
+
+    const req = {
+      method: 'POST',
+      headers: { 'x-forwarded-for': '127.0.0.1' },
+      body: { image: 'data:image/jpeg;base64,abc123', deviceId: 'test_dev' }
+    };
+    const res = {
+      setHeader: vi.fn(),
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn()
+    };
+
+    await handler(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(fakeGeminiResponse);
+    expect(mockIncr).toHaveBeenCalled();
+  });
 });
