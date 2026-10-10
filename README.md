@@ -2,7 +2,7 @@
 
 Intelligent, camera-enabled bill allocation application. Splat turns a photo of a bill into structured items and adjustments, supports fine-grained item allocations across participants, and calculates penny-accurate proportional adjustments.
 
-**[Try the live app →](https://splat-bills.vercel.app/)**
+**[Get it on Google Play →](https://play.google.com/store/apps/details?id=com.mickrheault.splat)**
 
 [![CI](https://github.com/MickRheault/splat/actions/workflows/ci.yml/badge.svg)](https://github.com/MickRheault/splat/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/badge/tests-142%20passing-brightgreen)](https://github.com/MickRheault/splat)
