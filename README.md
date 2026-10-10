@@ -12,14 +12,6 @@ Intelligent, camera-enabled bill allocation application. Splat turns a photo of 
 
 ---
 
-## App preview
-
-| Review Items & Adjustments | Allocate to Participants | Set Assigned Quantity | Itemized Breakdown |
-| :---: | :---: | :---: | :---: |
-| <img src="screenshots/3_review_edit_items.png" alt="Review bill items and adjustments" width="200"> | <img src="screenshots/6_allocation_step_grid.png" alt="Allocate items to participants" width="200"> | <img src="screenshots/8_allocation_dialog_custom.png" alt="Set assigned quantity per participant" width="200"> | <img src="screenshots/10_final_splits_share.png" alt="Itemized bill breakdown and share summary" width="200"> |
-
----
-
 ## Core capabilities
 
 - **Multimodal Bill Scanning:** Gemini-powered OCR (`gemini-3.5-flash-lite` with automated fallback to `gemini-3.8-flash` on peak demand) extracts items, adjustments, tip, and currency.
@@ -62,14 +54,7 @@ The application architecture follows a domain model with ubiquitous language:
 
 ## Architecture & design decisions
 
-Key architectural patterns and trade-offs are documented as Architecture Decision Records (ADRs):
-
-- [ADR 0001: Participant Deletion Allocation Rebalancing](docs/adr/0001-participant-deletion-allocation-rebalancing.md) — Automatic quota redistribution when a participant is removed.
-- [ADR 0002: Negative Total Clamping](docs/adr/0002-negative-total-clamping.md) — Handling edge cases with large discount adjustments.
-- [ADR 0003: Penny Rounding Correction Policy](docs/adr/0003-penny-rounding-correction-policy.md) — Largest-remainder method for penny-accurate reconciliation.
-- [ADR 0004: Display-Only Itemized Rounding Policy](docs/adr/0004-display-only-itemized-rounding-policy.md) — Display consistency across participant itemized lists.
-- [ADR 0005: Bill Categories Preset Rules](docs/adr/0005-bill-categories-preset-rules.md) — Standardized categorization rules.
-- [ADR 0006: Payer Designation and Settlement](docs/adr/0006-payer-designation-and-settlement.md) — Multi-payer settlement calculation logic.
+Key architectural decisions and calculations (such as penny rounding, quota rebalancing, and negative clamping) are documented as [Architecture Decision Records (ADRs)](docs/adr/).
 
 ---
 
@@ -116,6 +101,5 @@ splat/
 │   └── App.vue      # Main application interface and step flow
 ├── docs/            # Architecture documentation, ADRs, and billing setup
 ├── ios/             # Native iOS project (Capacitor)
-├── android/         # Native Android project (Capacitor)
-└── screenshots/     # Visual documentation and previews
+└── android/         # Native Android project (Capacitor)
 ```
