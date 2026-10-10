@@ -38,3 +38,7 @@ revenuecat-key.json
 *.ntvs*
 *.njsproj
 *.sln
+
+# Internal agent documents
+.agents/docs/
+
