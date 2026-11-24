@@ -1339,29 +1339,18 @@ const selectAllText = (event: Event) => {
           </p>
 
           <!-- Download Action Buttons -->
-          <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md lg:max-w-lg mt-2">
+          <div class="flex justify-center lg:justify-start w-full mt-2">
             <!-- Google Play -->
             <a 
               href="https://play.google.com/store/apps/details?id=com.mickrheault.splat" 
               target="_blank"
-              class="w-full sm:w-1/2 flex items-center justify-center gap-3 bg-gradient-to-b from-slate-900 to-slate-950 hover:from-slate-800 hover:to-slate-900 border border-slate-800 hover:border-emerald-500/50 text-white px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 hover:-translate-y-0.5 group cursor-pointer"
+              rel="noopener noreferrer"
+              class="w-full max-w-md sm:w-auto sm:min-w-[220px] flex items-center justify-center gap-3 bg-gradient-to-b from-slate-900 to-slate-950 hover:from-slate-800 hover:to-slate-900 border border-slate-800 hover:border-emerald-500/50 text-white px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 hover:-translate-y-0.5 group cursor-pointer"
             >
               <i class="pi pi-google text-2xl text-emerald-400 group-hover:scale-110 transition-transform"></i>
               <div class="flex flex-col text-left">
                 <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Get it on</span>
                 <span class="font-extrabold text-sm tracking-wide text-white">Google Play</span>
-              </div>
-            </a>
-
-            <!-- App Store -->
-            <a 
-              href="#" 
-              class="w-full sm:w-1/2 flex items-center justify-center gap-3 bg-gradient-to-b from-slate-900 to-slate-950 hover:from-slate-800 hover:to-slate-900 border border-slate-800 hover:border-purple-500/50 text-white px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 hover:-translate-y-0.5 group cursor-pointer"
-            >
-              <i class="pi pi-apple text-2xl text-purple-400 group-hover:scale-110 transition-transform"></i>
-              <div class="flex flex-col text-left">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Download on</span>
-                <span class="font-extrabold text-sm tracking-wide text-white">App Store</span>
               </div>
             </a>
           </div>
